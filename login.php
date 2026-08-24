@@ -1,8 +1,10 @@
 <?php
-session_start();
+require_once './config/google_oauth.php';
+startAppSession();
 require_once './config/db_config.php';
 
-$error = '';
+$error = $_SESSION['google_error'] ?? '';
+unset($_SESSION['google_error']);
 $verified = isset($_GET['verified']);
 $reset    = isset($_GET['reset']);
 
@@ -14,12 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Email and password are required.';
     } else {
-        $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password FROM users WHERE email=? AND is_verified=1");
+        $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, auth_provider FROM users WHERE email=? AND is_verified=1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
 
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && ($user['auth_provider'] ?? 'local') === 'google') {
+            $error = 'This account uses Google sign-in. Please use Continue with Google below.';
+        } elseif ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_email'] = $email;
             $_SESSION['user_name']  = $user['user_name'];
@@ -104,6 +108,13 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
         <div class="terms">
             <button type="submit">Log In</button>
             <p>Don't have an account? <a href="register.php">Create an Account</a></p>
+        </div>
+        <div class="google">
+            <p>Or sign in with:</p>
+            <a href="google_signup.php?from=login" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20">
+                <span>Continue with Google</span>
+            </a>
         </div>
     </form>
 

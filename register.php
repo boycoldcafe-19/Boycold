@@ -1,9 +1,11 @@
 <?php
-session_start();
+require_once './config/google_oauth.php';
+startAppSession();
 require_once './config/db_config.php';
 require_once './config/mailer.php';
 
-$error = '';
+$error = $_SESSION['google_error'] ?? '';
+unset($_SESSION['google_error']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstname = trim($_POST['Firstname'] ?? '');
@@ -15,19 +17,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'All fields are required.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Invalid email address.';
-    } elseif (strlen($password) < 8 || strlen($password) > 25
-           || !preg_match('/[A-Z]/', $password)
-           || !preg_match('/[a-z]/', $password)
-           || !preg_match('/[0-9]/', $password)) {
+    } elseif (
+        strlen($password) < 8 || strlen($password) > 25
+        || !preg_match('/[A-Z]/', $password)
+        || !preg_match('/[a-z]/', $password)
+        || !preg_match('/[0-9]/', $password)
+    ) {
         $error = 'Password does not meet the requirements.';
     } else {
         $chk = $connect->prepare("SELECT id FROM users WHERE email=? AND is_verified=1");
-        $chk->bind_param("s", $email); $chk->execute();
+        $chk->bind_param("s", $email);
+        $chk->execute();
         if ($chk->get_result()->num_rows > 0) {
             $error = 'This email is already registered. Please log in.';
         } else {
             $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='register' AND status='pending'");
-            $exp->bind_param("s", $email); $exp->execute();
+            $exp->bind_param("s", $email);
+            $exp->execute();
 
             $otp        = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
             $hashedPass = password_hash($password, PASSWORD_BCRYPT);
@@ -46,10 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: createotp.php');
                     exit;
                 } else {
-                    $error = 'Could not send OTP email. Please try again.';
+                    $error = 'Could not send OTP email. Please check your email address and try again. If the problem persists, please contact support.';
+                    error_log("OTP email send failed for email: $email");
                 }
             } else {
                 $error = 'Database error. Please try again.';
+                error_log("Database insert failed for email: $email");
             }
         }
     }
@@ -57,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <header>
     <img src="picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
 </header>
+
 <body>
     <div class="pic1">
         <img src="picture/Mask group.png">
@@ -89,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form action="register.php" method="post" id="registerForm">
             <h4>Personal Information</h4>
             <input type="text" name="Firstname" id="Firstname" placeholder="*First Name" required><br><br>
-            <input type="text" name="Lastname"  id="Lastname"  placeholder="*Last Name"  required><br><br>
+            <input type="text" name="Lastname" id="Lastname" placeholder="*Last Name" required><br><br>
 
             <h4>Account Security</h4>
             <input type="email" name="email" id="email" placeholder="*Email" required><br><br>
@@ -99,10 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div><br>
 
             <div class="password-rules">
-                <p id="length"    class="invalid">✘ 8–25 characters</p>
+                <p id="length" class="invalid">✘ 8–25 characters</p>
                 <p id="uppercase" class="invalid">✘ At least 1 uppercase letter</p>
                 <p id="lowercase" class="invalid">✘ At least 1 lowercase letter</p>
-                <p id="number"    class="invalid">✘ At least 1 number</p>
+                <p id="number" class="invalid">✘ At least 1 number</p>
             </div>
 
             <div class="terms">
@@ -119,6 +129,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </label><br>
                 <button type="button" id="registerBtn">Register Account</button>
                 <p>You have account Already? <a href="login.php">Log In</a></p>
+            </div>
+            <div class="google">
+                <p>Or sign up with:</p>
+                <a href="google_signup.php" class="google-btn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20">
+                    <span>Continue with Google</span>
+                </a>
             </div>
         </form>
     </div>
@@ -154,8 +171,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <br><br>
 
                 <h3>1. INFORMATION WE COLLECT</h3>
-                <p>We collect information you provide to us, such as your name, email address, phone number, and order details when you place an order, sign up for our newsletter, or interact with our website, app, or in-store services. We may also collect information automatically, including device and browsing data, to help us improve your experience.   </p>
-                
+                <p>We collect information you provide to us, such as your name, email address, phone number, and order details when you place an order, sign up for our newsletter, or interact with our website, app, or in-store services. We may also collect information automatically, including device and browsing data, to help us improve your experience. </p>
+
                 <h3>2. HOW WE USE YOUR INFORMATION</h3>
                 <p>We use your information to process orders, personalize your experience, provide customer support, send updates and promotions (with your consent), and improve our products and services. We may also use your data for analytics to understand how our customers interact with Boycold Cafe.</p>
 
@@ -163,8 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p>We take your privacy seriously. We use industry-standard security measures to protect your information from unauthorized access, disclosure, alteration, or destruction. Our systems are regularly monitored, and access to personal data is limited to authorized team members only.</p>
 
                 <h3>4. SHARING YOUR INFORMATION</h3>
-            <p>We do not sell your personal information. We may share your information with trusted service providers who help us operate our business—such as payment processors, delivery partners, and marketing platforms—but only to the extent necessary and under strict confidentiality obligations.</p>            
-        </div>
+                <p>We do not sell your personal information. We may share your information with trusted service providers who help us operate our business—such as payment processors, delivery partners, and marketing platforms—but only to the extent necessary and under strict confidentiality obligations.</p>
+            </div>
 
             <p class="tc-scroll-hint" id="tcScrollHint">↓ Scroll down to read all terms</p>
 
@@ -184,4 +201,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="scr/script.js"></script>
 </body>
+
 </html>
