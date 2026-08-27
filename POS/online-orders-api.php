@@ -31,10 +31,39 @@ if ($lastOrderId < 0) {
     $lastOrderId = 0;
 }
 
+$onlineOrderTypeSql = "
+     (
+       order_type IN ('delivery', 'pickup')
+       OR (order_type = 'takeout' AND user_id IS NOT NULL)
+     )";
+
+$countStmt = $connect->prepare(
+    "SELECT COUNT(*) AS pending_count
+     FROM orders
+     WHERE $onlineOrderTypeSql
+       AND status = 'pending'
+       AND branch_id = ?"
+);
+$countStmt->bind_param('i', $branchId);
+$countStmt->execute();
+$pendingCount = (int) ($countStmt->get_result()->fetch_assoc()['pending_count'] ?? 0);
+$countStmt->close();
+
+if (isset($_GET['action']) && $_GET['action'] === 'counts') {
+    echo json_encode([
+        'success' => true,
+        'pending_count' => $pendingCount
+    ]);
+    exit;
+}
+
 $stmt = $connect->prepare(
     "SELECT id, user_name, status, payment_method, payment_status, order_type, subtotal, delivery_fee, tax, total, address, created_at
      FROM orders
-     WHERE status = 'pending' AND id > ? AND branch_id = ?
+     WHERE status = 'pending'
+       AND id > ?
+       AND branch_id = ?
+       AND $onlineOrderTypeSql
      ORDER BY id ASC"
 );
 $stmt->bind_param('ii', $lastOrderId, $branchId);
@@ -52,5 +81,11 @@ foreach ($orders as $order) {
 echo json_encode([
     'success' => true,
     'orders' => $orders,
-    'latest_order_id' => $latestOrderId
+    'pending_count' => $pendingCount,
+    'latest_order_id' => $latestOrderId,
+    'debug' => [
+        'branch_id' => $branchId,
+        'last_order_id' => $lastOrderId,
+        'orders_count' => count($orders)
+    ]
 ]);

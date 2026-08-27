@@ -9,8 +9,11 @@ if (isset($_SESSION['employee_id'])) {
     exit;
 }
 
-// Always redirect to signup first
-$redirectPage = 'signup.php';
+// Check if user has previously created an account (stored in session)
+$hasAccount = isset($_SESSION['has_account']) && $_SESSION['has_account'] === true;
+
+// If no account status in session, default to signup
+$redirectPage = $hasAccount ? 'login.php' : 'signup.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -8,7 +8,7 @@ $_SESSION = [];
 // Destroy the session
 session_destroy();
 
-// Redirect to login
-header('Location: login.php');
+// Redirect to flash screen
+header('Location: flashscreen.php');
 exit;
 ?>

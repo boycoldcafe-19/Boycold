@@ -20,8 +20,12 @@ $userId     = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 $employeeId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
 $isStaff    = $employeeId > 0 || !empty($_SESSION['is_admin']);
 
+// Log session info for debugging
+error_log('[Order Popup] Session check - userId: ' . $userId . ', employeeId: ' . $employeeId . ', isStaff: ' . ($isStaff ? 'true' : 'false'));
+
 if ($userId <= 0 && !$isStaff) {
-    header('Location: auth/login.php');
+    error_log('[Order Popup] No valid session, redirecting to flash screen');
+    header('Location: auth/flashscreen.php');
     exit;
 }
 
@@ -39,7 +43,7 @@ if ($userId > 0) {
 
 if (!$userRow && !$isStaff) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: auth/flashscreen.php');
     exit;
 }
 
@@ -56,11 +60,30 @@ $orderTime  = '';
 if ($orderId <= 0) {
     $errorMsg = 'Invalid order.';
 } else {
-    if ($isAdmin) {
+    // Get employee branch for staff members
+    $employeeBranchId = 0;
+    if ($employeeId > 0) {
+        $empStmt = $connect->prepare("SELECT branch_id FROM employees WHERE id = ?");
+        $empStmt->bind_param("i", $employeeId);
+        $empStmt->execute();
+        $empResult = $empStmt->get_result()->fetch_assoc();
+        $empStmt->close();
+        if ($empResult) {
+            $employeeBranchId = (int) $empResult['branch_id'];
+        }
+        error_log('[Order Popup] Employee branch_id: ' . $employeeBranchId);
+    }
+
+    if ($isAdmin && $employeeBranchId > 0) {
+        // Staff member with branch assignment - check branch ownership
+        $stmt = $connect->prepare("SELECT * FROM orders WHERE id = ? AND branch_id = ?");
+        $stmt->bind_param("ii", $orderId, $employeeBranchId);
+    } else if ($isAdmin) {
+        // Super admin (branch_id = 0) - can see all orders
         $stmt = $connect->prepare("SELECT * FROM orders WHERE id = ?");
         $stmt->bind_param("i", $orderId);
     } else {
-        // Ownership check — a user can only ever see their own order.
+        // Regular user - ownership check by user_name
         $stmt = $connect->prepare("SELECT * FROM orders WHERE id = ? AND user_name = ?");
         $stmt->bind_param("is", $orderId, $userName);
     }
@@ -70,6 +93,7 @@ if ($orderId <= 0) {
 
     if (!$order) {
         $errorMsg = 'Order not found.';
+        error_log('[Order Popup] Order not found for order_id: ' . $orderId);
     } else {
         if ($userPhone === '' && !empty($order['user_name'])) {
             $phoneStmt = $connect->prepare("SELECT phone FROM users WHERE user_name = ? LIMIT 1");
@@ -131,6 +155,7 @@ if ($order) {
 
 $backUrl  = $isStaff ? 'dashboard/pos-online.php' : 'menu.php';
 $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('status.php?order_id=' . $orderId);
+$backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -151,7 +176,7 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
             <div class="order-error">
                 <i class="fa-solid fa-circle-exclamation"></i>
                 <p><?= htmlspecialchars($errorMsg) ?></p>
-                <button type="button" class="btn btn-confirm btn-single" onclick="goTop('<?= htmlspecialchars($backUrl, ENT_QUOTES) ?>')">Back to Menu</button>
+                <button type="button" class="btn btn-confirm btn-single" onclick="closePopupOrGo('<?= htmlspecialchars($backUrl, ENT_QUOTES) ?>')"><?= htmlspecialchars($backButtonLabel) ?></button>
             </div>
         </div>
 
@@ -164,7 +189,7 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
                 <span class="tag-new">New Order</span>
                 <div class="top-time">
                     <span><?= htmlspecialchars($orderTime) ?></span>
-                    <button type="button" class="popup-close" onclick="goTop('<?= htmlspecialchars($backUrl, ENT_QUOTES) ?>')" aria-label="Close">
+                    <button type="button" class="popup-close" onclick="closePopupOrGo('<?= htmlspecialchars($backUrl, ENT_QUOTES) ?>')" aria-label="Close">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -243,9 +268,16 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
                     <div class="item-row">
                         <div class="item-icon">
                             <?php if (!empty($item['product_image'])): ?>
-                                <img src="<?= htmlspecialchars($item['product_image']) ?>"
-                                     alt="<?= htmlspecialchars($item['product_name']) ?>"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <?php $imagePath = $item['product_image']; ?>
+                                <?php if (strpos($imagePath, '../') === 0): ?>
+                                    <img src="<?= htmlspecialchars($imagePath) ?>"
+                                         alt="<?= htmlspecialchars($item['product_name']) ?>"
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <?php else: ?>
+                                    <img src="../<?= htmlspecialchars(ltrim($imagePath, '/')) ?>"
+                                         alt="<?= htmlspecialchars($item['product_name']) ?>"
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <?php endif; ?>
                                 <i class="fa-solid fa-mug-hot" style="display:none;"></i>
                             <?php else: ?>
                                 <i class="fa-solid fa-mug-hot"></i>
@@ -318,8 +350,20 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
     <?php endif; ?>
 
     <script>
-        // Navigates the top-level window — works whether this page is
-        // opened directly or loaded inside checkout.php's popup iframe.
+        function isEmbeddedPopup() {
+            return window.top && window.top !== window;
+        }
+
+        function closePopupOrGo(fallbackUrl) {
+            if (isEmbeddedPopup()) {
+                window.top.postMessage({ type: 'closeOrderPopup' }, '*');
+                return;
+            }
+
+            goTop(fallbackUrl);
+        }
+
+        // Navigates the top-level window for standalone popup pages.
         function goTop(url) {
             window.top.location.href = new URL(url, window.location.href).href;
         }
@@ -342,8 +386,9 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
                 });
                 const data = await res.json();
                 if (data.success) {
-                    if (window.top && window.top !== window) {
+                    if (isEmbeddedPopup()) {
                         window.top.postMessage({ type: 'orderCancelled', orderId }, '*');
+                        return;
                     }
                     location.reload();
                 } else {
@@ -373,8 +418,7 @@ $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('sta
                 });
                 const data = await res.json();
                 if (data.success) {
-                    const isEmbedded = window.top && window.top !== window;
-                    if (isEmbedded) {
+                    if (isEmbeddedPopup()) {
                         // Auto-popup case (order-notify.js): let the parent page
                         // close this popup and refresh the online orders table
                         // in place. Don't hijack whatever POS page staff is on.

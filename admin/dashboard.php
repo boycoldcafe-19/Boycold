@@ -2,12 +2,6 @@
 session_start();
 require_once '../config/db_config.php';
 
-// Session guard
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
-    exit;
-}
-
 // Get date range for analytics (default to this week)
 $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('monday this week'));
 $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d', strtotime('sunday this week'));

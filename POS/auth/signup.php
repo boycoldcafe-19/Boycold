@@ -138,6 +138,10 @@ $branchStmt->close();
                     <button type="button" class="cancel-btn" id="step1CancelBtn">Cancel</button>
                     <button type="submit" class="submit-btn" id="signupBtn">Create</button>
                 </div>
+                
+                <div class="login-link">
+                    <p>Already have an account? <a href="login.php">Log in</a></p>
+                </div>
 
             </form>
         </div>
@@ -290,9 +294,10 @@ $branchStmt->close();
             clearError(this, document.getElementById('confirmPasswordError'));
         });
 
-        // ── Step 1: Cancel button clears the form ──
+        // ── Step 1: Cancel button redirects to flash screen ──
         document.getElementById('step1CancelBtn').addEventListener('click', function () {
-            signupForm.reset();
+            window.location.href = "flashscreen.php";
+        });
             branchSelect.classList.remove('filled');
             ['email', 'password', 'branch'].forEach(function (id) {
                 var el = document.getElementById(id);

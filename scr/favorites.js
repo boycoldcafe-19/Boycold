@@ -129,7 +129,7 @@ function renderFavs() {
                             <i class="fa-solid fa-heart" style="color:#e53935; -webkit-text-stroke:0;"></i>
                         </button>
                     </div>
-                    <img src="${item.image ?? ''}" alt="${item.product_name}">
+                    <img src="${item.image && item.image.startsWith('../') ? item.image : (item.image ? '../' + item.image.replace(/^\//, '') : '')}" alt="${item.product_name}">
                 </div>
             </div>
             <div class="card-info">

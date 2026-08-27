@@ -87,7 +87,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
             <ul class="nav-links">
                 <li><a href="home.php">HOME</a></li>
                 <li><a href="menu.php" class="active">MENU</a></li>
-                <li><a href="/User/status.php">ORDERS</a></li>
+                <li><a href="status.php">ORDERS</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
             </ul>
         </div>
@@ -188,7 +188,11 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                                             <?php endif; ?>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
-                                        <img src="<?= $image ?>" alt="<?= $name ?>">
+                                        <?php if (strpos($image, '../') === 0): ?>
+                                            <img src="<?= $image ?>" alt="<?= $name ?>">
+                                        <?php else: ?>
+                                            <img src="../<?= ltrim($image, '/') ?>" alt="<?= $name ?>">
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="card-info">

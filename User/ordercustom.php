@@ -503,6 +503,8 @@ $isNoAddonItem = in_array($productName, $noAddonItems);
         document.querySelector('.btn.checkout-btn').addEventListener('click', function() {
             const item = buildCartItem();
             sessionStorage.setItem('boycold_direct_order', JSON.stringify(item));
+            // Also store the order type separately for pre-selection in checkout
+            sessionStorage.setItem('boycold_order_type', item.orderType);
             window.location.href = 'checkout.php?mode=direct';
         });
 

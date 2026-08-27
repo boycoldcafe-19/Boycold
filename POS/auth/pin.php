@@ -6,9 +6,9 @@ require_once __DIR__ . '/../config/db_config.php';
 $isNewSignup = isset($_SESSION['employee_signup']);
 $isExistingEmployee = isset($_SESSION['employee_id']);
 
-// Nothing to attach a PIN to — send them back to sign up
+// Nothing to attach a PIN to — send them back to flash screen
 if (!$isNewSignup && !$isExistingEmployee) {
-    header('Location: login.php');
+    header('Location: flashscreen.php');
     exit;
 }
 
@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                 $_SESSION['employee_id'] = $stmt->insert_id;
                 $_SESSION['employee_email'] = $data['email'];
                 $_SESSION['branch_id'] = $data['branch_id'];
+                $_SESSION['has_account'] = true; // Mark that user now has an account
                 unset($_SESSION['employee_signup']);
                 $response['success'] = true;
             } else {

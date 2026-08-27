@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
 
 function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type = 'register'): bool
 {
@@ -44,16 +45,35 @@ function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type
 
     $mail = new PHPMailer(true);
     try {
+        // SMTP Configuration
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'boycoldcafe19@gmail.com';
-        $mail->Password   = 'plcj mrda ruwk yvyb';
+        $mail->Username   = getenv('GMAIL_USERNAME') ?: 'boycoldcafe19@gmail.com';
+        $mail->Password   = getenv('GMAIL_APP_PASSWORD') ?: 'plcj mrda ruwk yvyb';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port       = 465;
-        $mail->SMTPDebug  = 0; // Set to 2 for debugging (logs SMTP communication)
+        
+        // Enable debugging (set to 0 for production, 2 for development)
+        $mail->SMTPDebug  = getenv('SMTP_DEBUG') ? (int)getenv('SMTP_DEBUG') : 0;
+        $mail->Debugoutput = function($str, $level) {
+            error_log("PHPMailer Debug [$level]: $str");
+        };
 
-        $mail->setFrom('boycoldcafe19@gmail.com', 'BoyCold Cafe');
+        // Additional SMTP options for better compatibility
+        $mail->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            )
+        );
+
+        // Set timeout values
+        $mail->Timeout = 30;
+        $mail->SMTPKeepAlive = true;
+
+        $mail->setFrom($mail->Username, 'BoyCold Cafe');
         $mail->addAddress($toEmail, $toName);
         $mail->isHTML(true);
         $mail->Subject = $subject;
@@ -65,6 +85,7 @@ function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type
     } catch (Exception $e) {
         $errorMsg = 'Mailer Error: ' . $e->getMessage();
         error_log($errorMsg);
+        error_log('SMTP Error Info: ' . $mail->ErrorInfo);
         return false;
     }
 }

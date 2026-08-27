@@ -548,6 +548,8 @@ CREATE TABLE `users` (
   `user_name` varchar(255) COLLATE utf8mb4_unicode_ci GENERATED ALWAYS AS (concat(`firstname`,_utf8mb4' ',`lastname`)) STORED NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `google_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `auth_provider` enum('local','google') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'local',
   `is_verified` tinyint NOT NULL DEFAULT '0',
   `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -728,6 +730,7 @@ ALTER TABLE `shift_logs`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_users_email` (`email`),
+  ADD UNIQUE KEY `uq_users_google_id` (`google_id`),
   ADD UNIQUE KEY `uq_users_name` (`user_name`);
 
 --

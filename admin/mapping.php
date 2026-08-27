@@ -2,12 +2,6 @@
 session_start();
 require_once '../config/db_config.php';
 
-// Session guard
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
-    exit;
-}
-
 // Fetch ingredients from database
 $ingredientsQuery = "SELECT id, name, unit, stock, branch_id FROM ingredients ORDER BY name";
 $ingredientsResult = $connect->query($ingredientsQuery);

@@ -349,7 +349,6 @@ header .box {
     justify-content: center;
     align-items: center;
     background: #1e1e1e;
-    /* Changed min-width to 90% so it doesn't hit screen edges on mobile */
     width: clamp(200px, 82%, 1300px);
     height: clamp(50px, 18vw, 70px);
     border-bottom-left-radius: 30px;
@@ -430,7 +429,7 @@ header .box {
     position:absolute;
     inset: 0;
     z-index: -1;
-    background: url('/picture/aa3044d0-6480-46e4-96e1-4429219722b8\ 1.png');
+    background: url('../../picture/aa3044d0-6480-46e4-96e1-4429219722b8 1.png');
     background-color: #000;
     background-size: cover;
     background-position: center top;
@@ -941,7 +940,6 @@ footer {
         justify-content: center;
         align-items: center;
         background: #1e1e1e;
-        /* Changed min-width to 90% so it doesn't hit screen edges on mobile */
         width: clamp(200px, 82%, 1200px); 
         height: clamp(50px, 18vw, 70px);
         border-bottom-left-radius: 30px;

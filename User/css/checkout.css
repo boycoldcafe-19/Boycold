@@ -6,7 +6,7 @@
 body {
     overflow-x: hidden;
     font-family: 'Afacad', sans-serif;
-    background: url('/picture/background2.png') center -40px / cover no-repeat #000;
+    background: url('../../picture/background2.png') center -40px / cover no-repeat #000;
 }
 
 html {
@@ -1175,7 +1175,7 @@ footer {
 }
 
 .co-pay-gcash {
-    background: #007aff;
+    background:url('../../picture/qr-ph.webp') center / cover no-repeat;
     color: #fff;
 }
 

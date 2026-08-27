@@ -69,7 +69,7 @@ $_SESSION['user_email'] = $user['email'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/cart.css">
-    <link rel="icon" href="/picture/icon.png" type="image/png">
+    <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
@@ -123,9 +123,10 @@ $_SESSION['user_email'] = $user['email'];
                 <li><a href="favorites.php">FAVORITES</a></li>
             </ul>
         </div>
-        <div class="logo">
-            <img src="/picture/BoyCold Logo 2.png" alt="BoyCold">
+       <div class="logo">
+            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
         </div>
+
         <div class="nav-right-group">
             <a href="cart.php" class="cart-link">
                 <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i>

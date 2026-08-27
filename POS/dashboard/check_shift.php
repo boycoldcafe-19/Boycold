@@ -5,7 +5,7 @@ require_once '../config/db_config.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 

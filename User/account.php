@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/loyalty.php';
 require_once '../vendor/autoload.php';
 
 use Endroid\QrCode\Encoding\Encoding;
@@ -311,6 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch latest user data
+syncLoyaltyStampsFromCompletedOrders($connect, (int) $userId);
 $stmt = $connect->prepare(
     "SELECT firstname, lastname, email, phone, address, avatar, card_no, user_name, loyalty_beans, loyalty_stamps FROM users WHERE id = ?"
 );
@@ -332,17 +334,21 @@ $address  = $user['address'] ? $user['address'] : '';
 $avatar   = $user['avatar']  ? htmlspecialchars($user['avatar'])  : '';
 $cardNoRaw = ensureLoyaltyCardNo($connect, $userId);
 $cardNo   = htmlspecialchars($cardNoRaw);
-$loyaltyQrPayload = $cardNoRaw;
+$loyaltyToken = ensureUserLoyaltyToken($connect, $userId);
+$loyaltyQrPayload = buildLoyaltyScanUrl($loyaltyToken);
 $loyaltyQrDataUri = buildLoyaltyQrDataUri($loyaltyQrPayload);
 $userName = $user['user_name'];
 $loyaltyBeans = (int) ($user['loyalty_beans'] ?? 0);
 $loyaltyStamps = (int) ($user['loyalty_stamps'] ?? 0);
-$loyaltyDisplayBeans = min(10, max(0, $loyaltyBeans));
-$loyaltyProgressText = $loyaltyBeans >= 10
-    ? 'Stamp ready!'
-    : ($loyaltyBeans === 0
-        ? 'No beans yet — complete an order to start'
-        : $loyaltyBeans . ' of 10 beans toward your next stamp');
+$loyaltyDisplayStamps = min(10, max(0, $loyaltyStamps));
+$loyaltyProgressText = $loyaltyStamps === 0
+    ? 'No stamps yet — complete an order to start'
+    : ($loyaltyStamps >= 10 
+        ? '10 stamps earned! Great job!' 
+        : $loyaltyStamps . ' stamp' . ($loyaltyStamps > 1 ? 's' : '') . ' earned!');
+
+// Coffee bean brown color
+$beanColor = '#6F4E37';
 
 // Fetch favorites count
 $favStmt = $connect->prepare("SELECT COUNT(*) AS cnt FROM favorites WHERE user_name = ?");
@@ -585,7 +591,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     <div class="beans-row">
                         <?php for ($i = 0; $i < 5; $i++): ?>
                             <svg width="25" height="27" viewBox="0 0 25 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4.51146 24.3952C9.97896 28.2235 15.9937 24.2871 19.8221 18.8196C23.6504 13.3521 25.2909 6.35484 19.8247 2.52652C14.3586 -1.3018 8.34245 2.6333 4.51413 8.10081C0.685812 13.5683 -0.95604 20.5669 4.51146 24.3952Z" fill="<?= $i < $loyaltyDisplayBeans ? '#6F4E37' : 'none' ?>" stroke="black" stroke-width="2" />
+                                <path d="M4.51146 24.3952C9.97896 28.2235 15.9937 24.2871 19.8221 18.8196C23.6504 13.3521 25.2909 6.35484 19.8247 2.52652C14.3586 -1.3018 8.34245 2.6333 4.51413 8.10081C0.685812 13.5683 -0.95604 20.5669 4.51146 24.3952Z" fill="<?= $i < $loyaltyDisplayStamps ? $beanColor : 'none' ?>" stroke="black" stroke-width="2" />
                                 <path d="M18.2931 4.71298C16.4337 5.04135 11.1838 7.88323 11.0743 12.6953C10.9635 17.5061 7.35414 21.4973 6.04199 22.2074C8.44871 22.2634 13.1513 19.0371 13.2608 14.225C13.3716 9.41429 16.9797 5.42312 18.2931 4.71298Z" fill="black" />
                             </svg>
                         <?php endfor; ?>
@@ -593,14 +599,14 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     <div class="beans-row-2">
                         <?php for ($i = 5; $i < 10; $i++): ?>
                             <svg width="25" height="27" viewBox="0 0 25 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4.51146 24.3952C9.97896 28.2235 15.9937 24.2871 19.8221 18.8196C23.6504 13.3521 25.2909 6.35484 19.8247 2.52652C14.3586 -1.3018 8.34245 2.6333 4.51413 8.10081C0.685812 13.5683 -0.95604 20.5669 4.51146 24.3952Z" fill="<?= $i < $loyaltyDisplayBeans ? '#6F4E37' : 'none' ?>" stroke="black" stroke-width="2" />
-                                <path d="M18.2931 4.71298C16.4337 5.04135 11.1838 7.88323 11.0743 12.6953C10.9635 17.5061 7.35414 21.4973 6.04199 22.2074C8.44871 22.2634 13.1513 19.0371 13.2608 14.225C13.3716 9.41429 16.9797 5.42312 18.2931 4.71298Z" fill="black" />
+                                <path d="M4.51146 24.3952C9.97896 28.2235 15.9937 24.2871 19.8221 18.8196C23.6504 13.3521 25.2909 6.35484 19.8247 2.52652C14.3586 -1.3018 8.34245 2.6333 4.51413 8.10081C0.685812 13.5683 -0.95604 20.5669 4.51146 24.3952Z" fill="<?= $i < $loyaltyDisplayStamps ? $beanColor : 'none' ?>" stroke="black" stroke-width="2" />
+                                <path d="M18.2931 4.71298C16.4337 5.04135 11.1838 7.88323 11.0743 12.6953C10.9635 17.5061 7.35414 21.4973 6.04199 22.2074C8.44871 22.2634 13.1513 19.0371 13.2608 14.225" fill="black" />
                             </svg>
                         <?php endfor; ?>
                     </div>
                     <div class="loyalty-progress" style="font-size:.8rem;margin-top:6px;color:#5d4020;">
                         <?= htmlspecialchars($loyaltyProgressText, ENT_QUOTES, 'UTF-8') ?>
-                        <div style="margin-top:2px;font-weight:600;">Stamps: <?= (int) $loyaltyStamps ?></div>
+                        <div style="margin-top:2px;font-weight:600;">Total Stamps: <?= (int) $loyaltyStamps ?></div>
                     </div>
                     <div class="card-no-wrapper">
                         <span class="card-no">Card no: <?= $cardNo ?></span>
@@ -683,9 +689,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         </div>
                         <div class="s-item" onclick="showSPanel('phone', this)">
                             <i class="fa-solid fa-phone"></i><span>Phone Number</span><i class="fa-solid fa-chevron-right s-arr"></i>
-                        </div>
-                        <div class="s-item" onclick="showSPanel('payment', this)">
-                            <i class="fa-regular fa-credit-card"></i><span>Payment Method</span><i class="fa-solid fa-chevron-right s-arr"></i>
                         </div>
                         <div class="s-item s-logout" onclick="showSPanel('logout', this)">
                             <i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log Out</span><i class="fa-solid fa-chevron-right s-arr"></i>
@@ -778,18 +781,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                             </div>
                             <div class="s-msg" id="msg-phone"></div>
                         </div>
-
-                        <div class="s-panel" id="s-panel-payment">
-                            <h2>Payment Method</h2>
-                            <p>Manage your saved payment methods.</p>
-                            <div class="s-fg"><label>Card Number</label><input type="text" placeholder="XXXX XXXX XXXX XXXX" /></div>
-                            <div class="s-frow">
-                                <div class="s-fg"><label>Expiry</label><input type="text" placeholder="MM/YY" /></div>
-                                <div class="s-fg"><label>CVV</label><input type="text" placeholder="CVV" /></div>
-                            </div>
-                            <button class="s-save-btn">Save Card</button>
-                        </div>
-
                         <div class="s-panel" id="s-panel-logout">
                             <div class="s-welcome-icon s-logout-icon"><img src="../picture/ChatGPT Image May 16, 2026, 09_14_38 PM 1.png" alt=""></div>
                             <h2>Log Out</h2>
@@ -929,6 +920,75 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
     <script>
         // Saved delivery addresses (address book), rendered/managed by account.js
         const ADDRESS_BOOK_INITIAL = <?= json_encode($savedAddresses) ?>;
+        
+        // Store current stamps to detect changes
+        let currentStamps = <?= $loyaltyStamps ?>;
+        
+        // Auto-refresh loyalty card data
+        async function refreshLoyaltyCard() {
+            try {
+                const response = await fetch('../api/get_loyalty_data.php');
+                const data = await response.json();
+                if (data.success) {
+                    const newStamps = data.loyalty_stamps;
+                    
+                    // Only update UI if stamps actually changed
+                    if (newStamps !== currentStamps) {
+                        currentStamps = newStamps;
+                        
+                        // Update loyalty stamps display
+                        const loyaltyDisplayStamps = Math.min(10, Math.max(0, newStamps));
+                        const beanColor = '#6F4E37';
+                        
+                        // Update all stamp SVGs in both rows
+                        const stampElements = document.querySelectorAll('.beans-row svg, .beans-row-2 svg');
+                        stampElements.forEach((svg, index) => {
+                            const path = svg.querySelector('path:first-child');
+                            if (path) {
+                                path.setAttribute('fill', index < loyaltyDisplayStamps ? beanColor : 'none');
+                            }
+                        });
+                        
+                        // Update progress text
+                        const progressText = newStamps === 0 
+                            ? 'No stamps yet — complete an order to start'
+                            : (newStamps >= 10 
+                                ? '10 stamps earned! Great job!' 
+                                : newStamps + ' stamp' + (newStamps > 1 ? 's' : '') + ' earned!');
+                        
+                        const progressElement = document.querySelector('.loyalty-progress');
+                        if (progressElement) {
+                            progressElement.innerHTML = progressText + '<div style="margin-top:2px;font-weight:600;">Total Stamps: ' + newStamps + '</div>';
+                        }
+                        
+                        // Add visual feedback for update
+                        const storeCard = document.querySelector('.card-store');
+                        if (storeCard) {
+                            storeCard.style.transition = 'transform 0.3s ease';
+                            storeCard.style.transform = 'scale(1.02)';
+                            setTimeout(() => {
+                                storeCard.style.transform = 'scale(1)';
+                            }, 300);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to refresh loyalty data:', error);
+            }
+        }
+        
+        // Refresh loyalty data when page gains focus
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                refreshLoyaltyCard();
+            }
+        });
+        
+        // Refresh more frequently for real-time updates (every 5 seconds)
+        setInterval(refreshLoyaltyCard, 5000);
+        
+        // Initial refresh after a short delay
+        setTimeout(refreshLoyaltyCard, 1000);
     </script>
     <script src="../scr/account.js"></script>
 

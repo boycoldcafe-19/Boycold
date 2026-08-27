@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/db_config.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: login.php');
+    header('Location: flashscreen.php');
     exit;
 }
 

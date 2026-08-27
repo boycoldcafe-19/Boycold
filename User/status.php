@@ -343,7 +343,12 @@ function step_class(bool $reached)
                     <?php foreach ($orderItems as $item): ?>
                         <div class="order-item-row">
                             <?php if (!empty($item['product_image'])): ?>
-                                <img src="../<?= htmlspecialchars(ltrim($item['product_image'], '/')) ?>" alt="<?= htmlspecialchars($item['product_name']) ?>" class="order-item-img">
+                                <?php $imagePath = $item['product_image']; ?>
+                                <?php if (strpos($imagePath, '../') === 0): ?>
+                                    <img src="<?= htmlspecialchars($imagePath) ?>" alt="<?= htmlspecialchars($item['product_name']) ?>" class="order-item-img">
+                                <?php else: ?>
+                                    <img src="../<?= htmlspecialchars(ltrim($imagePath, '/')) ?>" alt="<?= htmlspecialchars($item['product_name']) ?>" class="order-item-img">
+                                <?php endif; ?>
                             <?php endif; ?>
                             <div class="order-item-info">
                                 <span class="order-item-name"><?= (int) $item['quantity'] ?>x <?= htmlspecialchars($item['product_name']) ?></span>

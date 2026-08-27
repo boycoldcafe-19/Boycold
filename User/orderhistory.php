@@ -280,7 +280,7 @@ $_SESSION['user_email'] = $user['email'];
             <div class="order-card" data-order-id="${o.id}">
                 <div class="order-card-top">
                     <div>
-                        <p class="order-id">Order #${o.id}</p>
+                        <p class="order-id">Order #${o.order_number}</p>
                         <p class="order-date">${formatDate(o.created_at)}</p>
                     </div>
                     <span class="order-status-badge status-${escapeHtml(o.status)}">${STATUS_LABELS[o.status] || o.status}</span>
@@ -348,8 +348,8 @@ $_SESSION['user_email'] = $user['email'];
                 const items = order.items || [];
 
                 // Populate modal
-                document.getElementById('modalOrderId').textContent = '#' + order.id;
-                document.getElementById('modalOrderTitle').textContent = 'Order #' + order.id;
+                document.getElementById('modalOrderId').textContent = '#' + order.order_number;
+                document.getElementById('modalOrderTitle').textContent = 'Order #' + order.order_number;
                 document.getElementById('modalOrderDate').textContent = formatDate(order.created_at);
 
                 const statusBadge = document.getElementById('modalOrderStatus');
@@ -363,7 +363,7 @@ $_SESSION['user_email'] = $user['email'];
                 } else {
                     itemsContainer.innerHTML = items.map(item => `
                     <div class="order-modal-item">
-                        ${item.product_image ? `<img class="order-modal-item-img" src="${escapeHtml(item.product_image)}" alt="${escapeHtml(item.product_name)}" onerror="this.style.display='none'">` : ''}
+                        ${item.product_image ? `<img class="order-modal-item-img" src="${item.product_image.startsWith('../') ? escapeHtml(item.product_image) : '../' + escapeHtml(item.product_image.replace(/^\//, ''))}" alt="${escapeHtml(item.product_name)}" onerror="this.style.display='none'">` : ''}
                         <div class="order-modal-item-info">
                             <div class="order-modal-item-name">${escapeHtml(item.product_name)}</div>
                             ${item.milk || item.addons ? `<div class="order-modal-item-meta">${escapeHtml(item.milk || '')} ${item.milk && item.addons ? '•' : ''} ${escapeHtml(item.addons || '')}</div>` : ''}

@@ -5,7 +5,7 @@ require_once '../config/db_config.php';
 
 // Check if user is logged in and is a super admin (branch_id = 0 or admin role)
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 

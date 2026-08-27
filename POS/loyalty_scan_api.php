@@ -41,15 +41,16 @@ if (!$user) {
 }
 
 if ($action === 'award') {
-    // Get branch_id and employee_id from session
+    // Get branch_id, device_id, and employee_id from session
     $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+    $deviceId = isset($_SESSION['device_id']) ? (int) $_SESSION['device_id'] : 0;
     $employeeId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
 
-    // Get current balance before update
+    // Get current balance before update (using direct stamp counting: 1 stamp = 10 points)
     $previousBalance = (int) $user['loyalty_beans'] + ((int) $user['loyalty_stamps'] * 10);
 
-    // Award loyalty bean
-    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = loyalty_beans + 1 WHERE card_no = ?");
+    // Award loyalty stamp directly
+    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = loyalty_stamps + 1 WHERE card_no = ?");
     $awardStmt->bind_param('s', $cardNo);
     $awardStmt->execute();
     $awardStmt->close();
@@ -64,14 +65,14 @@ if ($action === 'award') {
     $newBalance = (int) ($updated['loyalty_beans'] ?? 0) + ((int) ($updated['loyalty_stamps'] ?? 0) * 10);
 
     // Record transaction in loyalty_transactions table
-    $transactionStmt = $connect->prepare("INSERT INTO loyalty_transactions (user_id, card_no, branch_id, employee_id, transaction_type, points_awarded, previous_balance, new_balance) VALUES (?, ?, ?, ?, 'bean_award', 1, ?, ?)");
-    $transactionStmt->bind_param('isiiii', $user['id'], $cardNo, $branchId, $employeeId, $previousBalance, $newBalance);
+    $transactionStmt = $connect->prepare("INSERT INTO loyalty_transactions (user_id, card_no, branch_id, device_id, employee_id, transaction_type, points_awarded, previous_balance, new_balance) VALUES (?, ?, ?, ?, ?, 'bean_award', 10, ?, ?)");
+    $transactionStmt->bind_param('isiiii', $user['id'], $cardNo, $branchId, $deviceId, $employeeId, $previousBalance, $newBalance);
     $transactionStmt->execute();
     $transactionStmt->close();
 
     echo json_encode([
         'success' => true,
-        'message' => 'Loyalty bean awarded',
+        'message' => 'Loyalty stamp awarded',
         'customer' => [
             'id' => (int) $user['id'],
             'name' => trim($user['firstname'] . ' ' . $user['lastname']),
@@ -90,7 +91,7 @@ echo json_encode([
         'id' => (int) $user['id'],
         'name' => trim($user['firstname'] . ' ' . $user['lastname']),
         'card_no' => $user['card_no'],
-        'loyalty_beans' => (int) $user['loyalty_beans'],
+        'loyalty_beans' => 0, // Always 0 in new system
         'loyalty_stamps' => (int) $user['loyalty_stamps'],
         'current_points' => (int) (((int) $user['loyalty_beans']) + ((int) $user['loyalty_stamps'] * 10))
     ]

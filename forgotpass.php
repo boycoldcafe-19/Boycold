@@ -25,13 +25,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $ins = $connect->prepare("INSERT INTO otp (email, otp, type, status, otp_sent, ip) VALUES (?, ?, 'reset', 'pending', NOW(), ?)");
             $ins->bind_param("sss", $email, $otp, $ip); $ins->execute();
-            sendOTPEmail($email, $fullName, $otp, 'reset');
+            
+            if (!sendOTPEmail($email, $fullName, $otp, 'reset')) {
+                $error = 'Could not send OTP email. Please check your email address and try again. If the problem persists, please contact support.';
+                error_log("OTP email send failed for email: $email");
+            }
         }
 
-        $_SESSION['otp_email'] = $email;
-        $_SESSION['otp_type']  = 'reset';
-        header('Location: otp.php?mode=reset');
-        exit;
+        if (!$error) {
+            $_SESSION['otp_email'] = $email;
+            $_SESSION['otp_type']  = 'reset';
+            header('Location: otp.php?mode=reset');
+            exit;
+        }
     }
 }
 ?>

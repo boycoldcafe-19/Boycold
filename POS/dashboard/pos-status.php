@@ -10,10 +10,11 @@ session_set_cookie_params([
 ]);
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/loyalty.php';
 
-// Session guard — redirect to login if not logged in
+// Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 
@@ -27,7 +28,7 @@ $employee = $stmt->get_result()->fetch_assoc();
 
 if (!$employee || (int) $employee['is_active'] === 0) {
     session_destroy();
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 $stmt->close();
@@ -112,6 +113,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stmt->bind_param("si", $newStatus, $orderId);
 
     if ($stmt->execute()) {
+        if ($newStatus === 'completed' && ($existingOrder['status'] ?? '') !== 'completed') {
+            awardLoyaltyForCompletedOrder(
+                $connect,
+                $orderId,
+                (string) ($existingOrder['user_name'] ?? ''),
+                $branchId,
+                0,
+                $employeeId
+            );
+        }
         echo json_encode(['success' => true, 'message' => "Order status updated to '$newStatus'."]);
     } else {
         echo json_encode(['success' => false, 'error' => 'Failed to update order status.']);

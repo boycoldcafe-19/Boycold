@@ -3,9 +3,9 @@ session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
 
-// Session guard — redirect to login if not logged in
+// Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ $employee = $stmt->get_result()->fetch_assoc();
 
 if (!$employee || (int) $employee['is_active'] === 0) {
     session_destroy();
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 $stmt->close();

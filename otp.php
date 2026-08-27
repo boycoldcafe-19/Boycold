@@ -162,8 +162,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ins->bind_param("sss", $email, $otp, $ip);
             }
             $ins->execute();
-            sendOTPEmail($email, $fullName, $otp, $type);
-            $success = 'A new OTP has been sent to your email.';
+            
+            if (!sendOTPEmail($email, $fullName, $otp, $type)) {
+                $error = 'Could not send OTP email. Please check your email address and try again. If the problem persists, please contact support.';
+                error_log("OTP email resend failed for email: $email");
+            } else {
+                $success = 'A new OTP has been sent to your email.';
+            }
         }
     }
 }

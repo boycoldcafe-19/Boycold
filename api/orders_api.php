@@ -41,16 +41,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-session_set_cookie_params([
+$sessionCookieParams = [
     'lifetime' => 0,
     'path' => '/',
     'domain' => '',
     'secure' => false,
     'httponly' => true,
     'samesite' => 'Lax'
-]);
-session_start();
+];
+
+function startOrderApiSession(string $name, array $cookieParams): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
+    session_name($name);
+    session_set_cookie_params($cookieParams);
+    session_start();
+}
+
+function orderApiSessionHasAuth(): bool
+{
+    return !empty($_SESSION['user_id']) || !empty($_SESSION['employee_id']);
+}
+
+function orderApiRequestCameFromPos(): bool
+{
+    $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH);
+
+    return is_string($refererPath) && stripos($refererPath, '/POS/') !== false;
+}
+
+// Customer pages use PHP's default session cookie, while POS pages use
+// POS_SESSION. This API is shared by both sides, so resume the session
+// that matches the caller when possible, then fall back to the other one.
+$defaultSessionName = session_name();
+$startedSession = false;
+$sessionCandidates = orderApiRequestCameFromPos()
+    ? ['POS_SESSION', $defaultSessionName]
+    : [$defaultSessionName, 'POS_SESSION'];
+
+foreach (array_unique($sessionCandidates) as $sessionName) {
+    if (empty($_COOKIE[$sessionName])) {
+        continue;
+    }
+
+    $startedSession = true;
+    startOrderApiSession($sessionName, $sessionCookieParams);
+
+    if (orderApiSessionHasAuth()) {
+        break;
+    }
+}
+
+if (!$startedSession) {
+    startOrderApiSession($defaultSessionName, $sessionCookieParams);
+}
 require_once '../config/db_config.php';
+require_once '../config/loyalty.php';
 
 header('Content-Type: application/json');
 
@@ -169,7 +218,10 @@ switch ($action) {
     // }
     case 'place':
         $items          = $body['items']        ?? [];
-        $orderType      = substr(trim($body['order_type'] ?? 'dine-in'), 0, 20);
+        $orderType      = strtolower(substr(trim($body['order_type'] ?? 'dine-in'), 0, 20));
+        if (in_array($orderType, ['pick-up', 'pick up', 'takeout'], true)) {
+            $orderType = 'pickup';
+        }
         $address        = trim($body['address']  ?? '');
         $contactNumber  = trim($body['contact_number'] ?? '');
         $deliveryFee    = (float) ($body['delivery_fee'] ?? 0);
@@ -182,9 +234,9 @@ switch ($action) {
         if (!in_array($paymentMethod, ['cod', 'gcash'], true)) {
             $paymentMethod = 'cod';
         }
-        // GCash is paid through the app at checkout time; COD is
-        // settled later when the order is delivered (see update_status).
-        $paymentStatus = ($paymentMethod === 'gcash') ? 'paid' : 'unpaid';
+        
+        // Payment status starts as unpaid
+        $paymentStatus = 'unpaid';
 
         if (empty($items)) {
             echo json_encode(['success' => false, 'error' => 'No items in order.']);
@@ -200,15 +252,17 @@ switch ($action) {
 
         // ── Insert order row ──────────────────────────────────
         // user_name comes from SESSION — never from the request body
+        $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
         $stmt = $connect->prepare(
             "INSERT INTO orders
-               (user_name, status, order_type, payment_method, payment_status,
+               (user_name, user_id, status, order_type, payment_method, payment_status,
                 subtotal, delivery_fee, tax, total, branch_id, address, notes)
-             VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->bind_param(
-            "ssssdddisss",
+            "sisssddddiss",
             $userName,
+            $userId,
             $orderType,
             $paymentMethod,
             $paymentStatus,
@@ -306,6 +360,7 @@ switch ($action) {
         $sql = "
             SELECT
                 o.id,
+                ROW_NUMBER() OVER (PARTITION BY o.user_name ORDER BY o.created_at ASC, o.id ASC) AS order_number,
                 o.user_name,
                 o.status,
                 o.order_type,
@@ -341,6 +396,7 @@ switch ($action) {
         $sql = "
             SELECT
                 id,
+                ROW_NUMBER() OVER (PARTITION BY user_name ORDER BY created_at ASC, id ASC) AS order_number,
                 user_name,
                 status,
                 order_type,
@@ -394,12 +450,22 @@ switch ($action) {
         // Non-admins can only see their own order
         if ($isAdmin) {
             $stmt = $connect->prepare(
-                "SELECT * FROM orders WHERE id = ?"
+                "SELECT o.*,
+                        (SELECT COUNT(*) FROM orders sequence_order
+                         WHERE sequence_order.user_name = o.user_name
+                           AND (sequence_order.created_at < o.created_at
+                                OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
+                 FROM orders o WHERE o.id = ?"
             );
             $stmt->bind_param("i", $orderId);
         } else {
             $stmt = $connect->prepare(
-                "SELECT * FROM orders WHERE id = ? AND user_name = ?"
+                                "SELECT o.*,
+                                                (SELECT COUNT(*) FROM orders sequence_order
+                                                 WHERE sequence_order.user_name = o.user_name
+                                                     AND (sequence_order.created_at < o.created_at
+                                                                OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
+                                 FROM orders o WHERE o.id = ? AND o.user_name = ?"
             );
             $stmt->bind_param("is", $orderId, $userName);
         }
@@ -509,10 +575,26 @@ switch ($action) {
             break;
         }
 
+        // Fetch payment method and status for QR Ph check
+        $orderDetailsStmt = $connect->prepare("SELECT payment_method, payment_status FROM orders WHERE id = ?");
+        $orderDetailsStmt->bind_param("i", $orderId);
+        $orderDetailsStmt->execute();
+        $orderDetails = $orderDetailsStmt->get_result()->fetch_assoc();
+        $orderDetailsStmt->close();
+
+        $paymentMethod = $orderDetails['payment_method'] ?? 'cod';
+        $paymentStatus = $orderDetails['payment_status'] ?? 'unpaid';
+
+        // For QR Ph (gcash), require payment to be confirmed before order can be completed
+        if ($newStatus === 'completed' && $paymentMethod === 'gcash' && $paymentStatus !== 'paid') {
+            echo json_encode(['success' => false, 'error' => 'Order cannot be completed until QR Ph payment is confirmed.']);
+            break;
+        }
+
         $shouldAwardLoyalty = ($newStatus === 'completed' && ($existingOrder['status'] ?? '') !== 'completed');
 
         if ($newStatus === 'completed') {
-            // Auto-settle COD orders on completion; leave GCash (already paid) untouched
+            // Auto-settle COD orders on completion; leave QR Ph (already paid) untouched
             $stmt = $connect->prepare(
                 "UPDATE orders
                  SET status = ?,
@@ -526,14 +608,7 @@ switch ($action) {
         $stmt->execute();
 
         if ($shouldAwardLoyalty && !empty($existingOrder['user_name'])) {
-            $loyaltyStmt = $connect->prepare(
-                "UPDATE users
-                 SET loyalty_beans = CASE WHEN loyalty_beans + 1 >= 10 THEN 0 ELSE loyalty_beans + 1 END,
-                     loyalty_stamps = loyalty_stamps + CASE WHEN loyalty_beans + 1 >= 10 THEN 1 ELSE 0 END
-                 WHERE user_name = ?"
-            );
-            $loyaltyStmt->bind_param("s", $existingOrder['user_name']);
-            $loyaltyStmt->execute();
+            awardLoyaltyForCompletedOrder($connect, $orderId, $existingOrder['user_name']);
         }
 
         echo json_encode(['success' => true, 'message' => "Order status set to '$newStatus'."]);

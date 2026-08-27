@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
             $_SESSION['employee_email'] = $employee['email'];
             $_SESSION['employee_role']  = $employee['role'];
             $_SESSION['branch_id']     = $employee['branch_id'];
+            $_SESSION['has_account']  = true; // Mark that user has an account
 
             // No PIN set yet (e.g. admin-created account) — go set one first
             if (empty($employee['pin'])) {
@@ -125,6 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
                         <button type="submit" class="submit-btn" id="loginBtn">
                             Log In
                         </button>
+                    </div>
+                    
+                    <div class="signup-link">
+                        <p>Don't have an account? <a href="signup.php">Sign up</a></p>
                     </div>
                 </div>
             </form>

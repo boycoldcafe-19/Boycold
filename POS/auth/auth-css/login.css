@@ -47,6 +47,29 @@ nav {
     text-align: center;
 }
 
+/* ── Signup link styling ── */
+.signup-link {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.signup-link p {
+    color: #666;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.signup-link a {
+    color: #6F4E37;
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
 /* ── Step wrapper: both steps live in the DOM, only one is shown ── */
 .form-step {
     display: none;

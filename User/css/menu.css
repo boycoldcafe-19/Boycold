@@ -6,7 +6,7 @@
 body {
     overflow-x: hidden;
     min-height: 100vh;
-    background: url('/picture/aa3044d0-6480-46e4-96e1-4429219722b8 1.png') center top / cover no-repeat, #000;
+    background: url('../../picture/aa3044d0-6480-46e4-96e1-4429219722b8 1.png') center top / cover no-repeat, #000;
 }
 
 html, body {
@@ -410,10 +410,10 @@ header .box {
 }
 
 .box ul li a:hover {
-    background: rgba(111, 78, 55, 1);
+    background:#692727;
 }
 .box ul li a.active {
-    background: rgba(111, 78, 55, 1);
+    background:#692727;
 }
 
 .background {

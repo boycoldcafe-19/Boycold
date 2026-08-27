@@ -3,9 +3,9 @@ session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
 
-// Session guard — redirect to login if not logged in
+// Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ $employee = $stmt->get_result()->fetch_assoc();
 
 if (!$employee || (int) $employee['is_active'] === 0) {
     session_destroy();
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 $stmt->close();
@@ -66,10 +66,12 @@ if ($branchId > 0) {
 }
 
 // Online Orders only covers orders placed through the customer app:
-// delivery and pickup. Walk-in / staff-keyed orders (dine-in, takeout)
-// belong to the POS itself and are excluded here.
+// delivery and pickup. Legacy customer pickup rows may still be saved
+// as takeout, so include only those with a user_id. Walk-in / staff-keyed
+// orders keep user_id NULL and stay excluded here.
 $onlineTypes = ['delivery', 'pickup'];
 $placeholders = implode(',', array_fill(0, count($onlineTypes), '?'));
+$onlineTypeCondition = "(o.order_type IN ($placeholders) OR (o.order_type = 'takeout' AND o.user_id IS NOT NULL))";
 
 // Brand new ("pending") orders are shown too, tagged "New" — they only
 // surface under the "All" tab since posonline_status_filter() maps
@@ -86,7 +88,7 @@ $sql = "SELECT o.id, o.user_name, o.status, o.order_type, o.payment_method,
                u.phone AS user_phone
         FROM orders o
         LEFT JOIN users u ON u.user_name = o.user_name
-        WHERE o.order_type IN ($placeholders)
+        WHERE $onlineTypeCondition
           AND o.status IN ($statusPlaceholders)
           AND o.branch_id = ?
         ORDER BY o.created_at DESC";
@@ -108,10 +110,12 @@ if ($stmt) {
 $typeLabels = [
     'delivery' => 'Delivery',
     'pickup'   => 'Pick Up',
+    'takeout'  => 'Pick Up',
 ];
 $typeCodes = [
     'delivery' => 'DEL',
     'pickup'   => 'PU',
+    'takeout'  => 'PU',
 ];
 
 // The DB tracks a finer-grained lifecycle than the 4 tabs shown to staff.
@@ -161,7 +165,7 @@ function posonline_status_class(string $status): string {
 // and are waiting to be confirmed.
 $pendingCount = 0;
 if ($branchId > 0) {
-    $pendingSql = "SELECT COUNT(*) AS cnt FROM orders WHERE order_type IN ($placeholders) AND status = 'pending' AND branch_id = ?";
+    $pendingSql = "SELECT COUNT(*) AS cnt FROM orders o WHERE $onlineTypeCondition AND status = 'pending' AND branch_id = ?";
     $pendingStmt = $connect->prepare($pendingSql);
     if ($pendingStmt) {
         $types = str_repeat('s', count($onlineTypes)) . 'i';

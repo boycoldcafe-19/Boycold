@@ -6,6 +6,8 @@
     const ORDER_POPUP = '../order-popup.php';
     const POLL_INTERVAL = 5000;
 
+    console.log('[Order Notify] Initialized, polling every', POLL_INTERVAL, 'ms');
+
     let latestOrderId = 0;
     let isInitialPoll = true;
     let popupSound = null;
@@ -282,6 +284,24 @@
         }
     }
 
+    function updateOrderCountBadges(count) {
+        const normalizedCount = Math.max(0, Number(count) || 0);
+        document.querySelectorAll('.nav-badge, .icon-badge').forEach((badge) => {
+            badge.textContent = String(normalizedCount);
+            badge.style.display = normalizedCount > 0 ? 'flex' : 'none';
+        });
+    }
+
+    async function refreshOrderCount() {
+        try {
+            const res = await fetch(`${ORDER_API}?action=counts`, { cache: 'no-store' });
+            const data = await res.json();
+            if (data.success) updateOrderCountBadges(data.pending_count);
+        } catch (err) {
+            console.error('Online order count refresh failed', err);
+        }
+    }
+
     window.addEventListener('message', (event) => {
         const type = event.data?.type;
         if (['orderAccepted', 'orderCancelled', 'closeOrderPopup', 'orderUpdated'].includes(type)) {
@@ -289,6 +309,7 @@
         }
         if (['orderAccepted', 'orderCancelled', 'orderUpdated'].includes(type)) {
             refreshOnlineOrdersTable();
+            refreshOrderCount();
         }
     });
 
@@ -296,17 +317,21 @@
         try {
             const res = await fetch(`${ORDER_API}?last_order_id=${encodeURIComponent(latestOrderId)}`);
             const data = await res.json();
+            console.log('[Order Notify] Poll response:', data);
             if (!data.success || !Array.isArray(data.orders)) return;
 
             if (isInitialPoll) {
                 latestOrderId = data.latest_order_id || latestOrderId;
                 isInitialPoll = false;
+                console.log('[Order Notify] Initial poll, latest_order_id:', latestOrderId);
                 return;
             }
 
             if (data.orders.length > 0) {
                 latestOrderId = data.latest_order_id || latestOrderId;
+                console.log('[Order Notify] Found new orders:', data.orders.length);
                 data.orders.forEach((order) => {
+                    console.log('[Order Notify] Showing popup for order:', order.id);
                     showPopup(order.id);
                     addNotification(order);
                 });
@@ -318,5 +343,7 @@
 
     bindGeneratedDropdown(ensureNotificationUi());
     setInterval(pollOnlineOrders, POLL_INTERVAL);
+    setInterval(refreshOrderCount, POLL_INTERVAL);
     pollOnlineOrders();
+    refreshOrderCount();
 })();

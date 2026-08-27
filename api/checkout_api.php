@@ -16,6 +16,14 @@
 //
 // Returns JSON { success, order_id, total, message }
 // ─────────────────────────────────────────────────────────────
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => false,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 session_start();
 require_once '../config/db_config.php';
 
@@ -97,6 +105,7 @@ if (!in_array($paymentMethod, ['cod', 'gcash'], true)) {
 $address     = trim($body['address']     ?? '');
 $deliveryFee = max(0, (float) ($body['delivery_fee'] ?? 0));
 $tax         = max(0, (float) ($body['tax']          ?? 0));
+$branchId    = isset($body['branch_id']) ? (int) $body['branch_id'] : 1; // Use selected branch, default to Baliuag
 $orderNotes  = trim($body['notes'] ?? '');
 
 // ── Re-calculate totals server-side (never trust client totals) ─
@@ -112,14 +121,15 @@ $total = $subtotal + $deliveryFee + $tax;
 
 // ── Insert order ───────────────────────────────────────────────
 $paymentStatus = ($paymentMethod === 'gcash') ? 'paid' : 'unpaid';
+$userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
 $stmt = $connect->prepare(
     "INSERT INTO orders
-       (user_name, status, order_type, payment_method, payment_status, subtotal, delivery_fee, tax, total, address, notes, branch_id)
-     VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+       (user_name, user_id, status, order_type, payment_method, payment_status, subtotal, delivery_fee, tax, total, address, notes, branch_id)
+     VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 1; // Default to Baliuag if not set
-$stmt->bind_param("ssssddddssi",
-    $userName, $orderType, $paymentMethod, $paymentStatus, $subtotal, $deliveryFee, $tax, $total, $address, $orderNotes, $branchId
+// Use the branch_id from the checkout form (user's selected branch)
+$stmt->bind_param("sissssdddssi",
+    $userName, $userId, $orderType, $paymentMethod, $paymentStatus, $subtotal, $deliveryFee, $tax, $total, $address, $orderNotes, $branchId
 );
 
 if (!$stmt->execute()) {

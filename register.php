@@ -1,11 +1,9 @@
 <?php
-require_once './config/google_oauth.php';
-startAppSession();
+require_once './config/google.php';
 require_once './config/db_config.php';
 require_once './config/mailer.php';
 
-$error = $_SESSION['google_error'] ?? '';
-unset($_SESSION['google_error']);
+$error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstname = trim($_POST['Firstname'] ?? '');
@@ -132,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="google">
                 <p>Or sign up with:</p>
-                <a href="google_signup.php" class="google-btn">
+                <a href="<?= getGoogleAuthUrl('register') ?>" class="google-btn">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20">
                     <span>Continue with Google</span>
                 </a>

@@ -85,7 +85,7 @@ $_SESSION['user_email'] = $user['email'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/addtocart.css">
-    <link rel="icon" href="/picture/icon.png" type="image/png">
+    <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
@@ -145,8 +145,9 @@ $_SESSION['user_email'] = $user['email'];
             </ul>
         </div>
         <div class="logo">
-            <img src="/picture/BoyCold Logo 2.png" alt="BoyCold">
+            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
         </div>
+
         <div class="nav-right-group">
             <a href="cart.php" class="cart-link">
                 <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i>
@@ -315,7 +316,7 @@ $_SESSION['user_email'] = $user['email'];
             <div class="cart-item-checkbox">
                 <input type="checkbox" class="item-checkbox" data-cart-id="${item.cartId}" onchange="toggleItemSelection(${item.cartId})" />
             </div>
-            <div class="cart-item-img"><img src="${item.image}" alt="${item.name}"></div>
+            <div class="cart-item-img"><img src="${item.image.startsWith('../') ? item.image : '../' + item.image.replace(/^\//, '')}" alt="${item.name}"></div>
             <div class="cart-item-details">
                 <p class="item-name">${item.name}</p>
                 ${item.milk ? `<p class="item-meta">Milk: ${item.milk}</p>` : ''}

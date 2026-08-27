@@ -3,9 +3,9 @@ session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
 
-// Session guard — redirect to login if not logged in
+// Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ $employee = $stmt->get_result()->fetch_assoc();
 
 if (!$employee || (int) $employee['is_active'] === 0) {
     session_destroy();
-    header('Location: ../auth/login.php');
+    header('Location: ../auth/flashscreen.php');
     exit;
 }
 $stmt->close();
@@ -2942,7 +2942,7 @@ if ($branchId > 0) {
                 const data = await response.json();
                 if (data.success) {
                     const fullStock = await loadInventory();
-                    renderInventoryBar();
+                    await renderInventoryBar();
                     updateProductCardsStock();
                 }
             } catch (e) {
@@ -2980,8 +2980,8 @@ if ($branchId > 0) {
             percentEl.textContent = percent + '%';
         }
 
-        function renderInventoryBar() {
-            const inv = loadInventory();
+        async function renderInventoryBar() {
+            const inv = await loadInventory();
             renderInventoryStat('milk', inv.milk.current, inv.milk.max, inv.milk.unit || 'ml');
             renderInventoryStat('coffeeBeans', inv.coffeeBeans.current, inv.coffeeBeans.max, inv.coffeeBeans.unit || 'g');
             renderInventoryStat('cups', inv.cups.current, inv.cups.max, inv.cups.unit || 'pcs');
@@ -3095,11 +3095,13 @@ if ($branchId > 0) {
         }
 
         // Save the defaults on first load, then render
-        saveInventory(loadInventory());
-        renderInventoryBar();
-        document.querySelectorAll('.product-card').forEach(setupListViewStock);
-        updateProductCardsStock();
-        attachOrderButtonHandlers();
+        (async () => {
+            saveInventory(await loadInventory());
+            await renderInventoryBar();
+            document.querySelectorAll('.product-card').forEach(setupListViewStock);
+            updateProductCardsStock();
+            attachOrderButtonHandlers();
+        })();
 
         const resetStockBtn = document.getElementById('resetStockBtn');
         if (resetStockBtn) {

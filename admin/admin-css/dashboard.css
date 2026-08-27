@@ -1000,7 +1000,7 @@ button {
 }
 
 .chart-area{
-    fill: url(#salesGradient);
+    fill: url('#salesGradient');
 }
 
 .chart-line{

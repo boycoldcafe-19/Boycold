@@ -4,12 +4,6 @@ require_once '../config/db_config.php';
 
 header('Content-Type: application/json');
 
-// Session guard
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
 $action = $_GET['action'] ?? '';
 
 try {

@@ -47,12 +47,14 @@ $addrStmt->bind_param("s", $userName);
 $addrStmt->execute();
 $savedAddresses = $addrStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $addrStmt->close();
+$savedAddresses = $savedAddresses ?? [];
 
 // Fetch available branches for branch selection
 $branchStmt = $connect->prepare("SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name");
 $branchStmt->execute();
 $branches = $branchStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $branchStmt->close();
+$branches = $branches ?? [];
 ?>
 
 <!DOCTYPE html>
@@ -121,7 +123,7 @@ $branchStmt->close();
             </ul>
         </div>
         <div class="logo">
-            <img src="/picture/BoyCold Logo 2.png" alt="BoyCold">
+            <img src="../picture/BoyCold Logo 2.png" alt="BoyCold">
         </div>
         <div class="nav-right-group">
             <a href="cart.php" class="cart-link">
@@ -233,10 +235,10 @@ $branchStmt->close();
 
                         <label class="co-pay-card co-pay-selected" id="payGcash">
                             <input type="radio" name="payment" value="gcash" checked class="co-radio">
-                            <div class="co-pay-logo co-pay-gcash">G</div>
+                            <div class="co-pay-logo co-pay-gcash">QR Ph</div>
                             <div class="co-pay-info">
-                                <div class="co-pay-name">GCash</div>
-                                <div class="co-pay-desc">Pay securely using your GCash app</div>
+                                <div class="co-pay-name">QR Ph</div>
+                                <div class="co-pay-desc">Pay securely using QR Ph</div>
                             </div>
                             <div class="co-pay-circle"></div>
                         </label>
@@ -380,8 +382,7 @@ $branchStmt->close();
 
 
     <script>
-        /* ── Saved delivery addresses (address book) from the DB ── */
-        const SAVED_ADDRESSES = <?= json_encode($savedAddresses) ?>;
+        const SAVED_ADDRESSES = <?= json_encode($savedAddresses, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
         let addresses = Array.isArray(SAVED_ADDRESSES) ? SAVED_ADDRESSES : [];
 
         function formatAddress(a) {
@@ -636,6 +637,65 @@ $branchStmt->close();
             btn.style.cursor  = subtotal === 0 ? 'not-allowed' : 'pointer';
         }
 
+        async function placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, sourceId) {
+            const btn = document.getElementById('coPlaceBtn');
+            
+            const orderData = {
+                action: 'place',
+                items: cartItems.map(i => ({
+                    name:      i.name,
+                    unitPrice: i.unitPrice,
+                    qty:       i.qty,
+                    image:     i.image     || '',
+                    milk:      i.milk      || '',
+                    addons:    i.addons    || '',
+                    orderType: i.orderType || orderType,
+                    notes:     i.notes     || ''
+                })),
+                order_type:      orderType,
+                payment_method:  paymentMethod,
+                branch_id:       branchId,
+                address:         finalAddress,
+                contact_number:  phone,
+                delivery_fee:    DELIVERY_FEE,
+                tax:             TAX,
+                notes:           '',
+                from_cart:       !isDirectOrder
+            };
+
+            try {
+                const res    = await fetch(ORDER_API, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify(orderData)
+                });
+                
+                if (!res.ok) {
+                    const errText = await res.text();
+                    console.error('API Response Error:', res.status, errText);
+                    alert('Error: ' + res.status + ' ' + res.statusText);
+                    btn.disabled = false;
+                    btn.textContent = 'Place Order — ₱' + total.toFixed(2);
+                    return;
+                }
+                
+                const result = await res.json();
+                if (result.success) {
+                    if (isDirectOrder) sessionStorage.removeItem(DIRECT_KEY);
+                    window.location.href = 'status.php?order_id=' + encodeURIComponent(result.order_id);
+                } else {
+                    alert('Error placing order: ' + (result.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.textContent = 'Place Order — ₱' + total.toFixed(2);
+                }
+            } catch (err) {
+                console.error('Network error:', err);
+                alert('Network error: ' + err.message + '\n\nPlease check browser console for details.');
+                this.disabled = false;
+                updateTotals(subtotal);
+            }
+        }
+
         /* ── Place Order ── */
         document.getElementById('coPlaceBtn').addEventListener('click', async function() {
             if (!cartItems.length) return;
@@ -644,7 +704,7 @@ $branchStmt->close();
             const activeDelivery = document.querySelector('.co-toggle-btn.co-active');
             const deliveryText = activeDelivery ? activeDelivery.textContent.trim().toLowerCase() : 'delivery';
             const isPickup  = deliveryText.includes('pick');
-            const orderType = isPickup ? 'takeout' : 'delivery';
+            const orderType = isPickup ? 'pickup' : 'delivery';
 
             // For pick-up use the branch select; for delivery use the address field
             const branchEl = document.getElementById('branchSelect');
@@ -673,68 +733,37 @@ $branchStmt->close();
             this.textContent = 'Placing order…';
 
             const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
-            const orderData = {
-                action: 'place',
-                items: cartItems.map(i => ({
-                    name:      i.name,
-                    unitPrice: i.unitPrice,
-                    qty:       i.qty,
-                    image:     i.image     || '',
-                    milk:      i.milk      || '',
-                    addons:    i.addons    || '',
-                    orderType: i.orderType || orderType,
-                    notes:     i.notes     || ''
-                })),
-                order_type:      orderType,
-                payment_method:  paymentMethod,
-                branch_id:       branchId,
-                address:         finalAddress,
-                contact_number:  phone,
-                delivery_fee:    DELIVERY_FEE,
-                tax:             TAX,
-                notes:           '',
-                // Only let the server clear the persistent cart when this
-                // order actually came from it. A direct "buy now" order
-                // must never wipe out unrelated items sitting in the cart.
-                from_cart:       !isDirectOrder
-            };
+            const total = subtotal + DELIVERY_FEE + TAX;
 
-            try {
-                const res    = await fetch(ORDER_API, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify(orderData)
-                });
-                
-                // Check if response is ok
-                if (!res.ok) {
-                    const errText = await res.text();
-                    console.error('API Response Error:', res.status, errText);
-                    alert('Error: ' + res.status + ' ' + res.statusText);
-                    this.disabled = false;
-                    updateTotals(subtotal);
-                    return;
-                }
-                
-                const result = await res.json();
-                if (result.success) {
-                    if (isDirectOrder) sessionStorage.removeItem(DIRECT_KEY);
-                    window.location.href = 'status.php?order_id=' + encodeURIComponent(result.order_id);
-                } else {
-                    alert('Error placing order: ' + (result.error || 'Unknown error'));
-                    this.disabled = false;
-                    updateTotals(subtotal);
-                }
-            } catch (err) {
-                console.error('Network error:', err);
-                alert('Network error: ' + err.message + '\n\nPlease check browser console for details.');
-                this.disabled = false;
-                updateTotals(subtotal);
-            }
+            // Proceed with order placement
+            await placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, null);
         });
 
         // Load cart on page ready
         loadCart();
+
+        // Pre-select delivery mode based on order type from ordercustom.php
+        const storedOrderType = sessionStorage.getItem('boycold_order_type');
+        if (storedOrderType) {
+            const deliveryBtns = document.querySelectorAll('.co-toggle-btn');
+            if (storedOrderType.toLowerCase().includes('pick') || storedOrderType.toLowerCase().includes('takeout')) {
+                // Select Pick-Up button
+                deliveryBtns.forEach(btn => {
+                    if (btn.textContent.includes('Pick-Up')) {
+                        setDeliveryMode(btn);
+                    }
+                });
+            } else {
+                // Select Delivery button (default)
+                deliveryBtns.forEach(btn => {
+                    if (btn.textContent.includes('Delivery')) {
+                        setDeliveryMode(btn);
+                    }
+                });
+            }
+            // Clear the stored order type after using it
+            sessionStorage.removeItem('boycold_order_type');
+        }
     </script>
 
 </body>

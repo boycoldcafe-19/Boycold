@@ -185,16 +185,18 @@ try {
     // Get branch_id and cashier_id from session
     $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
     $cashierId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
+    $userId = null; // POS orders are typically walk-in customers
 
     $stmt = $connect->prepare(
         "INSERT INTO orders
-           (user_name, status, order_type, payment_method, payment_status,
+           (user_name, user_id, status, order_type, payment_method, payment_status,
             subtotal, delivery_fee, tax, total, address, notes, branch_id, cashier_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $stmt->bind_param(
-        'sssssddddssii',
+        'sisssssdddssii',
         $userName,
+        $userId,
         $status,
         $orderType,
         $paymentMethod,
@@ -275,6 +277,53 @@ try {
     $createdRow = $createdStmt->get_result()->fetch_assoc();
     if (!empty($createdRow['created_at'])) {
         $createdAt = $createdRow['created_at'];
+    }
+
+    // Award loyalty stamps for POS orders (they're completed immediately)
+    // Skip for walk-in customers
+    if ($userName !== 'Walk-in Customer') {
+        $userStmt = $connect->prepare("SELECT id, loyalty_beans, loyalty_stamps, card_no FROM users WHERE user_name = ?");
+        $userStmt->bind_param("s", $userName);
+        $userStmt->execute();
+        $userInfo = $userStmt->get_result()->fetch_assoc();
+        $userStmt->close();
+
+        if ($userInfo) {
+            // Calculate previous balance (using direct stamp counting: 1 stamp = 10 points)
+            $previousBalance = (int) $userInfo['loyalty_beans'] + ((int) $userInfo['loyalty_stamps'] * 10);
+
+            // Update loyalty: increment stamps directly, keep beans at 0
+            $loyaltyStmt = $connect->prepare(
+                "UPDATE users
+                 SET loyalty_beans = 0,
+                     loyalty_stamps = loyalty_stamps + 1
+                 WHERE user_name = ?"
+            );
+            $loyaltyStmt->bind_param("s", $userName);
+            $loyaltyStmt->execute();
+            $loyaltyStmt->close();
+
+            // Get updated balance
+            $refreshStmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps FROM users WHERE user_name = ?");
+            $refreshStmt->bind_param("s", $userName);
+            $refreshStmt->execute();
+            $updated = $refreshStmt->get_result()->fetch_assoc();
+            $refreshStmt->close();
+
+            $newBalance = (int) ($updated['loyalty_beans'] ?? 0) + ((int) ($updated['loyalty_stamps'] ?? 0) * 10);
+
+            // Get device_id from session
+            $deviceId = isset($_SESSION['device_id']) ? (int) $_SESSION['device_id'] : 0;
+
+            // Record transaction in loyalty_transactions table
+            $transactionStmt = $connect->prepare(
+                "INSERT INTO loyalty_transactions (user_id, card_no, branch_id, device_id, employee_id, transaction_type, points_awarded, previous_balance, new_balance, order_id)
+                 VALUES (?, ?, ?, ?, ?, 'bean_award', 10, ?, ?, ?)"
+            );
+            $transactionStmt->bind_param('isiiiii', $userInfo['id'], $userInfo['card_no'], $branchId, $deviceId, $cashierId, $previousBalance, $newBalance, $orderId);
+            $transactionStmt->execute();
+            $transactionStmt->close();
+        }
     }
 
     $connect->commit();

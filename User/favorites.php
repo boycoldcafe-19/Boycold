@@ -203,7 +203,7 @@ $_SESSION['user_email'] = $user['email'];
         <span id="cartToastMsg">Added to cart!</span>
     </div>
 
-    <script src="/scr/favorites.js"></script>
+    <script src="../scr/favorites.js"></script>
 </body>
 
 </html>

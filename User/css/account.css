@@ -528,7 +528,7 @@ html {
     position: relative;
     flex: 1;
     min-height: 220px;
-    background-image: url('/picture/Rectangle 78.png');
+    background-image: url('../../picture/Rectangle 78.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -617,24 +617,17 @@ html {
     margin-bottom: 10px;
 }
 
-.bean {
-    font-size: 20px;
-    text-align: center;
-    transition: transform 0.2s;
-    line-height: 1;
+.beans-row svg,
+.beans-row-2 svg {
+    transition: transform 0.3s ease, filter 0.3s ease;
+    cursor: pointer;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-.bean:hover {
-    transform: scale(1.3) rotate(12deg);
-}
-
-.bean.filled {
-    opacity: 1;
-}
-
-.bean.empty {
-    opacity: 0.3;
-    filter: grayscale(1);
+.beans-row svg:hover,
+.beans-row-2 svg:hover {
+    transform: scale(1.2) rotate(8deg);
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)) brightness(1.1);
 }
 
 /* ── QR button on loyalty card ── */
