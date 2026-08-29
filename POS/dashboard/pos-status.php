@@ -11,6 +11,7 @@ session_set_cookie_params([
 session_start();
 require_once '../config/db_config.php';
 require_once '../../config/loyalty.php';
+require_once '../../config/payments.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -75,10 +76,21 @@ if ($branchId > 0) {
 }
 
 // Handle POST request for status updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
 
     $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+
+    if ($_POST['action'] === 'confirm_payment') {
+        echo json_encode(boycold_confirm_cod_payment($connect, $orderId, $branchId));
+        exit;
+    }
+
+    if ($_POST['action'] !== 'update_status') {
+        echo json_encode(['success' => false, 'error' => 'Invalid action.']);
+        exit;
+    }
+
     $newStatus = trim($_POST['status'] ?? '');
     $allowed = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed', 'cancelled'];
 
@@ -88,13 +100,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     // Get existing order to check payment method and branch ownership
-    $existingOrderStmt = $connect->prepare("SELECT user_name, status, payment_method, branch_id FROM orders WHERE id = ? AND branch_id = ?");
+    $existingOrderStmt = $connect->prepare("SELECT user_name, status, payment_method, payment_status, branch_id FROM orders WHERE id = ? AND branch_id = ?");
     $existingOrderStmt->bind_param("ii", $orderId, $branchId);
     $existingOrderStmt->execute();
     $existingOrder = $existingOrderStmt->get_result()->fetch_assoc();
 
     if (!$existingOrder) {
         echo json_encode(['success' => false, 'error' => 'Order not found.']);
+        exit;
+    }
+
+    $payMethod = strtolower((string) ($existingOrder['payment_method'] ?? 'cod'));
+    $payStatus = strtolower((string) ($existingOrder['payment_status'] ?? 'unpaid'));
+    if ($payMethod === 'qrph' && $payStatus !== 'paid' && $newStatus !== 'cancelled') {
+        echo json_encode(['success' => false, 'error' => 'QRPh payment must be verified by PayMongo first.']);
         exit;
     }
 
@@ -204,7 +223,7 @@ $orderTypeLabels = [
 
 $paymentLabels = [
     'cod'   => 'Cash on Delivery',
-    'gcash' => 'GCash',
+    'qrph'  => 'QRPh',
 ];
 
 $typeCodes = [
@@ -253,8 +272,13 @@ $statusMessage = $statusMessages[$orderStatus] ?? ['Order status updated.', ''];
 $nextStatus = $nextStatusMap[$orderStatus] ?? null;
 $prevStatus = $prevStatusMap[$orderStatus] ?? null;
 
+if ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
+    $nextStatus = null;
+    $statusMessages['pending'] = ['Waiting for QRPh payment.', 'This order is confirmed automatically after PayMongo verifies the payment.'];
+}
+
 // Define different status flows based on payment method
-if ($paymentMethodKey === 'gcash') {
+if ($paymentMethodKey === 'qrph') {
     // GCash flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
     $statusIndex = [
         'pending'   => 0,
@@ -540,7 +564,7 @@ if ($paymentMethodKey === 'gcash') {
                                 </div>
                                 <div>
                                     <dt>Payment Method</dt>
-                                    <dd><?= htmlspecialchars($paymentMethodLabel) ?></dd>
+                                    <dd><?= htmlspecialchars(boycold_payment_label($paymentMethodKey, $paymentStatusKey)) ?></dd>
                                 </div>
                             </dl>
 
@@ -622,6 +646,11 @@ if ($paymentMethodKey === 'gcash') {
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </a>
                             <?php endif; ?>
+                            <?php if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid'): ?>
+                                <button class="status-btn primary" type="button" id="confirmCodPayBtn">
+                                    Confirm Cash Payment
+                                </button>
+                            <?php endif; ?>
                         </footer>
                     <?php endif; ?>
                 </article>
@@ -671,6 +700,39 @@ if ($paymentMethodKey === 'gcash') {
                 }
             });
         });
+
+        const confirmCodBtn = document.getElementById('confirmCodPayBtn');
+        if (confirmCodBtn) {
+            confirmCodBtn.addEventListener('click', async () => {
+                if (!currentOrderId) return;
+                confirmCodBtn.disabled = true;
+                const original = confirmCodBtn.textContent;
+                confirmCodBtn.textContent = 'Confirming...';
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'confirm_payment');
+                    formData.append('order_id', currentOrderId);
+                    const response = await fetch('pos-status.php', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        alert(data.error || 'Could not confirm COD payment.');
+                        confirmCodBtn.disabled = false;
+                        confirmCodBtn.textContent = original;
+                        return;
+                    }
+                    window.location.href = 'pos-status.php?order_id=' + encodeURIComponent(currentOrderId);
+                } catch (err) {
+                    alert('Network error. Please try again.');
+                    confirmCodBtn.disabled = false;
+                    confirmCodBtn.textContent = original;
+                }
+            });
+        }
     </script>
     <script src="order-notify.js"></script>
 </body>

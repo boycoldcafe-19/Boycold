@@ -132,7 +132,7 @@ $orderTypeLabels = [
 
 $paymentLabels = [
     'cod'   => 'Cash on Delivery',
-    'gcash' => 'GCash',
+    'qrph'  => 'QRPh',
 ];
 
 $addressLabel = 'Location';
@@ -230,6 +230,10 @@ $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
                     <div class="info-kv-row">
                         <span class="info-kv-label">Payment Method</span>
                         <span class="info-kv-value"><?= htmlspecialchars($paymentL) ?></span>
+                    </div>
+                    <div class="info-kv-row">
+                        <span class="info-kv-label">Payment Status</span>
+                        <span class="info-kv-value"><?= htmlspecialchars(strtoupper((string) ($order['payment_status'] ?? 'unpaid'))) ?></span>
                     </div>
                 </div>
             </div>
@@ -338,7 +342,14 @@ $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
 
             <!-- Actions -->
             <div class="actions">
-                <?php if ($order['status'] === 'pending'): ?>
+                <?php
+                    $isQrphUnpaid = strtolower((string) ($order['payment_method'] ?? '')) === 'qrph'
+                        && strtolower((string) ($order['payment_status'] ?? '')) !== 'paid';
+                ?>
+                <?php if ($order['status'] === 'pending' && $isQrphUnpaid): ?>
+                    <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
+                    <button type="button" class="btn btn-confirm" disabled>Waiting for QRPh payment</button>
+                <?php elseif ($order['status'] === 'pending'): ?>
                     <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
                     <button type="button" class="btn btn-confirm" id="acceptBtn" onclick="acceptOrder(<?= $orderId ?>)">Confirm Order</button>
                 <?php else: ?>

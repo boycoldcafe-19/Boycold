@@ -250,8 +250,9 @@ CREATE TABLE `orders` (
   `user_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('pending','confirmed','preparing','ready','delivered','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `order_type` enum('dine-in','takeout','delivery','pickup') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'dine-in',
-  `payment_method` enum('cod','gcash') COLLATE utf8mb4_unicode_ci DEFAULT 'cod',
-  `payment_status` enum('unpaid','paid','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
+  `payment_method` enum('cod','qrph') COLLATE utf8mb4_unicode_ci DEFAULT 'cod',
+  `payment_status` enum('unpaid','pending','paid','failed','expired','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
+  `payment_reference` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `subtotal` decimal(10,2) NOT NULL DEFAULT '0.00',
   `delivery_fee` decimal(10,2) DEFAULT '0.00',
   `tax` decimal(10,2) DEFAULT '0.00',
@@ -270,7 +271,7 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_name`, `status`, `order_type`, `payment_method`, `payment_status`, `subtotal`, `delivery_fee`, `tax`, `total`, `branch_id`, `device_id`, `cashier_id`, `address`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 'Takt Hoshino', 'completed', 'delivery', 'gcash', 'paid', 105.00, 30.00, 5.00, 140.00, 1, NULL, NULL, 'N/A, San Jose, San Luis, Pampanga, 2014', '', '2026-07-17 20:35:32', '2026-07-17 20:36:29'),
+(1, 'Takt Hoshino', 'completed', 'delivery', 'qrph', 'paid', 105.00, 30.00, 5.00, 140.00, 1, NULL, NULL, 'N/A, San Jose, San Luis, Pampanga, 2014', '', '2026-07-17 20:35:32', '2026-07-17 20:36:29'),
 (2, 'Takt Hoshino', 'completed', 'delivery', 'cod', 'paid', 238.00, 30.00, 5.00, 273.00, 2, NULL, NULL, 'N/A, San Jose, San Luis, Pampanga, 2014', '', '2026-07-17 21:28:07', '2026-07-17 21:31:46');
 
 -- --------------------------------------------------------
@@ -666,6 +667,7 @@ ALTER TABLE `orders`
   ADD KEY `device_id` (`device_id`),
   ADD KEY `cashier_id` (`cashier_id`),
   ADD KEY `idx_orders_created_at` (`created_at`),
+  ADD KEY `idx_payment_reference` (`payment_reference`),
   ADD KEY `idx_orders_status_created_at` (`status`,`created_at`);
 
 --

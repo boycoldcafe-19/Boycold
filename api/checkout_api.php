@@ -26,6 +26,7 @@ session_set_cookie_params([
 ]);
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/payments.php';
 
 header('Content-Type: application/json');
 
@@ -88,6 +89,8 @@ if (!empty($_SESSION['user_id'])) {
     }
 }
 
+boycold_ensure_payment_schema($connect);
+
 $raw   = file_get_contents('php://input');
 $body  = json_decode($raw, true);
 
@@ -99,7 +102,7 @@ if (!$body || empty($body['items'])) {
 $items       = $body['items'];
 $orderType   = substr(trim($body['order_type']   ?? 'dine-in'), 0, 20);
 $paymentMethod = strtolower(trim($body['payment_method'] ?? 'cod'));
-if (!in_array($paymentMethod, ['cod', 'gcash'], true)) {
+if (!in_array($paymentMethod, ['cod', 'qrph'], true)) {
     $paymentMethod = 'cod';
 }
 $address     = trim($body['address']     ?? '');
@@ -120,16 +123,16 @@ unset($item);
 $total = $subtotal + $deliveryFee + $tax;
 
 // ── Insert order ───────────────────────────────────────────────
-$paymentStatus = ($paymentMethod === 'gcash') ? 'paid' : 'unpaid';
+$paymentStatus = ($paymentMethod === 'qrph') ? 'pending' : 'unpaid';
+$orderStatus = ($paymentMethod === 'qrph') ? 'pending' : 'confirmed';
 $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
 $stmt = $connect->prepare(
     "INSERT INTO orders
        (user_name, user_id, status, order_type, payment_method, payment_status, subtotal, delivery_fee, tax, total, address, notes, branch_id)
-     VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
-// Use the branch_id from the checkout form (user's selected branch)
-$stmt->bind_param("sissssdddssi",
-    $userName, $userId, $orderType, $paymentMethod, $paymentStatus, $subtotal, $deliveryFee, $tax, $total, $address, $orderNotes, $branchId
+$stmt->bind_param("sissssddddssi",
+    $userName, $userId, $orderStatus, $orderType, $paymentMethod, $paymentStatus, $subtotal, $deliveryFee, $tax, $total, $address, $orderNotes, $branchId
 );
 
 if (!$stmt->execute()) {
@@ -164,11 +167,29 @@ foreach ($items as $item) {
     $itemStmt->execute();
 }
 
-echo json_encode([
+$qrPayload = null;
+if ($paymentMethod === 'qrph') {
+    try {
+        $qrPayload = boycold_create_qrph_for_order($connect, $orderId, $total);
+    } catch (Throwable $e) {
+        $fail = $connect->prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?");
+        $fail->bind_param('i', $orderId);
+        $fail->execute();
+        echo json_encode(['success' => false, 'error' => $e->getMessage(), 'order_id' => $orderId]);
+        exit;
+    }
+}
+
+$response = [
     'success'        => true,
     'order_id'       => $orderId,
     'total'          => number_format($total, 2),
     'payment_method' => $paymentMethod,
     'payment_status' => $paymentStatus,
+    'order_status'   => $orderStatus,
     'message'        => 'Order placed!',
-]);
+];
+if ($qrPayload) {
+    $response['qr_image_url'] = $qrPayload['qr_image_url'];
+}
+echo json_encode($response);

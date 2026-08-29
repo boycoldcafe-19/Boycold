@@ -14,8 +14,8 @@ if ($hasOrder) {
     $paymentStatus = $latestOrder[\'payment_status\'];
     $paymentMethodKey = strtolower($latestOrder[\'payment_method\'] ?? \'\');
     
-    if ($paymentMethodKey === \'gcash\') {
-        // GCash flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
+    if ($paymentMethodKey === \'qrph\') {
+        // QR Ph flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
         $stepReached[0] = true;
         $stepReached[1] = in_array($status, [\'confirmed\', \'preparing\', \'ready\', \'delivered\', \'completed\']);
         $stepReached[2] = ($paymentStatus === \'paid\');

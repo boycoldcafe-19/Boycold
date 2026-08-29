@@ -12,13 +12,9 @@
 //   cancel  → cancel a pending order (user's own only)
 //   update_status → admin-only: change order status
 //
-// COD FLOW:
-//   Order placed (status=pending, payment_status=unpaid for COD,
-//                  payment_status=paid for GCash)
-//     → Admin prepares order (status=preparing)
-//     → Admin delivers (status=delivered)
-//     → Admin marks completed (status=completed)
-//         → if payment_method = 'cod', payment_status auto-set to 'paid'
+// PAYMENT FLOW:
+//   COD:  status=confirmed, payment_status=unpaid until staff confirms cash
+//   QRPh: status=pending, payment_status=pending until PayMongo webhook marks paid
 // ─────────────────────────────────────────────────────────────
 
 // Enable error catching
@@ -100,6 +96,9 @@ if (!$startedSession) {
 }
 require_once '../config/db_config.php';
 require_once '../config/loyalty.php';
+require_once '../config/payments.php';
+
+boycold_ensure_payment_schema($connect);
 
 header('Content-Type: application/json');
 
@@ -210,7 +209,7 @@ switch ($action) {
     //       "orderType": "dine-in", "notes": "" }
     //   ],
     //   "order_type": "dine-in",
-    //   "payment_method": "cod" | "gcash",
+    //   "payment_method": "cod" | "qrph",
     //   "address": "...",
     //   "delivery_fee": 30,
     //   "tax": 5,
@@ -231,110 +230,134 @@ switch ($action) {
 
         // ── Payment method / status ────────────────────────────
         $paymentMethod = strtolower(trim($body['payment_method'] ?? 'cod'));
-        if (!in_array($paymentMethod, ['cod', 'gcash'], true)) {
+        if (!in_array($paymentMethod, ['cod', 'qrph'], true)) {
             $paymentMethod = 'cod';
         }
         
-        // Payment status starts as unpaid
-        $paymentStatus = 'unpaid';
+        $orderStatus = ($paymentMethod === 'qrph') ? 'pending' : 'confirmed';
+        $paymentStatus = ($paymentMethod === 'qrph') ? 'pending' : 'unpaid';
 
         if (empty($items)) {
             echo json_encode(['success' => false, 'error' => 'No items in order.']);
             break;
         }
 
-        // Calculate subtotal from items (never trust the client total)
+        if ($paymentMethod === 'qrph' && $userId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'QRPh checkout requires a customer account.']);
+            break;
+        }
+
         $subtotal = 0;
         foreach ($items as $item) {
             $subtotal += (float)($item['unitPrice'] ?? 0) * max(1, (int)($item['qty'] ?? 1));
         }
         $total = $subtotal + $deliveryFee + $tax;
 
-        // ── Insert order row ──────────────────────────────────
-        // user_name comes from SESSION — never from the request body
-        $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
-        $stmt = $connect->prepare(
-            "INSERT INTO orders
-               (user_name, user_id, status, order_type, payment_method, payment_status,
-                subtotal, delivery_fee, tax, total, branch_id, address, notes)
-             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->bind_param(
-            "sisssddddiss",
-            $userName,
-            $userId,
-            $orderType,
-            $paymentMethod,
-            $paymentStatus,
-            $subtotal,
-            $deliveryFee,
-            $tax,
-            $total,
-            $branchId,
-            $address,
-            $orderNotes
-        );
-        if (!$stmt->execute()) {
-            echo json_encode(['success' => false, 'error' => 'Failed to create order.']);
+        $connect->begin_transaction();
+        try {
+            $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+            $stmt = $connect->prepare(
+                "INSERT INTO orders
+                   (user_name, user_id, status, order_type, payment_method, payment_status,
+                    subtotal, delivery_fee, tax, total, branch_id, address, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            $stmt->bind_param(
+                "sissssddddiss",
+                $userName,
+                $userId,
+                $orderStatus,
+                $orderType,
+                $paymentMethod,
+                $paymentStatus,
+                $subtotal,
+                $deliveryFee,
+                $tax,
+                $total,
+                $branchId,
+                $address,
+                $orderNotes
+            );
+            if (!$stmt->execute()) {
+                throw new RuntimeException('Failed to create order.');
+            }
+            $orderId = (int) $connect->insert_id;
+
+            $itemStmt = $connect->prepare(
+                "INSERT INTO order_items
+                   (order_id, product_name, product_image, unit_price, quantity,
+                    line_total, milk, addons, order_type, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($items as $item) {
+                $name      = substr(trim($item['name']      ?? ''), 0, 150);
+                $image     = substr(trim($item['image']     ?? ''), 0, 255);
+                $unitPrice = (float)  ($item['unitPrice']  ?? 0);
+                $qty       = max(1, (int) ($item['qty']    ?? 1));
+                $lineTotal = $unitPrice * $qty;
+                $milk      = substr(trim($item['milk']      ?? ''), 0, 80);
+                $addons    = substr(trim($item['addons']    ?? ''), 0, 255);
+                $oType     = substr(trim($item['orderType'] ?? ''), 0, 40);
+                $notes     = trim($item['notes'] ?? '');
+
+                $itemStmt->bind_param(
+                    "issdidssss",
+                    $orderId,
+                    $name,
+                    $image,
+                    $unitPrice,
+                    $qty,
+                    $lineTotal,
+                    $milk,
+                    $addons,
+                    $oType,
+                    $notes
+                );
+                $itemStmt->execute();
+            }
+
+            $fromCart = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
+            if ($fromCart) {
+                $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
+                $clr->bind_param("s", $userName);
+                $clr->execute();
+            }
+
+            $connect->commit();
+        } catch (Throwable $e) {
+            $connect->rollback();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             break;
         }
-        $orderId = $connect->insert_id;
 
-        // ── Insert order_items ────────────────────────────────
-        $itemStmt = $connect->prepare(
-            "INSERT INTO order_items
-               (order_id, product_name, product_image, unit_price, quantity,
-                line_total, milk, addons, order_type, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        foreach ($items as $item) {
-            $name      = substr(trim($item['name']      ?? ''), 0, 150);
-            $image     = substr(trim($item['image']     ?? ''), 0, 255);
-            $unitPrice = (float)  ($item['unitPrice']  ?? 0);
-            $qty       = max(1, (int) ($item['qty']    ?? 1));
-            $lineTotal = $unitPrice * $qty;
-            $milk      = substr(trim($item['milk']      ?? ''), 0, 80);
-            $addons    = substr(trim($item['addons']    ?? ''), 0, 255);
-            $oType     = substr(trim($item['orderType'] ?? ''), 0, 40);
-            $notes     = trim($item['notes'] ?? '');
-
-            $itemStmt->bind_param(
-                "issdidssss",
-                $orderId,
-                $name,
-                $image,
-                $unitPrice,
-                $qty,
-                $lineTotal,
-                $milk,
-                $addons,
-                $oType,
-                $notes
-            );
-            $itemStmt->execute();
+        $qrPayload = null;
+        if ($paymentMethod === 'qrph') {
+            try {
+                $qrPayload = boycold_create_qrph_for_order($connect, $orderId, $total);
+            } catch (Throwable $e) {
+                $fail = $connect->prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?");
+                $fail->bind_param('i', $orderId);
+                $fail->execute();
+                $fail->close();
+                echo json_encode(['success' => false, 'error' => $e->getMessage(), 'order_id' => $orderId]);
+                break;
+            }
         }
 
-        // ── Clear the user's DB cart after order — but ONLY when this
-        // order actually came from the persistent cart. Direct "buy now"
-        // orders (from ordercustom.php) send from_cart = false so a
-        // single-item purchase never wipes out unrelated cart contents.
-        // Default to true so any older caller that omits the flag keeps
-        // the original behavior.
-        $fromCart = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
-        if ($fromCart) {
-            $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
-            $clr->bind_param("s", $userName);
-            $clr->execute();
-        }
-
-        echo json_encode([
+        $response = [
             'success'        => true,
             'order_id'       => $orderId,
             'total'          => number_format($total, 2),
             'payment_method' => $paymentMethod,
             'payment_status' => $paymentStatus,
+            'order_status'   => $orderStatus,
             'message'        => 'Order placed successfully.',
-        ]);
+        ];
+        if ($qrPayload) {
+            $response['qr_image_url'] = $qrPayload['qr_image_url'];
+            $response['payment_reference'] = $qrPayload['payment_intent_id'];
+        }
+        echo json_encode($response);
         break;
 
     // ── LIST ORDERS ───────────────────────────────────────────
@@ -530,11 +553,96 @@ switch ($action) {
         echo json_encode(['success' => true, 'message' => 'Order cancelled.']);
         break;
 
-    // COD FLOW:
-    //   pending → preparing → delivered → completed
-    //   When status is set to 'completed' AND payment_method = 'cod',
-    //   payment_status is automatically flipped to 'paid'.
-    //   GCash orders are already payment_status = 'paid' from checkout.
+    case 'payment_status':
+        $orderId = isset($body['order_id']) ? (int) $body['order_id']
+            : (isset($_GET['order_id']) ? (int) $_GET['order_id'] : 0);
+        if ($orderId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid order_id.']);
+            break;
+        }
+
+        $stmt = $connect->prepare(
+            "SELECT id, status, payment_method, payment_status, total
+             FROM orders WHERE id = ? AND user_name = ?"
+        );
+        $stmt->bind_param('is', $orderId, $userName);
+        $stmt->execute();
+        $order = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$order) {
+            echo json_encode(['success' => false, 'error' => 'Order not found.']);
+            break;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'order_id' => (int) $order['id'],
+            'order_status' => $order['status'],
+            'payment_method' => $order['payment_method'],
+            'payment_status' => $order['payment_status'],
+            'total' => (float) $order['total'],
+        ]);
+        break;
+
+    case 'qrph_details':
+        $orderId = isset($body['order_id']) ? (int) $body['order_id'] : 0;
+        if ($orderId <= 0 || $userId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid order.']);
+            break;
+        }
+
+        $stmt = $connect->prepare(
+            "SELECT id, payment_method, payment_status, payment_reference, total
+             FROM orders WHERE id = ? AND user_name = ?"
+        );
+        $stmt->bind_param('is', $orderId, $userName);
+        $stmt->execute();
+        $order = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$order || strtolower((string) $order['payment_method']) !== 'qrph') {
+            echo json_encode(['success' => false, 'error' => 'QRPh order not found.']);
+            break;
+        }
+
+        $qrImage = '';
+        $ref = trim((string) ($order['payment_reference'] ?? ''));
+        if ($ref !== '' && strtolower((string) $order['payment_status']) === 'pending') {
+            try {
+                $intent = paymongo_retrieve_intent($ref);
+                $qrImage = paymongo_extract_qr_image($intent);
+            } catch (Throwable $e) {
+                $qrImage = '';
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'order_id' => (int) $order['id'],
+            'payment_status' => $order['payment_status'],
+            'qr_image_url' => $qrImage,
+            'total' => (float) $order['total'],
+        ]);
+        break;
+
+    case 'confirm_cod_payment':
+        if (!$isAdmin) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden.']);
+            break;
+        }
+
+        $orderId = isset($body['order_id']) ? (int) $body['order_id'] : 0;
+        if ($orderId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid order_id.']);
+            break;
+        }
+
+        $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+        echo json_encode(boycold_confirm_cod_payment($connect, $orderId, $branchId));
+        break;
+
     case 'update_status':
         $orderId   = isset($body['order_id']) ? (int) $body['order_id'] : 0;
         $newStatus = trim($body['status'] ?? '');
@@ -545,7 +653,9 @@ switch ($action) {
             break;
         }
 
-        $existingOrderStmt = $connect->prepare("SELECT user_name, status FROM orders WHERE id = ?");
+        $existingOrderStmt = $connect->prepare(
+            "SELECT user_name, status, payment_method, payment_status FROM orders WHERE id = ?"
+        );
         $existingOrderStmt->bind_param("i", $orderId);
         $existingOrderStmt->execute();
         $existingOrder = $existingOrderStmt->get_result()->fetch_assoc();
@@ -555,39 +665,17 @@ switch ($action) {
             break;
         }
 
-        // Staff/admins can move an order through any status. The one
-        // exception: order-popup.php's "Confirm Order" button is also shown
-        // to the customer who placed the order, so a non-admin is allowed
-        // through here ONLY to flip their own still-pending order to
-        // 'confirmed' — checked against the order row itself (not the
-        // request body), so it can't be used to touch anyone else's order
-        // or any other transition.
-        $isOwnPendingConfirm = (
-            $newStatus === 'confirmed' &&
-            ($existingOrder['status'] ?? '') === 'pending' &&
-            $userName !== '' &&
-            $existingOrder['user_name'] === $userName
-        );
+        $paymentMethod = strtolower((string) ($existingOrder['payment_method'] ?? 'cod'));
+        $paymentStatus = strtolower((string) ($existingOrder['payment_status'] ?? 'unpaid'));
 
-        if (!$isAdmin && !$isOwnPendingConfirm) {
+        if (!$isAdmin) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Forbidden.']);
             break;
         }
 
-        // Fetch payment method and status for QR Ph check
-        $orderDetailsStmt = $connect->prepare("SELECT payment_method, payment_status FROM orders WHERE id = ?");
-        $orderDetailsStmt->bind_param("i", $orderId);
-        $orderDetailsStmt->execute();
-        $orderDetails = $orderDetailsStmt->get_result()->fetch_assoc();
-        $orderDetailsStmt->close();
-
-        $paymentMethod = $orderDetails['payment_method'] ?? 'cod';
-        $paymentStatus = $orderDetails['payment_status'] ?? 'unpaid';
-
-        // For QR Ph (gcash), require payment to be confirmed before order can be completed
-        if ($newStatus === 'completed' && $paymentMethod === 'gcash' && $paymentStatus !== 'paid') {
-            echo json_encode(['success' => false, 'error' => 'Order cannot be completed until QR Ph payment is confirmed.']);
+        if ($paymentMethod === 'qrph' && $paymentStatus !== 'paid' && $newStatus !== 'cancelled') {
+            echo json_encode(['success' => false, 'error' => 'QRPh payment must be verified by PayMongo before this order can proceed.']);
             break;
         }
 

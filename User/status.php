@@ -112,7 +112,7 @@ if ($hasOrder) {
     $paymentStatusKey = strtolower($latestOrder['payment_status'] ?? '');
     $isCodPayment = ($paymentMethodKey === 'cod');
     $paymentMethodLabel = [
-        'gcash' => 'GCash',
+        'qrph' => 'QR Ph',
         'cod'   => 'Cash on Delivery',
     ][$paymentMethodKey] ?? ucfirst($paymentMethodKey);
     if ($isCodPayment && $paymentStatusKey !== 'paid' && $paymentStatusKey !== 'cancelled') {
@@ -133,7 +133,7 @@ if ($hasOrder) {
     $paymentStatus = $latestOrder['payment_status'];
     $paymentMethodKey = strtolower($latestOrder['payment_method'] ?? '');
     
-    if ($paymentMethodKey === 'gcash') {
+    if ($paymentMethodKey === 'qrph') {
         // GCash flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
         $stepReached[0] = true;
         $stepReached[1] = in_array($status, ['confirmed', 'preparing', 'ready', 'delivered', 'completed']);
@@ -979,6 +979,25 @@ function step_class(bool $reached)
             alert('Report submitted! We will look into this shortly.');
             closeReportModalDirect();
         }
+
+        <?php if ($hasOrder && strtolower((string) ($latestOrder['payment_method'] ?? '')) === 'qrph' && strtolower((string) ($latestOrder['payment_status'] ?? '')) === 'pending'): ?>
+        (function pollQrph() {
+            const orderId = <?= (int) $latestOrder['id'] ?>;
+            setInterval(async () => {
+                try {
+                    const res = await fetch('../api/orders_api.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'payment_status', order_id: orderId })
+                    });
+                    const data = await res.json();
+                    if (data.success && data.payment_status === 'paid') {
+                        window.location.reload();
+                    }
+                } catch (err) {}
+            }, 4000);
+        })();
+        <?php endif; ?>
     </script>
 </body>
 

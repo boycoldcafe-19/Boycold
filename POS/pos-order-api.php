@@ -162,7 +162,7 @@ try {
     $deliveryFee = max(0, (float) ($body['delivery_fee'] ?? 0));
     $tax = max(0, (float) ($body['tax'] ?? 0));
     $paymentMethod = strtolower(trim((string) ($body['payment_method'] ?? 'cod')));
-    if (!in_array($paymentMethod, ['cod', 'gcash'], true)) {
+    if (!in_array($paymentMethod, ['cod', 'qrph'], true)) {
         $paymentMethod = 'cod';
     }
 

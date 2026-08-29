@@ -233,12 +233,12 @@ $branches = $branches ?? [];
 
                     <div class="co-payment-list">
 
-                        <label class="co-pay-card co-pay-selected" id="payGcash">
-                            <input type="radio" name="payment" value="gcash" checked class="co-radio">
+                        <label class="co-pay-card co-pay-selected" id="payQrph">
+                            <input type="radio" name="payment" value="qrph" checked class="co-radio">
                             <div class="co-pay-logo co-pay-gcash">QR Ph</div>
                             <div class="co-pay-info">
-                                <div class="co-pay-name">QR Ph</div>
-                                <div class="co-pay-desc">Pay securely using QR Ph</div>
+                                <div class="co-pay-name">QRPh</div>
+                                <div class="co-pay-desc">Pay securely using QRPh</div>
                             </div>
                             <div class="co-pay-circle"></div>
                         </label>
@@ -247,11 +247,16 @@ $branches = $branches ?? [];
                             <input type="radio" name="payment" value="cod" class="co-radio">
                             <div class="co-pay-logo co-pay-cod">₱</div>
                             <div class="co-pay-info">
-                                <div class="co-pay-name">Cash On Delivery</div>
-                                <div class="co-pay-desc">Pay upon delivery</div>
+                                <div class="co-pay-name">Cash on Delivery</div>
+                                <div class="co-pay-desc">Pay in cash when your order is delivered</div>
                             </div>
                             <div class="co-pay-circle"></div>
                         </label>
+                    </div>
+
+                    <div class="co-pay-method-panel" id="codHintPanel" hidden>
+                        <h4>Cash on Delivery</h4>
+                        <p id="codHintText">Pay in cash when your order is delivered.</p>
                     </div>
                 </div>
             </div>
@@ -379,7 +384,14 @@ $branches = $branches ?? [];
         </div>
     </footer>
 
-
+    <div class="qrph-overlay" id="qrphOverlay" hidden>
+        <div class="qrph-modal" role="dialog" aria-labelledby="qrphTitle">
+            <h2 id="qrphTitle">QRPh Payment</h2>
+            <img id="qrphImage" alt="Scan this QRPh code to pay">
+            <p class="qrph-amount" id="qrphAmount">Amount Due: ₱0.00</p>
+            <p class="qrph-wait" id="qrphWait">Waiting for payment...</p>
+        </div>
+    </div>
 
     <script>
         const SAVED_ADDRESSES = <?= json_encode($savedAddresses, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -527,8 +539,29 @@ $branches = $branches ?? [];
                 document.querySelectorAll('.co-pay-card').forEach(c => c.classList.remove('co-pay-selected'));
                 this.classList.add('co-pay-selected');
                 this.querySelector('input[type="radio"]').checked = true;
+                updatePaymentHints();
             });
         });
+
+        function selectedPaymentMethod() {
+            const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'cod';
+            return ['qrph', 'cod'].includes(selectedPayment) ? selectedPayment : 'cod';
+        }
+
+        function currentCheckoutTotal() {
+            const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
+            return subtotal + DELIVERY_FEE + TAX;
+        }
+
+        function updatePaymentHints() {
+            const panel = document.getElementById('codHintPanel');
+            const text = document.getElementById('codHintText');
+            const isCod = selectedPaymentMethod() === 'cod';
+            panel.hidden = !isCod;
+            if (isCod) {
+                text.textContent = 'Pay ₱' + currentCheckoutTotal().toFixed(2) + ' in cash when your order is delivered.';
+            }
+        }
 
         /* ── Cart & Order Summary ── */
         const CART_API    = '../api/cart_api.php';
@@ -635,6 +668,7 @@ $branches = $branches ?? [];
             btn.disabled = (subtotal === 0);
             btn.style.opacity = subtotal === 0 ? '0.45' : '1';
             btn.style.cursor  = subtotal === 0 ? 'not-allowed' : 'pointer';
+            updatePaymentHints();
         }
 
         async function placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, sourceId) {
@@ -682,6 +716,10 @@ $branches = $branches ?? [];
                 const result = await res.json();
                 if (result.success) {
                     if (isDirectOrder) sessionStorage.removeItem(DIRECT_KEY);
+                    if (paymentMethod === 'qrph') {
+                        startQrphWait(result.order_id, total, result.qr_image_url || '');
+                        return;
+                    }
                     window.location.href = 'status.php?order_id=' + encodeURIComponent(result.order_id);
                 } else {
                     alert('Error placing order: ' + (result.error || 'Unknown error'));
@@ -726,8 +764,7 @@ $branches = $branches ?? [];
                 return;
             }
             const finalAddress = isPickup ? branchName : address;
-            const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'cod';
-            const paymentMethod = ['gcash', 'cod'].includes(selectedPayment) ? selectedPayment : 'cod';
+            const paymentMethod = selectedPaymentMethod();
 
             this.disabled = true;
             this.textContent = 'Placing order…';
@@ -738,6 +775,41 @@ $branches = $branches ?? [];
             // Proceed with order placement
             await placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, null);
         });
+
+        function startQrphWait(orderId, total, qrImageUrl) {
+            const overlay = document.getElementById('qrphOverlay');
+            const img = document.getElementById('qrphImage');
+            document.getElementById('qrphAmount').textContent = 'Amount Due: ₱' + Number(total).toFixed(2);
+            document.getElementById('qrphWait').textContent = 'Waiting for payment...';
+            if (qrImageUrl) {
+                img.src = qrImageUrl;
+                img.hidden = false;
+            } else {
+                img.hidden = true;
+            }
+            overlay.hidden = false;
+
+            const poll = async () => {
+                try {
+                    const res = await fetch(ORDER_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'payment_status', order_id: orderId })
+                    });
+                    const data = await res.json();
+                    if (data.success && data.payment_status === 'paid') {
+                        window.location.href = 'status.php?order_id=' + encodeURIComponent(orderId);
+                        return;
+                    }
+                    if (data.success && ['failed', 'expired'].includes(data.payment_status)) {
+                        document.getElementById('qrphWait').textContent = 'Payment ' + data.payment_status + '. Please place a new order.';
+                        return;
+                    }
+                } catch (err) {}
+                setTimeout(poll, 3000);
+            };
+            poll();
+        }
 
         // Load cart on page ready
         loadCart();

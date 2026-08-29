@@ -2,6 +2,7 @@
 session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/payments.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -383,6 +384,7 @@ if ($branchId > 0) {
                                         $statusFilter = posonline_status_filter($order['status']);
                                         $statusLabel  = posonline_status_label($order['status']);
                                         $statusClass  = posonline_status_class($order['status']);
+                                        $payBadge     = boycold_payment_label((string) $order['payment_method'], (string) $order['payment_status']);
                                     ?>
                                     <tr class="order-row" data-status="<?= htmlspecialchars($statusFilter ?? '') ?>" onclick="window.location.href='pos-status.php?order_id=<?= (int)$order['id'] ?>'" style="cursor: pointer;">
                                         <td><?= htmlspecialchars($orderNo) ?></td>
@@ -398,6 +400,7 @@ if ($branchId > 0) {
                                             <span class="order-status-badge <?= $statusClass ?>">
                                                 <?= htmlspecialchars($statusLabel) ?>
                                             </span>
+                                            <span class="customer-phone"><?= htmlspecialchars($payBadge) ?></span>
                                         </td>
                                         <td class="order-total">&#8369;<?= number_format((float)$order['total'], 2) ?></td>
                                     </tr>

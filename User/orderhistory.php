@@ -288,7 +288,7 @@ $_SESSION['user_email'] = $user['email'];
                 <div class="order-card-mid">
                     <span>${escapeHtml(o.order_type || '')}</span>
                     <span>•</span>
-                    <span>${o.payment_method === 'cod' ? 'Cash on Delivery' : 'GCash'} (${o.payment_status})</span>
+                    <span>${o.payment_method === 'cod' ? 'Cash on Delivery' : 'QRPh'} (${o.payment_status})</span>
                 </div>
                 <div class="order-card-bottom">
                     <span class="order-total">₱${parseFloat(o.total).toFixed(2)}</span>
@@ -390,7 +390,7 @@ $_SESSION['user_email'] = $user['email'];
 
                 // Footer: payment method and address
                 const footer = document.getElementById('modalOrderFooter');
-                const paymentLabel = order.payment_method === 'cod' ? 'Cash on Delivery' : 'GCash';
+                const paymentLabel = order.payment_method === 'cod' ? 'Cash on Delivery' : 'QRPh';
                 footer.innerHTML = `
                 <div><span class="label">Payment Method</span> <span class="value">${paymentLabel}</span></div>
                 <div><span class="label">Payment Status</span> <span class="value">${escapeHtml(order.payment_status || '')}</span></div>

@@ -1356,6 +1356,71 @@ footer {
     font-weight: 600;
 }
 
+.co-pay-method-panel {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #faf7f4;
+}
+
+.co-pay-method-panel h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+}
+
+.co-pay-method-panel p {
+    margin: 0;
+    font-size: 13px;
+    color: #444;
+}
+
+.qrph-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 20px;
+}
+
+.qrph-overlay[hidden] {
+    display: none;
+}
+
+.qrph-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+}
+
+.qrph-modal h2 {
+    margin: 0 0 16px;
+    font-size: 22px;
+}
+
+.qrph-modal img {
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+    margin: 0 auto 16px;
+}
+
+.qrph-amount {
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+.qrph-wait {
+    margin: 0;
+    color: #666;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
 

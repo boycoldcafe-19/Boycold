@@ -321,11 +321,11 @@ if ($shiftResult) {
                                             <span class="payment-name">Cash</span>
                                             <span class="payment-sub">Pay with cash</span>
                                         </button>
-                                        <button class="payment-option" data-method="gcash" type="button">
+                                        <button class="payment-option" data-method="qrph" type="button">
                                             <span class="payment-check"><i class="fa-solid fa-check"></i></span>
                                             <img src="../img/gcash2821.logowik.com 1.png" alt="">
-                                            <span class="payment-name">GCash</span>
-                                            <span class="payment-sub">Pay with GCash</span>
+                                            <span class="payment-name">QR Ph</span>
+                                            <span class="payment-sub">Pay with QR Ph</span>
                                         </button>
                                     </div>
                                 </div>
@@ -345,9 +345,9 @@ if ($shiftResult) {
                                     </div>
                                 </div>
 
-                                <div class="checkout-panel gcash-panel" id="gcashPaymentPanel" style="display: none;">
-                                    <h3>GCash Payment</h3>
-                                    <p class="gcash-note">Ask the customer to scan the QR code or send payment to the store's GCash number, then confirm below.</p>
+                                <div class="checkout-panel qrph-panel" id="qrphPaymentPanel" style="display: none;">
+                                    <h3>QR Ph Payment</h3>
+                                    <p class="qrph-note">Ask the customer to scan the QR code or send payment to the store's QR Ph number, then confirm below.</p>
                                 </div>
 
                             </div>
@@ -1013,7 +1013,7 @@ if ($shiftResult) {
         // Payment method toggle
         const paymentOptions = document.querySelectorAll('.payment-option');
         const cashPanel = document.getElementById('cashPaymentPanel');
-        const gcashPanel = document.getElementById('gcashPaymentPanel');
+        const qrphPanel = document.getElementById('qrphPaymentPanel');
 
         paymentOptions.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1022,10 +1022,10 @@ if ($shiftResult) {
 
                 if (btn.dataset.method === 'cash') {
                     cashPanel.style.display = 'block';
-                    gcashPanel.style.display = 'none';
+                    qrphPanel.style.display = 'none';
                 } else {
                     cashPanel.style.display = 'none';
-                    gcashPanel.style.display = 'block';
+                    qrphPanel.style.display = 'block';
                 }
             });
         });
@@ -1077,7 +1077,7 @@ if ($shiftResult) {
                     };
                 }),
                 order_type: normalizePosOrderType(cart[0]?.orderType || 'Dine In'),
-                payment_method: method === 'cash' ? 'cod' : 'gcash',
+                payment_method: method === 'cash' ? 'cod' : 'qrph',
                 delivery_fee: 0,
                 tax: 0,
                 notes: ''
@@ -1245,7 +1245,7 @@ if ($shiftResult) {
             document.getElementById('receiptDiscount').textContent = `₱0.00`;
             document.getElementById('receiptGrandTotal').textContent = `₱${total.toFixed(2)}`;
 
-            document.getElementById('receiptMethod').textContent = method === 'cash' ? 'Cash' : 'GCash';
+            document.getElementById('receiptMethod').textContent = method === 'cash' ? 'Cash' : 'QR Ph';
 
             const tenderedRow = document.getElementById('receiptTenderedRow');
             const changeRow = document.getElementById('receiptChangeRow');

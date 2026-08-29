@@ -2,6 +2,7 @@
 session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/payments.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -106,7 +107,7 @@ $typeCodes = [
 ];
 $paymentLabels = [
     'cod'   => 'Cash',
-    'gcash' => 'GCash',
+    'qrph' => 'QR Ph',
 ];
 
 function orderhis_format_group_label(string $dateStr): string {
@@ -352,7 +353,7 @@ function orderhis_format_group_label(string $dateStr): string {
                                     <select id="filterPayment">
                                         <option value="">All</option>
                                         <option value="cash">Cash</option>
-                                        <option value="gcash">GCash</option>
+                                        <option value="qrph">QR Ph</option>
                                     </select>
                                 </div>
                                 <div class="filter-field">
@@ -416,8 +417,8 @@ function orderhis_format_group_label(string $dateStr): string {
                                 $orderNo     = sprintf('%s-%s-%s-%05d', $prefix, $typeCode, $createdAt->format('Y'), (int)$order['id']);
 
                                 $payment      = $order['payment_method'] ?: 'cod';
-                                $paymentLabel = $paymentLabels[$payment] ?? ucfirst($payment);
-                                $paymentAttr  = $payment === 'gcash' ? 'gcash' : 'cash';
+                                $paymentLabel = boycold_payment_label($payment, (string) ($order['payment_status'] ?? 'unpaid'));
+                                $paymentAttr  = $payment === 'qrph' ? 'qrph' : 'cash';
                                 $typeAttr     = str_replace('-', '', $type);
 
                                 $groupLabel = orderhis_format_group_label($order['created_at']);

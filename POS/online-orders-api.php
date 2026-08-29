@@ -60,10 +60,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'counts') {
 $stmt = $connect->prepare(
     "SELECT id, user_name, status, payment_method, payment_status, order_type, subtotal, delivery_fee, tax, total, address, created_at
      FROM orders
-     WHERE status = 'pending'
+     WHERE $onlineOrderTypeSql
+       AND status IN ('pending', 'confirmed')
        AND id > ?
        AND branch_id = ?
-       AND $onlineOrderTypeSql
      ORDER BY id ASC"
 );
 $stmt->bind_param('ii', $lastOrderId, $branchId);

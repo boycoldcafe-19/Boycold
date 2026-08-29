@@ -103,9 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Query orders placed during this shift
             $ordersQuery = "SELECT 
                 SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN total ELSE 0 END) as cash_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'gcash' THEN total ELSE 0 END) as gcash_sales,
+                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN total ELSE 0 END) as qrph_sales,
                 SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN 1 ELSE 0 END) as cash_orders,
-                SUM(CASE WHEN LOWER(payment_method) = 'gcash' THEN 1 ELSE 0 END) as gcash_orders,
+                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN 1 ELSE 0 END) as qrph_orders,
                 SUM(total) as total_sales,
                 COUNT(*) as total_orders
                 FROM orders 
@@ -120,24 +120,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ordersStmt->close();
             
             $cashSales = floatval($ordersResult['cash_sales'] ?? 0);
-            $gcashSales = floatval($ordersResult['gcash_sales'] ?? 0);
+            $qrphSales = floatval($ordersResult['qrph_sales'] ?? 0);
             $cashOrders = intval($ordersResult['cash_orders'] ?? 0);
-            $gcashOrders = intval($ordersResult['gcash_orders'] ?? 0);
+            $qrphOrders = intval($ordersResult['qrph_orders'] ?? 0);
             $totalSales = floatval($ordersResult['total_sales'] ?? 0);
             $totalOrders = intval($ordersResult['total_orders'] ?? 0);
             
             $cashDifference = $closingCash - ($currentShift['opening_cash_float'] + $cashSales);
             
-            $updateStmt = $connect->prepare("UPDATE shift_logs SET closing_cash_count = ?, cash_sales = ?, gcash_sales = ?, total_sales = ?, cash_orders = ?, gcash_orders = ?, total_orders = ?, cash_difference = ?, closed_at = NOW(), status = 'closed' WHERE id = ? AND branch_id = ?");
-            $updateStmt->bind_param('ddddiiidii', $closingCash, $cashSales, $gcashSales, $totalSales, $cashOrders, $gcashOrders, $totalOrders, $cashDifference, $currentShift['id'], $branchId);
+            $updateStmt = $connect->prepare("UPDATE shift_logs SET closing_cash_count = ?, cash_sales = ?, qrph_sales = ?, total_sales = ?, cash_orders = ?, qrph_orders = ?, total_orders = ?, cash_difference = ?, closed_at = NOW(), status = 'closed' WHERE id = ? AND branch_id = ?");
+            $updateStmt->bind_param('ddddiiidii', $closingCash, $cashSales, $qrphSales, $totalSales, $cashOrders, $qrphOrders, $totalOrders, $cashDifference, $currentShift['id'], $branchId);
             
             if ($updateStmt->execute()) {
                 $response['success'] = true;
                 $response['calculated'] = [
                     'cash_sales' => $cashSales,
-                    'gcash_sales' => $gcashSales,
+                    'qrph_sales' => $qrphSales,
                     'cash_orders' => $cashOrders,
-                    'gcash_orders' => $gcashOrders,
+                    'qrph_orders' => $qrphOrders,
                     'total_sales' => $totalSales,
                     'total_orders' => $totalOrders
                 ];
@@ -158,9 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Query orders placed during this shift
             $ordersQuery = "SELECT 
                 SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN total ELSE 0 END) as cash_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'gcash' THEN total ELSE 0 END) as gcash_sales,
+                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN total ELSE 0 END) as qrph_sales,
                 SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN 1 ELSE 0 END) as cash_orders,
-                SUM(CASE WHEN LOWER(payment_method) = 'gcash' THEN 1 ELSE 0 END) as gcash_orders,
+                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN 1 ELSE 0 END) as qrph_orders,
                 SUM(total) as total_sales,
                 COUNT(*) as total_orders
                 FROM orders 
@@ -177,9 +177,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response['success'] = true;
             $response['sales'] = [
                 'cash_sales' => floatval($ordersResult['cash_sales'] ?? 0),
-                'gcash_sales' => floatval($ordersResult['gcash_sales'] ?? 0),
+                'qrph_sales' => floatval($ordersResult['qrph_sales'] ?? 0),
                 'cash_orders' => intval($ordersResult['cash_orders'] ?? 0),
-                'gcash_orders' => intval($ordersResult['gcash_orders'] ?? 0),
+                'qrph_orders' => intval($ordersResult['qrph_orders'] ?? 0),
                 'total_sales' => floatval($ordersResult['total_sales'] ?? 0),
                 'total_orders' => intval($ordersResult['total_orders'] ?? 0)
             ];
@@ -511,7 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="row">
-              <span class="row-label">GCash Sales</span>
+              <span class="row-label">QRPh Sales</span>
               <span>
                 <span class="row-value" id="ssDigitalSales">₱0.00</span>
                 <span class="row-sub blue" id="ssDigitalOrders">0 Orders</span>
@@ -890,9 +890,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .then(data => {
           if (data.success && data.sales) {
             liveSales.cash = data.sales.cash_sales;
-            liveSales.digital = data.sales.gcash_sales;
+            liveSales.digital = data.sales.qrph_sales;
             liveSales.cashOrders = data.sales.cash_orders;
-            liveSales.digitalOrders = data.sales.gcash_orders;
+            liveSales.digitalOrders = data.sales.qrph_orders;
             renderSalesSummary();
           }
         })
@@ -1102,7 +1102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (data.calculated) {
               const summary = `Shift closed successfully!\n\n` +
                 `Cash Sales: ₱${data.calculated.cash_sales.toFixed(2)} (${data.calculated.cash_orders} orders)\n` +
-                `GCash Sales: ₱${data.calculated.gcash_sales.toFixed(2)} (${data.calculated.gcash_orders} orders)\n` +
+                `QR Ph Sales: ₱${data.calculated.qrph_sales.toFixed(2)} (${data.calculated.qrph_orders} orders)\n` +
                 `Total Sales: ₱${data.calculated.total_sales.toFixed(2)} (${data.calculated.total_orders} orders)`;
               alert(summary);
             } else {
