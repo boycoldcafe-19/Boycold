@@ -287,7 +287,7 @@ section {
 /* ── TOP RECTANGLE ── */
 .top-rectangle {
     position: relative;
-    background: #fff;
+    background: #692727;
     padding: clamp(40px, 6vw, 80px) clamp(24px, 5vw, 70px);
     border-top-left-radius: clamp(40px, 6vw, 80px);
     border-top-right-radius: clamp(40px, 6vw, 80px);
