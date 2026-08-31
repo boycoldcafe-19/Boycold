@@ -126,7 +126,7 @@ if (!isset($_SESSION['branch_id'])) {
                 <div class="avatar-dropdown" id="avatarDropdown">
                     <a href="account.php"><i class="fa-solid fa-user"></i> Account</a>
                     <hr>
-                    <a href="../logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                    <a href="logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
                 </div>
             </div>
         </div>

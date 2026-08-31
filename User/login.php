@@ -1,6 +1,6 @@
 <?php
-require_once './config/google.php';
-require_once './config/db_config.php';
+require_once '../config/google.php';
+require_once '../config/db_config.php';
 
 $error = $_SESSION['google_error'] ?? '';
 unset($_SESSION['google_error']);
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie('remember_email', '', time() - 3600, '/');
             }
 
-            header('Location: User/home.php');
+            header('Location: home.php');
             exit;
         } else {
             $error = 'Invalid email or password.';
@@ -48,20 +48,20 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold Café</title>
-    <link rel="stylesheet" href="styles/login.css">
-    <link rel="icon" type="image/png" href="picture/icon.png">
+    <link rel="stylesheet" href="../styles/login.css">
+    <link rel="icon" type="image/png" href="../picture/icon.png">
 </head>
 <header>
-    <img src="picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
 </header>
 
 <body>
     <div class="pic1">
-        <img src="picture/Mask group.png" alt="Sign Up Image" width="690px">
+        <img src="../picture/Mask group.png" alt="Sign Up Image" width="690px">
     </div>
 
     <div class="hero-banner">
-        <img src="picture/Mask group.png" alt="BoyCold Café hero">
+        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
     </div>
 
     <h1 class="font">Log in Now</h1>
@@ -92,7 +92,7 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
         <label for="password"></label>
         <div class="password-container">
             <input type="password" id="password" name="password" placeholder="*Password" required>
-            <img src="picture/eye-close.png" alt="Hide Icon" class="hide-icon">
+            <img src="../picture/eye-close.png" alt="Hide Icon" class="hide-icon">
         </div>
 
         <div class="remember-row">
@@ -121,10 +121,10 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
         hideIcon.addEventListener('click', () => {
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                hideIcon.src = 'picture/eye-open.png';
+                hideIcon.src = '../picture/eye-open.png';
             } else {
                 passwordInput.type = 'password';
-                hideIcon.src = 'picture/eye-close.png';
+                hideIcon.src = '../picture/eye-close.png';
             }
         });
     </script>

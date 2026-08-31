@@ -1,9 +1,17 @@
 <?php
-require_once './config/google.php';
-require_once './config/db_config.php';
-require_once './config/mailer.php';
+require_once '../config/google.php';
+require_once '../config/db_config.php';
+require_once '../config/mailer.php';
 
 $error = '';
+$googleMessage = $_SESSION['google_register_message'] ?? '';
+$googleEmail = $_SESSION['google_register_email'] ?? '';
+$googleGivenName = $_SESSION['google_register_given_name'] ?? '';
+$googleFamilyName = $_SESSION['google_register_family_name'] ?? '';
+$googleId = $_SESSION['google_register_id'] ?? '';
+
+// Clear Google session variables after retrieving them
+unset($_SESSION['google_register_message'], $_SESSION['google_register_email'], $_SESSION['google_register_given_name'], $_SESSION['google_register_family_name'], $_SESSION['google_register_id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstname = trim($_POST['Firstname'] ?? '');
@@ -68,21 +76,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold Café</title>
-    <link rel="stylesheet" href="styles/register.css">
-    <link rel="icon" type="image/png" href="picture/icon.png">
+    <link rel="stylesheet" href="../styles/register.css">
+    <link rel="icon" type="image/png" href="../picture/icon.png">
 
 </head>
 <header>
-    <img src="picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
 </header>
 
 <body>
     <div class="pic1">
-        <img src="picture/Mask group.png">
+        <img src="../picture/Mask group.png">
     </div>
 
     <div class="hero-banner">
-        <img src="picture/Mask group.png" alt="BoyCold Café hero">
+        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
     </div>
 
     <div id="registerSection">
@@ -90,20 +98,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <p class="p1">Please create an account for continue using our app</p>
         <p class="p2">* Indicates a required field</p>
 
+        <?php if ($googleMessage): ?>
+            <p class="google-message"><?= htmlspecialchars($googleMessage) ?></p>
+        <?php endif; ?>
+
         <?php if ($error): ?>
             <p class="error-msg" style="color:red;"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
 
         <form action="register.php" method="post" id="registerForm">
             <h4>Personal Information</h4>
-            <input type="text" name="Firstname" id="Firstname" placeholder="*First Name" required><br><br>
-            <input type="text" name="Lastname" id="Lastname" placeholder="*Last Name" required><br><br>
+            <input type="text" name="Firstname" id="Firstname" placeholder="*First Name" value="<?= htmlspecialchars($googleGivenName) ?>" required><br><br>
+            <input type="text" name="Lastname" id="Lastname" placeholder="*Last Name" value="<?= htmlspecialchars($googleFamilyName) ?>" required><br><br>
 
             <h4>Account Security</h4>
-            <input type="email" name="email" id="email" placeholder="*Email" required><br><br>
+            <input type="email" name="email" id="email" placeholder="*Email" value="<?= htmlspecialchars($googleEmail) ?>" required><br><br>
             <div class="password-container">
                 <input type="password" id="password" name="password" placeholder="*Password" required>
-                <img src="picture/eye-close.png" alt="Hide Icon" class="hide-icon">
+                <img src="../picture/eye-close.png" alt="Hide Icon" class="hide-icon">
             </div><br>
 
             <div class="password-rules">
@@ -197,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <script src="scr/script.js"></script>
+    <script src="../scr/script.js"></script>
 </body>
 
 </html>

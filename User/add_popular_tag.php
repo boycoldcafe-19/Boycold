@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db_config.php';
+require_once '../config/db_config.php';
 
 echo "Adding 'popular' category to top products...\n";
 

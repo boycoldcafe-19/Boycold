@@ -115,7 +115,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 <div class="avatar-dropdown" id="avatarDropdown">
                     <a href="account.php"><i class="fa-solid fa-user"></i> Account</a>
                     <hr>
-                    <a href="../logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                    <a href="logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
                 </div>
             </div>
         </div>
@@ -128,12 +128,13 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 <li><a href="#" data-filter="popular" class="active">Popular</a></li>
                 <li><a href="#" data-filter="coffee">Coffee</a></li>
                 <li><a href="#" data-filter="non-coffee">Non-Coffee</a></li>
-                <li><a href="#" data-filter="special-coffee">Special Coffee</a></li>
                 <li><a href="#" data-filter="matcha-fusion">Matcha Fusion</a></li>
-                <li><a href="#" data-filter="fruit-shake">Fruit Shake</a></li>
+                <li><a href="#" data-filter="smoothie">Smoothie</a></li>
                 <li><a href="#" data-filter="frappe-series">Frappe Series</a></li>
-                <li><a href="#" data-filter="waffles">Waffles</a></li>
-                <li><a href="#" data-filter="bites">Bites</a></li>
+                <li><a href="#" data-filter="rice-meal">Rice Meal</a></li>
+                <li><a href="#" data-filter="light-snack">Light Snack</a></li>
+                <li><a href="#" data-filter="pasta">Pasta</a></li>
+                <li><a href="#" data-filter="waffle">Waffles</a></li>
                 <li><a href="#" data-filter="quesadilla">Quesadilla</a></li>
             </ul>
 
@@ -148,10 +149,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 </div>
                 <div class="product-grid" id="productGrid">
                     <?php
-                    $popularProducts = ['spanish latte', 'white mocha', 'french vanilla', 'milky oreo','choco berry','choco vanilla cookie','choco banana pudding','sea salt latte',
-                    'caramel macchiato','salted caramel','cheesecake latte','einspanner latte','biscoff creamy latte', 'tiramisu latte', 'matcha latte', 'seasalt matcha','matcha freddo',
-                    'strawberry matcha','matcha banana pudding','mango graham','mango oreo','berry oreo','berry mango','hershey delight','oreo frappe','java chips','biscoff frappe','lolly oreo waffle',
-                    'lolly matcha waffle','lolly biscoff waffle','chicken quesadilla','messy tuna quesadilla']; // Add more popular product names here (lowercase)
+                    $popularProducts = ['americano', 'cafe latte', 'spanish latte', 'sea salt latte', 'french vanilla', 'white mocha', 'mont blanc', 'horchata', 'ocean mist', 'cheesecake latte', 'dark mocha', 'biscoff creamy latte', 'caramel macchiato', 'salted caramel', 'einspanner latte', 'strawberry milk', 'blueberry milk', 'milky oreo', 'choco berry', 'choco banana pudding', 'choco vanilla cookie', 'strawberry matcha', 'matcha banana pudding', 'biscoff matcha', 'mango matcha', 'sea salt matcha', 'matcha freddo', 'matcha latte', 'ube matcha', 'cheesecake matcha', 'strawberry smoothie', 'berry mango', 'tropical matcha yogurt', 'ube yogurt', 'blueberry', 'mango graham', 'hershey delight', 'ube frappe', 'oreo frappe', 'matcha frappe', 'java chips', 'cheesecake frappe', 'black forrest', 'biscoff frappe', 'honey gochujang katsu', 'dak galbi', 'salted egg fish fillet', 'cheezy fries', 'fries and chicken tenders', 'onion rings', 'nachos', 'chicken alfredo', 'chicken pesto', 'aglio olio', 'carbonara', 'lolly waffle biscoff', 'lolly waffle chocolate', 'lolly waffle matcha', 'lolly waffle strawberry', 'lolly waffle oreo', 'lolly waffle tiramisu', 'chicken quesadilla', 'beef quesadilla']; // Add more popular product names here (lowercase)
                     if ($products && $products->num_rows > 0) {
                         while ($product = $products->fetch_assoc()) {
                             $id    = htmlspecialchars($product['id']);
@@ -188,7 +186,9 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                                             <?php endif; ?>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
-                                        <?php if (strpos($image, '../') === 0): ?>
+                                        <?php if (strpos($image, '/public/') === 0): ?>
+                                            <img src="<?= $image ?>" alt="<?= $name ?>">
+                                        <?php elseif (strpos($image, '../') === 0): ?>
                                             <img src="<?= $image ?>" alt="<?= $name ?>">
                                         <?php else: ?>
                                             <img src="../<?= ltrim($image, '/') ?>" alt="<?= $name ?>">

@@ -11,7 +11,7 @@
  */
 
 session_start();
-require_once './config/db_config.php';
+require_once '../config/db_config.php';
 
 $message = '';
 $error = '';

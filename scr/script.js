@@ -4,10 +4,10 @@ const hideIcon = document.querySelector('.hide-icon');
 hideIcon.addEventListener('click', () => {
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        hideIcon.src = 'picture/eye-open.png';
+        hideIcon.src = '../picture/eye-open.png';
     } else {
         passwordInput.type = 'password';
-        hideIcon.src = 'picture/eye-close.png';
+        hideIcon.src = '../picture/eye-close.png';
     }
 });
 

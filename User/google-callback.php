@@ -1,6 +1,6 @@
 <?php
-require_once './config/google.php';
-require_once './config/db_config.php';
+require_once '../config/google.php';
+require_once '../config/db_config.php';
 
 $error = '';
 $authAction = $_SESSION['google_auth_action'] ?? 'login';
@@ -40,7 +40,7 @@ function signInGoogleUser(array $user): void
     $_SESSION['user_email'] = $user['email'];
     $_SESSION['user_name'] = $user['user_name'];
 
-    header('Location: User/home.php');
+    header('Location: home.php');
     exit;
 }
 
@@ -142,7 +142,23 @@ if ($existingUser) {
 }
 
 if ($authAction !== 'register') {
-    redirectWithGoogleError('No BoyCold account is registered with that Google email. Please create an account first.');
+    // Check if this Google account was already redirected to register
+    if (isset($_SESSION['google_redirected_to_register']) && $_SESSION['google_redirected_to_register'] === $googleId) {
+        // Auto-register the account since they already tried to register
+        // Clear the redirect marker
+        unset($_SESSION['google_redirected_to_register']);
+    } else {
+        // First time - redirect to register page with Google account info pre-filled
+        $_SESSION['google_register_email'] = $googleEmail;
+        $_SESSION['google_register_name'] = $googleName;
+        $_SESSION['google_register_given_name'] = $googleGivenName;
+        $_SESSION['google_register_family_name'] = $googleFamilyName;
+        $_SESSION['google_register_id'] = $googleId;
+        $_SESSION['google_register_message'] = 'Account has not yet registered. Please complete your registration.';
+        $_SESSION['google_redirected_to_register'] = $googleId;
+        header('Location: register.php');
+        exit;
+    }
 }
 
 $firstname = $googleGivenName ?: $googleName ?: strtok($googleEmail, '@');

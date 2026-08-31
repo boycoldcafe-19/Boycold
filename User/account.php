@@ -348,7 +348,7 @@ $loyaltyProgressText = $loyaltyStamps === 0
         : $loyaltyStamps . ' stamp' . ($loyaltyStamps > 1 ? 's' : '') . ' earned!');
 
 // Coffee bean brown color
-$beanColor = '#6F4E37';
+$beanColor = '#692727';
 
 // Fetch favorites count
 $favStmt = $connect->prepare("SELECT COUNT(*) AS cnt FROM favorites WHERE user_name = ?");
@@ -517,7 +517,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 <div class="avatar-dropdown" id="avatarDropdown">
                     <a href="account.php"><i class="fa-solid fa-user"></i> Account</a>
                     <hr>
-                    <a href="../logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                    <a href="logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
                 </div>
             </div>
         </div>
@@ -785,7 +785,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                             <div class="s-welcome-icon s-logout-icon"><img src="../picture/ChatGPT Image May 16, 2026, 09_14_38 PM 1.png" alt=""></div>
                             <h2>Log Out</h2>
                             <p>Are you sure you want to log out of your account?</p>
-                            <button class="s-save-btn s-logout-btn" onclick="window.location.href='../logout.php'">Yes, Log Out</button>
+                            <button class="s-save-btn s-logout-btn" onclick="window.location.href='logout.php'">Yes, Log Out</button>
                         </div>
                     </div>
                 </div>
@@ -938,7 +938,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         
                         // Update loyalty stamps display
                         const loyaltyDisplayStamps = Math.min(10, Math.max(0, newStamps));
-                        const beanColor = '#6F4E37';
+                        const beanColor = '#692727';
                         
                         // Update all stamp SVGs in both rows
                         const stampElements = document.querySelectorAll('.beans-row svg, .beans-row-2 svg');

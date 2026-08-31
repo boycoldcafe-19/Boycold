@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once './config/db_config.php';
+require_once '../config/db_config.php';
 
 if (empty($_SESSION['reset_email'])) {
     header('Location: forgotpass.php');
@@ -47,20 +47,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold Café</title>
-    <link rel="stylesheet" href="styles/newpassword.css">
-    <link rel="icon" type="image/png" href="picture/icon.png">
+    <link rel="stylesheet" href="../styles/newpassword.css">
+    <link rel="icon" type="image/png" href="../picture/icon.png">
 </head>
 <header>
-    <img src="picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
 </header>
 
 <body>
     <div class="pic1">
-        <img src="picture/Mask group.png" alt="Sign Up Image" width="690px">
+        <img src="../picture/Mask group.png" alt="Sign Up Image" width="690px">
     </div>
 
     <div class="hero-banner">
-        <img src="picture/Mask group.png" alt="BoyCold Café hero">
+        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
     </div>
 
     <h1 class="font">New Password</h1>
@@ -74,14 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="password"></label>
         <div class="password-container">
             <input type="password" id="password" name="password" placeholder="*New Password" required>
-            <img src="picture/eye-close.png" alt="Toggle Password Visibility" class="hide-icon">
+            <img src="../picture/eye-close.png" alt="Toggle Password Visibility" class="hide-icon">
         </div>
         <br><br>
 
         <label for="confirm_password"></label>
         <div class="password-container">
             <input type="password" id="confirm_password" name="confirm_password" placeholder="*Confirm New Password" required>
-            <img src="picture/eye-close.png" alt="Toggle Password Visibility" class="hide-icon">
+            <img src="../picture/eye-close.png" alt="Toggle Password Visibility" class="hide-icon">
         </div>
         <br><br>
 
@@ -105,10 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const input = icon.previousElementSibling;
                 if (input.type === 'password') {
                     input.type = 'text';
-                    icon.src = 'picture/eye-open.png';
+                    icon.src = '../picture/eye-open.png';
                 } else {
                     input.type = 'password';
-                    icon.src = 'picture/eye-close.png';
+                    icon.src = '../picture/eye-close.png';
                 }
             });
         });

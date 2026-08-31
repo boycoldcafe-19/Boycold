@@ -287,7 +287,7 @@ section {
 /* ── TOP RECTANGLE ── */
 .top-rectangle {
     position: relative;
-    background: #692727;
+    background: #fff;
     padding: clamp(40px, 6vw, 80px) clamp(24px, 5vw, 70px);
     border-top-left-radius: clamp(40px, 6vw, 80px);
     border-top-right-radius: clamp(40px, 6vw, 80px);
@@ -350,7 +350,7 @@ section {
 /* ── MID RECTANGLE ── */
 .mid-rectangle {
     position: relative;
-    background: #6F4E37;
+    background: #692727;
     padding: clamp(40px, 6vw, 80px) clamp(24px, 5vw, 70px);
     border-top-left-radius: clamp(40px, 6vw, 80px);
     border-top-right-radius: clamp(40px, 6vw, 80px);
