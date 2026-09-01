@@ -3,7 +3,7 @@ session_start();
 require_once '../config/db_config.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 $userId = $_SESSION['user_id'];

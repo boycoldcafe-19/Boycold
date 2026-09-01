@@ -50,7 +50,7 @@ function buildLoyaltyQrDataUri(string $payload): string {
 
 // Session guard
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -323,7 +323,7 @@ $user = $stmt->get_result()->fetch_assoc();
 // Guard: if user row is gone (e.g. DB reset), destroy session and redirect
 if (!$user) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 

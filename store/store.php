@@ -3,7 +3,7 @@ session_start();
 require_once '../config/db_config.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: ../User/login.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $userEmail = htmlspecialchars($user['email']);
 $avatarRaw = $user['avatar'] ?? '';
 if ($avatarRaw !== '' && !preg_match('#^(https?://|/)#', $avatarRaw)) {
     // Avatar paths are stored relative to /User/, but this page lives in /store/
-    $avatarRaw = '/User/' . $avatarRaw;
+    $avatarRaw = '../User/' . $avatarRaw;
 }
 $avatar    = $avatarRaw !== '' ? htmlspecialchars($avatarRaw) : '';
 
@@ -30,7 +30,7 @@ $_SESSION['user_email'] = $user['email'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="location.css">
+    <link rel="stylesheet" href="../store/location.css">
     <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,19 +51,19 @@ $_SESSION['user_email'] = $user['email'];
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="/User/home.php">HOME</a></li>
-                <li><a href="/User/menu.php">MENU</a></li>
-                <li><a href="/User/status.php">ORDER</a></li>
+                <li><a href="../User/home.php">HOME</a></li>
+                <li><a href="../User/menu.php">MENU</a></li>
+                <li><a href="../User/status.php">ORDER</a></li>
                 <li><a href="../store/store.php">STORES</a></li>
-                <li class="sidebar-nav-only-not"><a href="/User/status.php">ORDERS</a></li>
-                <li class="sidebar-nav-only"><a href="/User/favorites.php">FAVORITES</a></li>
+                <li class="sidebar-nav-only-not"><a href="../User/status.php">ORDERS</a></li>
+                <li class="sidebar-nav-only"><a href="../User/favorites.php">FAVORITES</a></li>
                 <li><a href="../User/cart.php" class="cart-link">
                         <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i> CART
                     </a></li>
             </ul>
         </nav>
         <div class="sidebar-user">
-            <a href="/User/account.php" class="sidebar-avatar-link">
+            <a href="../User/account.php" class="sidebar-avatar-link">
                 <div class="sidebar-avatar" id="sidebarAvatarWrap">
                     <?php if ($avatar): ?>
                         <img id="sidebarAvatarImg" src="<?= $avatar ?>" alt="avatar" style="display:block;" onerror="this.style.display='none'; const icon=this.parentElement.querySelector('.fa-user'); if(icon) icon.style.display='';">
@@ -88,17 +88,17 @@ $_SESSION['user_email'] = $user['email'];
             </div>
 
             <ul class="nav-links">
-                <li><a href="/User/home.php">HOME</a></li>
-                <li><a href="/User/menu.php" class="active">MENU</a></li>
-                <li><a href="/User/status.php">ORDERS</a></li>
-                <li><a href="/User/favorites.php">FAVORITES</a></li>
+                <li><a href="../User/home.php">HOME</a></li>
+                <li><a href="../User/menu.php" class="active">MENU</a></li>
+                <li><a href="../User/status.php">ORDERS</a></li>
+                <li><a href="../User/favorites.php">FAVORITES</a></li>
             </ul>
         </div>
         <div class="logo">
             <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
         </div>
         <div class="nav-right-group">
-            <a href="/User/cart.php" class="cart-link">
+            <a href="../User/cart.php" class="cart-link">
                 <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i>
             </a>
             <div class="avatar-dropdown-wrap">
@@ -112,9 +112,9 @@ $_SESSION['user_email'] = $user['email'];
                     <?php endif; ?>
                 </div>
                 <div class="avatar-dropdown" id="avatarDropdown">
-                    <a href="/User/account.php"><i class="fa-solid fa-user"></i> Account</a>
+                    <a href="../User/account.php"><i class="fa-solid fa-user"></i> Account</a>
                     <hr>
-                    <a href="../logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                    <a href="../User/logout.php" class="dropdown-logout"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
                 </div>
             </div>
         </div>
@@ -234,6 +234,6 @@ $_SESSION['user_email'] = $user['email'];
         </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="location.js"></script>
+    <script src="../store/location.js"></script>
 </body>
 </html> 

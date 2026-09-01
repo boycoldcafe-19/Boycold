@@ -409,7 +409,7 @@ html {
     width: 100%;
     height: 100%;
     background-size: cover;
-    background: url('/picture/background2.png') center 10px / cover no-repeat;
+    background: url('../picture/background2.png') center 10px / cover no-repeat;
     background-color: #000;
     /* remove transform: scale(1.07) entirely */
 }
@@ -636,7 +636,7 @@ html {
     width: 100%;
     padding: 14px;
     border-radius: 12px;
-    background: #6F4E37;
+    background: #692727;
     border: none;
     color: #fff;
     font-size: 16px;

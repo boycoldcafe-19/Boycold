@@ -4,7 +4,7 @@ require_once '../config/db_config.php';
 
 // Session guard
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -20,7 +20,7 @@ $stmt->close();
 
 if (!$userRecord) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -49,7 +49,7 @@ $stmt->close();
 
 if (!$user) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 

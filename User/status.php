@@ -3,7 +3,7 @@ session_start();
 require_once '../config/db_config.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -15,7 +15,7 @@ $user = $stmt->get_result()->fetch_assoc();
 
 if (!$user) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 

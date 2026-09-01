@@ -4,7 +4,7 @@ require_once '../config/db_config.php';
 
 // Session guard — redirect to login if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $user = $stmt->get_result()->fetch_assoc();
 
 if (!$user) {
     session_destroy();
-    header('Location: ../login.php');
+    header('Location: login.php');
     exit;
 }
 
