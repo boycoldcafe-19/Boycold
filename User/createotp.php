@@ -15,11 +15,12 @@ if (empty($_SESSION['otp_email'])) {
     <link rel="stylesheet" href="../styles/createotp.css">
     <link rel="icon" type="image/png" href="../picture/icon.png">
 </head>
-<header>
-    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
-</header>
 
 <body>
+    <header>
+        <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    </header>
+
     <div class="pic1">
         <img src="../picture/Mask group.png" alt="Sign Up Image">
     </div>

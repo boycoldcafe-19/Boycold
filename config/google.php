@@ -46,7 +46,7 @@ function getGoogleAuthUrl($action = 'login') {
     return GOOGLE_AUTH_URL . '?' . http_build_query($params);
 }
 
-function exchangeCodeForToken($code) {
+function exchangeCodeForToken(string $code): array {
     $params = [
         'code' => $code,
         'client_id' => GOOGLE_CLIENT_ID,
@@ -64,7 +64,6 @@ function exchangeCodeForToken($code) {
     
     $response = curl_exec($ch);
     $error = curl_error($ch);
-    curl_close($ch);
     
     if ($error) {
         return ['error' => 'Curl error: ' . $error];
@@ -73,7 +72,7 @@ function exchangeCodeForToken($code) {
     return json_decode($response, true);
 }
 
-function getGoogleUserInfo($accessToken) {
+function getGoogleUserInfo(string $accessToken): array {
     $ch = curl_init(GOOGLE_USER_INFO_URL);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -82,8 +81,7 @@ function getGoogleUserInfo($accessToken) {
     
     $response = curl_exec($ch);
     $error = curl_error($ch);
-    curl_close($ch);
-    
+
     if ($error) {
         return ['error' => 'Curl error: ' . $error];
     }

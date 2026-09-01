@@ -50,7 +50,7 @@ function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = getenv('GMAIL_USERNAME') ?: 'boycoldcafe19@gmail.com';
-        $mail->Password   = getenv('GMAIL_APP_PASSWORD') ?: 'plcj mrda ruwk yvyb';
+        $mail->Password   = getenv('GMAIL_APP_PASSWORD') ?: 'zhjh ocsx gaww tvxv';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port       = 465;
         

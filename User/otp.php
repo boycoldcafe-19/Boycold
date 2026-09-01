@@ -62,92 +62,140 @@ if ($mode === 'register') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'verify') {
-        $otp = trim($_POST['otp'] ?? '');
-        if (!preg_match('/^\d{6}$/', $otp)) {
-            $error = 'Please enter a valid 6-digit OTP.';
-        } else {
-            $stmt = $connect->prepare(
-                "SELECT id, otp, expires_at, attempts FROM otp WHERE email=? AND type=? AND status='pending' ORDER BY id DESC LIMIT 1"
-            );
-            $stmt->bind_param("ss", $email, $type);
-            $stmt->execute();
-            $row = $stmt->get_result()->fetch_assoc();
-
-            if (!$row) {
-                $error = 'No active OTP found. Please request a new one.';
-            } elseif (new DateTime() > new DateTime($row['expires_at'])) {
-                $u = $connect->prepare("UPDATE otp SET status='expired' WHERE id=?");
-                $u->bind_param("i", $row['id']);
-                $u->execute();
-                $error = 'OTP has expired. Please click Resend OTP.';
-            } elseif ($row['attempts'] >= 5) {
-                $error = 'Too many failed attempts. Please request a new OTP.';
-            } elseif ($otp !== $row['otp']) {
-                $u = $connect->prepare("UPDATE otp SET attempts=attempts+1 WHERE id=?");
-                $u->bind_param("i", $row['id']);
-                $u->execute();
-                $left = 5 - ($row['attempts'] + 1);
-                $error = "Incorrect OTP. $left attempt(s) remaining.";
+        try {
+            $otp = trim($_POST['otp'] ?? '');
+            if (!preg_match('/^\d{6}$/', $otp)) {
+                $error = 'Please enter a valid 6-digit OTP.';
             } else {
-                $u = $connect->prepare("UPDATE otp SET status='verified' WHERE id=?");
-                $u->bind_param("i", $row['id']);
-                $u->execute();
-
-                if ($type === 'register') {
-                    $userData = $connect->prepare("SELECT firstname, lastname, password FROM otp WHERE email=? AND type='register' ORDER BY id DESC LIMIT 1");
-                    $userData->bind_param("s", $email);
-                    $userData->execute();
-                    $user = $userData->get_result()->fetch_assoc();
-                    $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified, created_at) VALUES (?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE is_verified=1, password=VALUES(password)");
-                    $ins->bind_param("ssss", $user['firstname'], $user['lastname'], $email, $user['password']);
-                    $ins->execute();
-
-                    // ── Assign loyalty card number ────────────────────────
-                    $uid = $connect->insert_id;
-                    if (!$uid) {
-                        $eid = $connect->prepare("SELECT id FROM users WHERE email=?");
-                        $eid->bind_param("s", $email);
-                        $eid->execute();
-                        $uid = $eid->get_result()->fetch_assoc()['id'];
-                    }
-
-                    ensureLoyaltyCardNo($connect, (int) $uid);
-                    // ─────────────────────────────────────────────────────
-
-                    unset($_SESSION['otp_email'], $_SESSION['otp_type']);
-                } else {
-                    $_SESSION['reset_email'] = $email;
-                    unset($_SESSION['otp_email'], $_SESSION['otp_type']);
+                $stmt = $connect->prepare(
+                    "SELECT id, otp, expires_at, attempts FROM otp WHERE email=? AND type=? AND status='pending' ORDER BY id DESC LIMIT 1"
+                );
+                if (!$stmt) {
+                    throw new Exception('Database error: ' . $connect->error);
                 }
-                header("Location: $redirectOnSuccess");
-                exit;
+                
+                $stmt->bind_param("ss", $email, $type);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$row) {
+                    $error = 'No active OTP found. Please request a new one.';
+                } elseif (new DateTime() > new DateTime($row['expires_at'])) {
+                    $u = $connect->prepare("UPDATE otp SET status='expired' WHERE id=?");
+                    if (!$u) {
+                        throw new Exception('Database error: ' . $connect->error);
+                    }
+                    $u->bind_param("i", $row['id']);
+                    $u->execute();
+                    $u->close();
+                    $error = 'OTP has expired. Please click Resend OTP.';
+                } elseif ($row['attempts'] >= 5) {
+                    $error = 'Too many failed attempts. Please request a new OTP.';
+                } elseif ($otp !== $row['otp']) {
+                    $u = $connect->prepare("UPDATE otp SET attempts=attempts+1 WHERE id=?");
+                    if (!$u) {
+                        throw new Exception('Database error: ' . $connect->error);
+                    }
+                    $u->bind_param("i", $row['id']);
+                    $u->execute();
+                    $u->close();
+                    $left = 5 - ($row['attempts'] + 1);
+                    $error = "Incorrect OTP. $left attempt(s) remaining.";
+                } else {
+                    $u = $connect->prepare("UPDATE otp SET status='verified' WHERE id=?");
+                    if (!$u) {
+                        throw new Exception('Database error: ' . $connect->error);
+                    }
+                    $u->bind_param("i", $row['id']);
+                    $u->execute();
+                    $u->close();
+
+                    if ($type === 'register') {
+                        $userData = $connect->prepare("SELECT firstname, lastname, password FROM otp WHERE email=? AND type='register' ORDER BY id DESC LIMIT 1");
+                        if (!$userData) {
+                            throw new Exception('Database error: ' . $connect->error);
+                        }
+                        $userData->bind_param("s", $email);
+                        $userData->execute();
+                        $user = $userData->get_result()->fetch_assoc();
+                        $userData->close();
+                        
+                        $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified, created_at) VALUES (?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE is_verified=1, password=VALUES(password)");
+                        if (!$ins) {
+                            throw new Exception('Database error: ' . $connect->error);
+                        }
+                        $ins->bind_param("ssss", $user['firstname'], $user['lastname'], $email, $user['password']);
+                        $ins->execute();
+
+                        // ── Assign loyalty card number ────────────────────────
+                        $uid = $connect->insert_id;
+                        if (!$uid) {
+                            $eid = $connect->prepare("SELECT id FROM users WHERE email=?");
+                            if (!$eid) {
+                                throw new Exception('Database error: ' . $connect->error);
+                            }
+                            $eid->bind_param("s", $email);
+                            $eid->execute();
+                            $uid = $eid->get_result()->fetch_assoc()['id'];
+                            $eid->close();
+                        }
+
+                        ensureLoyaltyCardNo($connect, (int) $uid);
+                        // ─────────────────────────────────────────────────────
+
+                        $ins->close();
+                        unset($_SESSION['otp_email'], $_SESSION['otp_type']);
+                    } else {
+                        $_SESSION['reset_email'] = $email;
+                        unset($_SESSION['otp_email'], $_SESSION['otp_type']);
+                    }
+                    header("Location: $redirectOnSuccess");
+                    exit;
+                }
             }
+        } catch (Exception $e) {
+            $error = 'An error occurred during OTP verification. Please try again.';
+            error_log("OTP verification error for email $email: " . $e->getMessage());
         }
     } elseif ($action === 'resend') {
-        $chk = $connect->prepare("SELECT otp_sent FROM otp WHERE email=? AND type=? AND status='pending' AND otp_sent >= NOW() - INTERVAL 60 SECOND ORDER BY id DESC LIMIT 1");
-        $chk->bind_param("ss", $email, $type);
-        $chk->execute();
-        $last = $chk->get_result()->fetch_assoc();
-        $wait = $last ? max(0, 60 - (time() - strtotime($last['otp_sent']))) : 0;
+        try {
+            $chk = $connect->prepare("SELECT otp_sent FROM otp WHERE email=? AND type=? AND status='pending' AND otp_sent >= NOW() - INTERVAL 60 SECOND ORDER BY id DESC LIMIT 1");
+            if (!$chk) {
+                throw new Exception('Database error: ' . $connect->error);
+            }
+            $chk->bind_param("ss", $email, $type);
+            $chk->execute();
+            $last = $chk->get_result()->fetch_assoc();
+            $chk->close();
+            $wait = $last ? max(0, 60 - (time() - strtotime($last['otp_sent']))) : 0;
 
-        if ($wait > 0) {
-            $error = "Please wait $wait second(s) before resending.";
-        } else {
-            $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type=? AND status='pending'");
-            $exp->bind_param("ss", $email, $type);
-            $exp->execute();
+            if ($wait > 0) {
+                $error = "Please wait $wait second(s) before resending.";
+            } else {
+                $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type=? AND status='pending'");
+                if (!$exp) {
+                    throw new Exception('Database error: ' . $connect->error);
+                }
+                $exp->bind_param("ss", $email, $type);
+                $exp->execute();
+                $exp->close();
 
-            $otp = str_pad(rand(0, 60), 6, '0', STR_PAD_LEFT);
-            $ip = $_SERVER['REMOTE_ADDR'];
-            $fullName = $email;
+                $otp = str_pad(rand(0, 60), 6, '0', STR_PAD_LEFT);
+                $ip = $_SERVER['REMOTE_ADDR'];
+                $fullName = $email;
 
-            if ($type === 'register') {
-                $nq = $connect->prepare("SELECT firstname, lastname, password FROM otp WHERE email=? ORDER BY id DESC LIMIT 1");
-                $nq->bind_param("s", $email);
-                $nq->execute();
-                $nr = $nq->get_result()->fetch_assoc();
-                $fn = $nr['firstname'] ?? '';
-                $ln = $nr['lastname'] ?? '';
+                if ($type === 'register') {
+                    $nq = $connect->prepare("SELECT firstname, lastname, password FROM otp WHERE email=? ORDER BY id DESC LIMIT 1");
+                    if (!$nq) {
+                        throw new Exception('Database error: ' . $connect->error);
+                    }
+                    $nq->bind_param("s", $email);
+                    $nq->execute();
+                    $nr = $nq->get_result()->fetch_assoc();
+                    $nq->close();
+                    $fn = $nr['firstname'] ?? '';
+                    $ln = $nr['lastname'] ?? '';
                 $hp = $nr['password'] ?? '';
                 $fullName = "$fn $ln";
                 $ins = $connect->prepare("INSERT INTO otp (firstname, lastname, email, password, otp, type, status, otp_sent, ip) VALUES (?, ?, ?, ?, ?, 'register', 'pending', NOW(), ?)");
@@ -169,6 +217,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $success = 'A new OTP has been sent to your email.';
             }
+            }
+        } catch (Exception $e) {
+            $error = 'An error occurred during resend. Please try again.';
+            error_log("OTP resend error for email $email: " . $e->getMessage());
         }
     }
 }
@@ -183,11 +235,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="../styles/code.css">
     <link rel="icon" type="image/png" href="../picture/icon.png">
 </head>
-<header>
-    <img src="../picture/LOGO.png" width="50px">
-</header>
 
 <body>
+    <header>
+        <img src="../picture/LOGO.png" width="50px">
+    </header>
+
     <div class="pic1">
         <img src="../picture/Mask group.png" width="750px">
     </div>

@@ -31,40 +31,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ) {
         $error = 'Password does not meet the requirements.';
     } else {
-        $chk = $connect->prepare("SELECT id FROM users WHERE email=? AND is_verified=1");
-        $chk->bind_param("s", $email);
-        $chk->execute();
-        if ($chk->get_result()->num_rows > 0) {
-            $error = 'This email is already registered. Please log in.';
-        } else {
-            $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='register' AND status='pending'");
-            $exp->bind_param("s", $email);
-            $exp->execute();
-
-            $otp        = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-            $hashedPass = password_hash($password, PASSWORD_BCRYPT);
-            $ip         = $_SERVER['REMOTE_ADDR'];
-
-            $ins = $connect->prepare(
-                "INSERT INTO otp (firstname, lastname, email, password, otp, type, status, otp_sent, ip)
-                 VALUES (?, ?, ?, ?, ?, 'register', 'pending', NOW(), ?)"
-            );
-            $ins->bind_param("ssssss", $firstname, $lastname, $email, $hashedPass, $otp, $ip);
-
-            if ($ins->execute()) {
-                if (sendOTPEmail($email, "$firstname $lastname", $otp, 'register')) {
-                    $_SESSION['otp_email'] = $email;
-                    $_SESSION['otp_type']  = 'register';
-                    header('Location: createotp.php');
-                    exit;
-                } else {
-                    $error = 'Could not send OTP email. Please check your email address and try again. If the problem persists, please contact support.';
-                    error_log("OTP email send failed for email: $email");
-                }
-            } else {
-                $error = 'Database error. Please try again.';
-                error_log("Database insert failed for email: $email");
+        try {
+            $chk = $connect->prepare("SELECT id FROM users WHERE email=? AND is_verified=1");
+            if (!$chk) {
+                throw new Exception('Database prepare failed: ' . $connect->error);
             }
+            
+            $chk->bind_param("s", $email);
+            $chk->execute();
+            
+            if ($chk->get_result()->num_rows > 0) {
+                $error = 'This email is already registered. Please log in.';
+            } else {
+                $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='register' AND status='pending'");
+                if (!$exp) {
+                    throw new Exception('Database prepare failed: ' . $connect->error);
+                }
+                
+                $exp->bind_param("s", $email);
+                $exp->execute();
+
+                $otp        = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+                $hashedPass = password_hash($password, PASSWORD_BCRYPT);
+                $ip         = $_SERVER['REMOTE_ADDR'];
+
+                $ins = $connect->prepare(
+                    "INSERT INTO otp (firstname, lastname, email, password, otp, type, status, otp_sent, ip)
+                     VALUES (?, ?, ?, ?, ?, 'register', 'pending', NOW(), ?)"
+                );
+                
+                if (!$ins) {
+                    throw new Exception('Database prepare failed: ' . $connect->error);
+                }
+                
+                $ins->bind_param("ssssss", $firstname, $lastname, $email, $hashedPass, $otp, $ip);
+
+                if ($ins->execute()) {
+                    if (sendOTPEmail($email, "$firstname $lastname", $otp, 'register')) {
+                        $_SESSION['otp_email'] = $email;
+                        $_SESSION['otp_type']  = 'register';
+                        header('Location: createotp.php');
+                        exit;
+                    } else {
+                        $error = 'Could not send OTP email. Please check your email address and try again. If the problem persists, please contact support.';
+                        error_log("OTP email send failed for email: $email");
+                    }
+                } else {
+                    $error = 'Database error: ' . $connect->error . '. Please try again.';
+                    error_log("Database insert failed for email: $email. Error: " . $connect->error);
+                }
+                $ins->close();
+            }
+            $chk->close();
+        } catch (Exception $e) {
+            $error = 'An error occurred during registration. Please try again.';
+            error_log("Registration error for email: $email. Exception: " . $e->getMessage());
         }
     }
 }
@@ -78,13 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>BoyCold Café</title>
     <link rel="stylesheet" href="../styles/register.css">
     <link rel="icon" type="image/png" href="../picture/icon.png">
-
 </head>
-<header>
-    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
-</header>
 
 <body>
+    <header>
+        <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    </header>
+
     <div class="pic1">
         <img src="../picture/Mask group.png">
     </div>
