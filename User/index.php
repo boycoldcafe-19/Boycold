@@ -10,7 +10,6 @@
     <title>BoyCold Café</title>
 </head>
 <body>
-    <p><a href="checkout.php">Go to checkout</a></p>
 
     <div class="main-nav">
         <nav id="mainNav">
@@ -18,9 +17,6 @@
                 <div class="logo">
                     <img src="../picture/BoyCold Logo 2.png" alt="BoyCold logo">
                 </div>
-                <ul class="nav-left">
-                    <li><a href="../User/register.php">MENU</a></li>
-                </ul>
             </div>
 
             <div class="nav-right-group">
