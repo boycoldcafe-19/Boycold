@@ -206,8 +206,8 @@ try {
     $hashedPassword = password_hash($randomPassword, PASSWORD_BCRYPT);
 
     $insertStmt = $connect->prepare(
-        "INSERT INTO users (firstname, lastname, email, password, google_id, auth_provider, is_verified, created_at)
-         VALUES (?, ?, ?, ?, ?, 'google', 1, NOW())"
+        "INSERT INTO users (firstname, lastname, email, password, google_id, auth_provider, is_verified)
+         VALUES (?, ?, ?, ?, ?, 'google', 1)"
     );
     if (!$insertStmt) {
         throw new Exception('Database error: ' . $connect->error);
