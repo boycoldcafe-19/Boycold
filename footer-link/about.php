@@ -89,7 +89,7 @@ $_SESSION['user_email'] = $user['email'];
             </div>
             <ul class="nav-links">
                 <li><a href="/User/home.php">HOME</a></li>
-                <li><a href="/User/Menu.php">MENU</a></li>
+                <li><a href="/User/menu.php">MENU</a></li>
                 <li><a href="/User/status.php">ORDERS</a></li>
                 <li><a href="/User/favorites.php">FAVORITES</a></li>
             </ul>
@@ -214,6 +214,6 @@ $_SESSION['user_email'] = $user['email'];
         </div>
     </footer>
 
-    <script src="../footer-js/footer.js"></script>
+    <script src="footer-js/footer.js"></script>
 </body>
 </html>

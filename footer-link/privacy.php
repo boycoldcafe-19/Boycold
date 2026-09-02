@@ -259,6 +259,6 @@ $_SESSION['user_email'] = $user['email'];
         </div>
     </footer>
 
-    <script src="../footer-js/footer.js"></script>
+    <script src="footer-js/footer.js"></script>
 </body>
 </html>>
