@@ -10,7 +10,6 @@
     <title>BoyCold Café</title>
 </head>
 <body>
-
     <div class="main-nav">
         <nav id="mainNav">
             <div class="nav-left-group">

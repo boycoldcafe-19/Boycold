@@ -56,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Insert admin user (verified=1 so no OTP needed)
             $stmt = $connect->prepare(
-                "INSERT INTO users (firstname, lastname, email, password, is_verified, phone, address, avatar, created_at)
-                 VALUES (?, ?, ?, ?, 1, NULL, NULL, NULL, NOW())"
+                "INSERT INTO users (firstname, lastname, email, password, is_verified, phone, address, avatar)
+                 VALUES (?, ?, ?, ?, 1, NULL, NULL, NULL)"
             );
             
             if (!$stmt) {
