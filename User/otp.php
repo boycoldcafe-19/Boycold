@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $user = $userData->get_result()->fetch_assoc();
                         $userData->close();
                         
-                        $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified, created_at) VALUES (?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE is_verified=1, password=VALUES(password)");
+                        $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE is_verified=1, password=VALUES(password)");
                         if (!$ins) {
                             throw new Exception('Database error: ' . $connect->error);
                         }
