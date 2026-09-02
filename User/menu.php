@@ -92,7 +92,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
             </ul>
         </div>
         <div class="logo">
-            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
+            <img src="../picture/LOGO.png" alt="BoyCold logo">
         </div>
         <div class="nav-right-group">
             <div class="nav-search" id="navSearch">
