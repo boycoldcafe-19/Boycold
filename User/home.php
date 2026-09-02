@@ -96,8 +96,8 @@ if (!isset($_SESSION['branch_id'])) {
                 <i class="fa-solid fa-bars"></i>
             </div>
             <ul class="nav-links">
-                <li><a href="Home.php">HOME</a></li>
-                <li><a href="Menu.php">MENU</a></li>
+                <li><a href="home.php">HOME</a></li>
+                <li><a href="menu.php">MENU</a></li>
                 <li><a href="status.php">ORDERS</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
             </ul>
