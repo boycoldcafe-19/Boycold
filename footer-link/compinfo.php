@@ -95,7 +95,7 @@ $_SESSION['user_email'] = $user['email'];
             </ul>
         </div>
         <div class="logo">
-            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
+            <img src="../picture/LOGO.png" alt="BoyCold logo">
         </div>
         <div class="nav-right-group">
             <a href="/User/cart.php" class="cart-link">
@@ -254,6 +254,6 @@ $_SESSION['user_email'] = $user['email'];
         </div>
     </footer>
 
-    <script src="footer-js/footer.js"></script>
+    <script src="../footer-js/footer.js"></script>
 </body>
 </html>
