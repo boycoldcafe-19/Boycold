@@ -102,7 +102,7 @@ $_SESSION['user_email'] = $user['email'];
 
         <!-- CENTER: logo -->
         <div class="logo">
-            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
+            <img src="../picture/LOGO.png" alt="BoyCold logo">
         </div>
 
         <div class="nav-right-group">
