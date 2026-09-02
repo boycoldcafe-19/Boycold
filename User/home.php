@@ -58,8 +58,8 @@ if (!isset($_SESSION['branch_id'])) {
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="Home.php">HOME</a></li>
-                <li><a href="Menu.php">MENU</a></li>
+                <li><a href="home.php">HOME</a></li>
+                <li><a href="menu.php">MENU</a></li>
                 <li><a href="status.php">ORDER</a></li>
                 <li><a href="../store/store.php">STORES</a></li>
                 <li class="sidebar-nav-only-not"><a href="status.php">ORDERS</a></li>
