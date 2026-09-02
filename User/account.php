@@ -498,7 +498,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
             </ul>
         </div>
         <div class="logo">
-            <img src="../picture/Boycold Logo 2.png" alt="BoyCold">
+            <img src="../picture/LOGO.png" alt="BoyCold">
         </div>
         <div class="nav-right-group">
             <a href="cart.php" class="cart-link">
