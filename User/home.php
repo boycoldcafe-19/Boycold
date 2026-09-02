@@ -105,7 +105,7 @@ if (!isset($_SESSION['branch_id'])) {
 
         <!-- CENTER: logo -->
         <div class="logo">
-            <img src="../picture/Boycold Logo 2.png" alt="BoyCold logo">
+            <img src="../picture/LOGO.png" alt="BoyCold logo">
         </div>
 
         <!-- RIGHT: avatar with dropdown -->
