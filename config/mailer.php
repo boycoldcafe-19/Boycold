@@ -6,6 +6,50 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
 
+function normalizeMailerValue(string $value): string
+{
+    return preg_replace('/\s+/', '', trim($value));
+}
+
+function getMailerEnvValue(string $name, string $default = ''): string
+{
+    $value = getenv($name);
+    if ($value !== false && $value !== '') {
+        return normalizeMailerValue((string) $value);
+    }
+
+    if (isset($_ENV[$name]) && $_ENV[$name] !== '') {
+        return normalizeMailerValue((string) $_ENV[$name]);
+    }
+
+    if (function_exists('loadProjectEnv')) {
+        $env = loadProjectEnv();
+        if (isset($env[$name]) && $env[$name] !== '') {
+            return normalizeMailerValue((string) $env[$name]);
+        }
+    }
+
+    $envFile = dirname(__DIR__) . '/.env';
+    if (is_readable($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (is_array($lines)) {
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if ($trimmed === '' || str_starts_with($trimmed, '#') || strpos($trimmed, '=') === false) {
+                    continue;
+                }
+
+                [$key, $value] = array_pad(explode('=', $trimmed, 2), 2, '');
+                if (trim($key) === $name) {
+                    return normalizeMailerValue(trim((string) $value));
+                }
+            }
+        }
+    }
+
+    return normalizeMailerValue($default);
+}
+
 function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type = 'register'): bool
 {
     $isReset  = ($type === 'reset');
@@ -45,12 +89,20 @@ function sendOTPEmail(string $toEmail, string $toName, string $otp, string $type
 
     $mail = new PHPMailer(true);
     try {
+        $gmailUsername = getMailerEnvValue('GMAIL_USERNAME', 'boycoldcafe19@gmail.com');
+        $gmailPassword = getMailerEnvValue('GMAIL_APP_PASSWORD', 'uepyraxttfudequq');
+
+        if ($gmailPassword === '') {
+            error_log('Gmail app password is not configured or is empty.');
+            return false;
+        }
+
         // SMTP Configuration
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = getenv('GMAIL_USERNAME') ?: 'boycoldcafe19@gmail.com';
-        $mail->Password   = getenv('GMAIL_APP_PASSWORD') ?: 'zhjh ocsx gaww tvxv';
+        $mail->Username   = $gmailUsername !== '' ? $gmailUsername : 'boycoldcafe19@gmail.com';
+        $mail->Password   = $gmailPassword;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port       = 465;
         
