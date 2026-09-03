@@ -32,6 +32,73 @@ function runChange(mysqli $connect, string $sql): void
     }
 }
 
+function generateUniqueToken(mysqli $connect): string
+{
+    do {
+        $token = bin2hex(random_bytes(16));
+        $stmt = $connect->prepare('SELECT id FROM users WHERE loyalty_token = ? LIMIT 1');
+        $stmt->bind_param('s', $token);
+        $stmt->execute();
+        $exists = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+    } while ($exists);
+
+    return $token;
+}
+
+function generateUniqueCardNumber(mysqli $connect, int $userId): string
+{
+    $base = 'BY-' . date('Y') . str_pad((string) $userId, 3, '0', STR_PAD_LEFT);
+    $cardNo = $base;
+    $suffix = 0;
+
+    do {
+        $stmt = $connect->prepare('SELECT id FROM users WHERE card_no = ? LIMIT 1');
+        $stmt->bind_param('s', $cardNo);
+        $stmt->execute();
+        $existing = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$existing || (int) $existing['id'] === $userId) {
+            return $cardNo;
+        }
+
+        $suffix++;
+        $cardNo = 'BY-' . date('Y') . str_pad((string) ($userId * 1000 + $suffix), 6, '0', STR_PAD_LEFT);
+    } while ($suffix < 1000);
+
+    throw new RuntimeException('Unable to generate a unique card number for user ' . $userId . '.');
+}
+
+function backfillLoyaltyIdentities(mysqli $connect): void
+{
+    $users = $connect->query(
+        "SELECT id, card_no, loyalty_token FROM users ORDER BY id"
+    )->fetch_all(MYSQLI_ASSOC);
+
+    foreach ($users as $user) {
+        $userId = (int) $user['id'];
+        $cardNo = trim((string) ($user['card_no'] ?? ''));
+        $token = trim((string) ($user['loyalty_token'] ?? ''));
+
+        if ($cardNo === '') {
+            $cardNo = generateUniqueCardNumber($connect, $userId);
+            $stmt = $connect->prepare('UPDATE users SET card_no = ? WHERE id = ?');
+            $stmt->bind_param('si', $cardNo, $userId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        if ($token === '') {
+            $token = generateUniqueToken($connect);
+            $stmt = $connect->prepare('UPDATE users SET loyalty_token = ? WHERE id = ?');
+            $stmt->bind_param('si', $token, $userId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
+
 try {
     if (!hasColumn($connect, 'users', 'loyalty_token')) {
         runChange($connect, "ALTER TABLE users ADD COLUMN loyalty_token VARCHAR(64) NULL");
@@ -68,6 +135,8 @@ try {
     if (!hasIndex($connect, 'orders', 'idx_orders_user_id')) {
         runChange($connect, "ALTER TABLE orders ADD KEY idx_orders_user_id (user_id)");
     }
+
+    backfillLoyaltyIdentities($connect);
 
     echo "Loyalty card database migration completed.\n";
 } catch (Throwable $error) {

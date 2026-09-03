@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$cardPayload = trim($input['card_no'] ?? '');
+$cardPayload = trim((string) ($input['card_no'] ?? $input['payload'] ?? $input['token'] ?? ''));
 $action = trim($input['action'] ?? 'lookup');
 
 if ($cardPayload === '') {
@@ -25,8 +25,20 @@ if ($cardPayload === '') {
     exit;
 }
 
- $token = extractLoyaltyTokenFromPayload($cardPayload);
-$cardNo = preg_match('/^BY-\d{4}\d{3}$/', $cardPayload) ? $cardPayload : '';
+$token = extractLoyaltyTokenFromPayload($cardPayload);
+$cardNo = '';
+$cardQuery = parse_url($cardPayload, PHP_URL_QUERY);
+if (is_string($cardQuery) && $cardQuery !== '') {
+    parse_str($cardQuery, $cardParams);
+    $cardNo = trim((string) ($cardParams['card_no'] ?? $cardParams['card'] ?? ''));
+}
+if ($cardNo === '') {
+    $cardNo = trim($cardPayload);
+}
+$cardNo = strtoupper($cardNo);
+if (!preg_match('/^BY-\d{7,}$/', $cardNo)) {
+    $cardNo = '';
+}
 
 if ($token === '' && $cardNo === '') {
     http_response_code(400);
