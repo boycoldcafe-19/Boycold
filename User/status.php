@@ -37,7 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
     }
 
     $stmt = $connect->prepare(
-        "SELECT status FROM orders WHERE id = ? AND user_id = ?"
+        "SELECT o.id, o.user_id, o.status
+         FROM orders o
+         WHERE o.id = ? AND o.user_id = ?"
     );
     $stmt->bind_param("ii", $orderId, $userId);
     $stmt->execute();
@@ -79,7 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
 // collided under the old name-based join, showing one user's order to
 // the other. user_id is unique and unambiguous.
 $stmt = $connect->prepare(
-    "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 1"
+    "SELECT o.*
+     FROM orders o
+     WHERE o.user_id = ?
+     ORDER BY o.created_at DESC, o.id DESC
+     LIMIT 1"
 );
 $stmt->bind_param("i", $userId);
 $stmt->execute();
