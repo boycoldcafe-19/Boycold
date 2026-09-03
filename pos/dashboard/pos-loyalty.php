@@ -248,7 +248,7 @@ if ($branchName === '-') {
 
                                 <div class="qr-scan-line" id="qrScanLine"></div>
 
-                                <img class="qr-icon" id="qrIcon" src="../../img/qr.png" alt="QR code scanner icon"
+                                <img class="qr-icon" id="qrIcon" src="../img/qr.png" alt="QR code scanner icon"
                                     aria-hidden="true">
 
                                 <div class="qr-overlay" id="qrOverlay">
