@@ -37,17 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
     }
 
     $stmt = $connect->prepare(
-        "SELECT o.user_name, o.status
-         FROM orders o
-         INNER JOIN users u ON u.user_name = o.user_name
-         WHERE o.id = ? AND u.id = ?"
+        "SELECT status FROM orders WHERE id = ? AND user_id = ?"
     );
     $stmt->bind_param("ii", $orderId, $userId);
     $stmt->execute();
     $order = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!$order || strcasecmp(trim((string) ($order['user_name'] ?? '')), $userName) !== 0) {
+    if (!$order) {
         echo json_encode(['success' => false, 'error' => 'Order not found.']);
         exit;
     }
@@ -58,11 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
     }
 
     $stmt = $connect->prepare(
-        "UPDATE orders o
-         INNER JOIN users u ON u.user_name = o.user_name
-         SET o.status = 'cancelled'
-         WHERE o.id = ? AND u.id = ?
-           AND o.status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
+        "UPDATE orders
+         SET status = 'cancelled'
+         WHERE id = ? AND user_id = ?
+           AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
     );
     $stmt->bind_param("ii", $orderId, $userId);
     $stmt->execute();
@@ -77,12 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
 }
 
 // ── Get this user's most recent order ──────────────────────────────
+// Matched by user_id (a real foreign key), NOT by user_name.
+// user_name is just an auto-generated "Firstname Lastname" string with
+// no UNIQUE constraint — two customers with the same name would have
+// collided under the old name-based join, showing one user's order to
+// the other. user_id is unique and unambiguous.
 $stmt = $connect->prepare(
-    "SELECT o.*
-     FROM orders o
-     INNER JOIN users u ON u.user_name = o.user_name
-     WHERE u.id = ?
-     ORDER BY o.created_at DESC LIMIT 1"
+    "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 1"
 );
 $stmt->bind_param("i", $userId);
 $stmt->execute();
