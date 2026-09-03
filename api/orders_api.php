@@ -340,10 +340,13 @@ switch ($action) {
 
     if ($isAdmin && (!empty($_GET['all']) || !empty($body['all']))) {
 
+        // LEFT JOIN (not INNER) so an order whose user_id is still NULL
+        // (placed before the user_id column existed / a POS/guest order)
+        // is not silently dropped from the admin list.
         $sql = "
             SELECT
                 o.id,
-                ROW_NUMBER() OVER (PARTITION BY o.user_name ORDER BY o.created_at ASC, o.id ASC) AS order_number,
+                ROW_NUMBER() OVER (PARTITION BY o.user_id ORDER BY o.created_at ASC, o.id ASC) AS order_number,
                 o.user_name,
                 o.status,
                 o.order_type,
@@ -358,8 +361,8 @@ switch ($action) {
                 u.lastname,
                 u.email
             FROM orders o
-            JOIN users u
-                ON u.user_name = o.user_name
+            LEFT JOIN users u
+                ON u.id = o.user_id
         ";
 
         if ($status != '') {
@@ -379,7 +382,7 @@ switch ($action) {
         $sql = "
             SELECT
                 id,
-                ROW_NUMBER() OVER (PARTITION BY user_name ORDER BY created_at ASC, id ASC) AS order_number,
+                ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at ASC, id ASC) AS order_number,
                 user_name,
                 status,
                 order_type,
@@ -391,7 +394,7 @@ switch ($action) {
                 total,
                 created_at
             FROM orders
-            WHERE user_name = ?
+            WHERE user_id = ?
         ";
 
         if ($status != '') {
@@ -403,9 +406,9 @@ switch ($action) {
         $stmt = $connect->prepare($sql);
 
         if ($status != '') {
-            $stmt->bind_param("ss", $userName, $status);
+            $stmt->bind_param("is", $userId, $status);
         } else {
-            $stmt->bind_param("s", $userName);
+            $stmt->bind_param("i", $userId);
         }
     }
 
@@ -435,7 +438,7 @@ switch ($action) {
             $stmt = $connect->prepare(
                 "SELECT o.*,
                         (SELECT COUNT(*) FROM orders sequence_order
-                         WHERE sequence_order.user_name = o.user_name
+                         WHERE sequence_order.user_id = o.user_id
                            AND (sequence_order.created_at < o.created_at
                                 OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
                  FROM orders o WHERE o.id = ?"
@@ -445,12 +448,12 @@ switch ($action) {
             $stmt = $connect->prepare(
                                 "SELECT o.*,
                                                 (SELECT COUNT(*) FROM orders sequence_order
-                                                 WHERE sequence_order.user_name = o.user_name
+                                                 WHERE sequence_order.user_id = o.user_id
                                                      AND (sequence_order.created_at < o.created_at
                                                                 OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
-                                 FROM orders o WHERE o.id = ? AND o.user_name = ?"
+                                 FROM orders o WHERE o.id = ? AND o.user_id = ?"
             );
-            $stmt->bind_param("is", $orderId, $userName);
+            $stmt->bind_param("ii", $orderId, $userId);
         }
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
@@ -488,15 +491,14 @@ switch ($action) {
             );
             $stmt->bind_param("i", $orderId);
         } else {
-            // Only allow cancelling orders that are still active; the user is
-            // matched via the users table so stale or mismatched session names
-            // do not prevent the update.
+            // Matched directly on the order's own user_id (a real foreign
+            // key), not on the name string, so it can never be tricked or
+            // blocked by two accounts sharing the same display name.
             $stmt = $connect->prepare(
-                "UPDATE orders o
-                 INNER JOIN users u ON u.user_name = o.user_name
-                 SET o.status = 'cancelled'
-                 WHERE o.id = ? AND u.id = ?
-                   AND o.status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
+                "UPDATE orders
+                 SET status = 'cancelled'
+                 WHERE id = ? AND user_id = ?
+                   AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
             );
             $stmt->bind_param("ii", $orderId, $userId);
         }
@@ -523,9 +525,9 @@ switch ($action) {
 
         $stmt = $connect->prepare(
             "SELECT id, status, payment_method, payment_status, total
-             FROM orders WHERE id = ? AND user_name = ?"
+             FROM orders WHERE id = ? AND user_id = ?"
         );
-        $stmt->bind_param('is', $orderId, $userName);
+        $stmt->bind_param('ii', $orderId, $userId);
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -554,9 +556,9 @@ switch ($action) {
 
         $stmt = $connect->prepare(
             "SELECT id, payment_method, payment_status, payment_reference, total
-             FROM orders WHERE id = ? AND user_name = ?"
+             FROM orders WHERE id = ? AND user_id = ?"
         );
-        $stmt->bind_param('is', $orderId, $userName);
+        $stmt->bind_param('ii', $orderId, $userId);
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
         $stmt->close();
