@@ -24,11 +24,11 @@ if (file_exists($envFile)) {
 }
 
 // Define database configuration with environment variable fallback
-define('DB_HOST', getenv('DB_HOST') !== false ? getenv('DB_HOST') : ($_ENV['DB_HOST'] ?? 'localhost'));
-define('DB_USER', getenv('DB_USER') !== false ? getenv('DB_USER') : ($_ENV['DB_USER'] ?? 'u627631172_boycold'));
-define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : ($_ENV['DB_PASS'] ?? 'Boycold2026'));
-define('DB_NAME', getenv('DB_NAME') !== false ? getenv('DB_NAME') : ($_ENV['DB_NAME'] ?? 'u627631172_boycold_db'));
-define('DB_PORT', getenv('DB_PORT') !== false ? getenv('DB_PORT') : ($_ENV['DB_PORT'] ?? 3306));
+define('DB_HOST', getenv('DB_HOST') ?: $_ENV['DB_HOST'] ?? 'localhost');
+define('DB_USER', getenv('DB_USER') ?: $_ENV['DB_USER'] ?? 'u627631172_boycold');
+define('DB_PASS', getenv('DB_PASS') ?: $_ENV['DB_PASS'] ?? 'Boycold2026');
+define('DB_NAME', getenv('DB_NAME') ?: $_ENV['DB_NAME'] ?? 'u627631172_boycold_db');
+define('DB_PORT', getenv('DB_PORT') ?: $_ENV['DB_PORT'] ?? 3306);
 
 // Create database connection with error handling
 try {
@@ -40,7 +40,7 @@ try {
         error_log($errorMsg);
         
         // Check if we're in debug mode
-        if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
+        if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
             die($errorMsg);
         } else {
             // Show generic error message in production
@@ -57,7 +57,7 @@ try {
         $errorMsg = 'Database connection lost after initialization';
         error_log($errorMsg);
         
-        if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
+        if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
             die($errorMsg);
         } else {
             header('HTTP/1.1 500 Internal Server Error');
@@ -68,7 +68,7 @@ try {
     $errorMsg = 'Database exception: ' . $e->getMessage();
     error_log($errorMsg);
     
-    if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
+    if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
         die($errorMsg);
     } else {
         header('HTTP/1.1 500 Internal Server Error');

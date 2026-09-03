@@ -109,6 +109,21 @@ function addToCart(mysqli $connect, int $employeeId, int $branchId, string $sess
     $quantity     = max(1, (int) ($input['qty'] ?? 1));
     $itemTotal    = max(0, (float) ($input['itemTotal'] ?? 0));
 
+    $noCustomizationCategories = [
+        'rice-meal',
+        'light-snack',
+        'pasta',
+        'waffle',
+        'waffles',
+        'quesadilla'
+    ];
+    if (in_array(strtolower($category), $noCustomizationCategories, true)) {
+        $milk = '';
+        $milkPrice = 0;
+        $addons = '[]';
+        $itemTotal = $basePrice * $quantity;
+    }
+
     $stmt = $connect->prepare(
         "INSERT INTO pos_cart
            (employee_id, branch_id, session_id, product_id, product_name, product_image,

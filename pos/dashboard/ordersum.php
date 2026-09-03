@@ -324,7 +324,7 @@ if ($shiftResult) {
                                         </button>
                                         <button class="payment-option" data-method="qrph" type="button">
                                             <span class="payment-check"><i class="fa-solid fa-check"></i></span>
-                                            <img src="../img/gcash2821.logowik.com 1.png" alt="">
+                                            <img src="../img/qr-ph.webp" alt="QR Ph">
                                             <span class="payment-name">QR Ph</span>
                                             <span class="payment-sub">Pay with QR Ph</span>
                                         </button>
@@ -521,6 +521,16 @@ if ($shiftResult) {
 
         function getProductType(product) {
             const category = (product.category || '').trim().toLowerCase();
+            const noCustomizationCategories = new Set([
+                'rice-meal',
+                'light-snack',
+                'pasta',
+                'waffle',
+                'waffles',
+                'quesadilla'
+            ]);
+
+            if (noCustomizationCategories.has(category)) return 'no-customization';
             if (category !== 'snacks') return 'default';
 
             const name = (product.name || '').toLowerCase();
