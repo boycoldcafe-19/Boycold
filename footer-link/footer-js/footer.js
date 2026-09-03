@@ -14,6 +14,23 @@ const nav = document.getElementById('mainNav');
             nav.classList.remove('sidebar-open');
         }
 
+        function toggleFaq(btn) {
+            const answer = btn.nextElementSibling;
+            const isOpen = btn.classList.contains('open');
+
+            document.querySelectorAll('.faq-question').forEach(function (question) {
+                question.classList.remove('open');
+            });
+            document.querySelectorAll('.faq-answer').forEach(function (faqAnswer) {
+                faqAnswer.classList.remove('open');
+            });
+
+            if (!isOpen && answer && answer.classList.contains('faq-answer')) {
+                btn.classList.add('open');
+                answer.classList.add('open');
+            }
+        }
+
         // Nav avatar dropdown
         function toggleAvatarDropdown() {
             document.getElementById('avatarDropdown').classList.toggle('open');
