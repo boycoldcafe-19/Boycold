@@ -622,7 +622,11 @@ function step_class(bool $reached)
         async function confirmCancel() {
             const orderId = Number(<?= json_encode($latestOrder['id'] ?? 0) ?>);
             const confirmBtn = document.getElementById('confirmCancelBtn');
-            if (!orderId || confirmBtn?.disabled) return;
+            if (confirmBtn?.disabled) return;
+            if (!Number.isFinite(orderId) || orderId <= 0) {
+                alert('Could not cancel this order (missing order id). Please refresh the page and try again.');
+                return;
+            }
 
             if (confirmBtn) {
                 confirmBtn.disabled = true;

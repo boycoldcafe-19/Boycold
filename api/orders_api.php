@@ -340,10 +340,16 @@ switch ($action) {
 
     if ($isAdmin && (!empty($_GET['all']) || !empty($body['all']))) {
 
+        // LEFT JOIN on user_id (not user_name): two customers can share the
+        // exact same generated "Firstname Lastname" user_name (it has no
+        // UNIQUE constraint), and joining on that string used to duplicate
+        // every one of their orders — one row per matching users record.
+        // Legacy orders placed before user_id existed (NULL) still fall back
+        // to a name match so they don't disappear from this view.
         $sql = "
             SELECT
                 o.id,
-                ROW_NUMBER() OVER (PARTITION BY o.user_name ORDER BY o.created_at ASC, o.id ASC) AS order_number,
+                ROW_NUMBER() OVER (PARTITION BY COALESCE(o.user_id, o.user_name) ORDER BY o.created_at ASC, o.id ASC) AS order_number,
                 o.user_name,
                 o.status,
                 o.order_type,
@@ -358,8 +364,9 @@ switch ($action) {
                 u.lastname,
                 u.email
             FROM orders o
-            JOIN users u
-                ON u.user_name = o.user_name
+            LEFT JOIN users u
+                ON (o.user_id IS NOT NULL AND u.id = o.user_id)
+                OR (o.user_id IS NULL AND u.user_name = o.user_name)
         ";
 
         if ($status != '') {
@@ -376,10 +383,14 @@ switch ($action) {
 
     } else {
 
+        // Matched by user_id first (a real foreign key, unlike user_name
+        // which has no UNIQUE constraint and can collide between two
+        // customers with the same name). Legacy orders placed before
+        // user_id existed (NULL) fall back to a name match.
         $sql = "
             SELECT
                 id,
-                ROW_NUMBER() OVER (PARTITION BY user_name ORDER BY created_at ASC, id ASC) AS order_number,
+                ROW_NUMBER() OVER (PARTITION BY COALESCE(user_id, user_name) ORDER BY created_at ASC, id ASC) AS order_number,
                 user_name,
                 status,
                 order_type,
@@ -391,7 +402,7 @@ switch ($action) {
                 total,
                 created_at
             FROM orders
-            WHERE user_name = ?
+            WHERE (user_id = ? OR (user_id IS NULL AND user_name = ?))
         ";
 
         if ($status != '') {
@@ -403,9 +414,9 @@ switch ($action) {
         $stmt = $connect->prepare($sql);
 
         if ($status != '') {
-            $stmt->bind_param("ss", $userName, $status);
+            $stmt->bind_param("iss", $userId, $userName, $status);
         } else {
-            $stmt->bind_param("s", $userName);
+            $stmt->bind_param("is", $userId, $userName);
         }
     }
 
@@ -435,22 +446,27 @@ switch ($action) {
             $stmt = $connect->prepare(
                 "SELECT o.*,
                         (SELECT COUNT(*) FROM orders sequence_order
-                         WHERE sequence_order.user_name = o.user_name
+                         WHERE COALESCE(sequence_order.user_id, sequence_order.user_name) = COALESCE(o.user_id, o.user_name)
                            AND (sequence_order.created_at < o.created_at
                                 OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
                  FROM orders o WHERE o.id = ?"
             );
             $stmt->bind_param("i", $orderId);
         } else {
+            // Matched by user_id, not user_name — two customers can share
+            // the exact same generated "Firstname Lastname" string, and
+            // matching on that would let one see the other's order detail.
             $stmt = $connect->prepare(
                                 "SELECT o.*,
                                                 (SELECT COUNT(*) FROM orders sequence_order
-                                                 WHERE sequence_order.user_name = o.user_name
+                                                 WHERE COALESCE(sequence_order.user_id, sequence_order.user_name) = COALESCE(o.user_id, o.user_name)
                                                      AND (sequence_order.created_at < o.created_at
                                                                 OR (sequence_order.created_at = o.created_at AND sequence_order.id <= o.id))) AS order_number
-                                 FROM orders o WHERE o.id = ? AND o.user_name = ?"
+                                 FROM orders o
+                                 WHERE o.id = ?
+                                   AND (o.user_id = ? OR (o.user_id IS NULL AND o.user_name = ?))"
             );
-            $stmt->bind_param("is", $orderId, $userName);
+            $stmt->bind_param("iis", $orderId, $userId, $userName);
         }
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
@@ -488,17 +504,18 @@ switch ($action) {
             );
             $stmt->bind_param("i", $orderId);
         } else {
-            // Only allow cancelling orders that are still active; the user is
-            // matched via the users table so stale or mismatched session names
-            // do not prevent the update.
+            // Matched by user_id directly — no join through user_name needed,
+            // and no risk of a stale/changed name ever blocking a cancel.
+            // Legacy orders placed before user_id existed (NULL) still fall
+            // back to a name match.
             $stmt = $connect->prepare(
-                "UPDATE orders o
-                 INNER JOIN users u ON u.user_name = o.user_name
-                 SET o.status = 'cancelled'
-                 WHERE o.id = ? AND u.id = ?
-                   AND o.status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
+                "UPDATE orders
+                 SET status = 'cancelled'
+                 WHERE id = ?
+                   AND (user_id = ? OR (user_id IS NULL AND user_name = ?))
+                   AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
             );
-            $stmt->bind_param("ii", $orderId, $userId);
+            $stmt->bind_param("iis", $orderId, $userId, $userName);
         }
         $stmt->execute();
 
@@ -523,9 +540,11 @@ switch ($action) {
 
         $stmt = $connect->prepare(
             "SELECT id, status, payment_method, payment_status, total
-             FROM orders WHERE id = ? AND user_name = ?"
+             FROM orders
+             WHERE id = ?
+               AND (user_id = ? OR (user_id IS NULL AND user_name = ?))"
         );
-        $stmt->bind_param('is', $orderId, $userName);
+        $stmt->bind_param('iis', $orderId, $userId, $userName);
         $stmt->execute();
         $order = $stmt->get_result()->fetch_assoc();
         $stmt->close();
