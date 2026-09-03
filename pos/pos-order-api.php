@@ -51,7 +51,7 @@ function pos_normalize_order_type(string $orderType): string
         : 'dine-in';
 }
 
-function pos_addons_to_text($addons): string
+function pos_addons_to_text(mixed $addons): string
 {
     if (empty($addons)) {
         return '';
