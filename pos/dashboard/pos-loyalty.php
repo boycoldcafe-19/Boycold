@@ -40,7 +40,7 @@ if ($branchName === '-') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 
 <body>
@@ -446,6 +446,11 @@ if ($branchName === '-') {
         async function startCamera() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 qrOverlayText.textContent = 'Camera access is not supported in this browser.';
+                return;
+            }
+
+            if (!window.jsQR) {
+                qrOverlayText.textContent = 'QR scanning library failed to load. Check your internet connection and reload the page.';
                 return;
             }
 
