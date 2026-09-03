@@ -10,6 +10,7 @@ session_set_cookie_params([
 ]);
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/shift_manager.php';
 require_once '../../config/loyalty.php';
 require_once '../../config/payments.php';
 
@@ -34,9 +35,11 @@ if (!$employee || (int) $employee['is_active'] === 0) {
 }
 $stmt->close();
 
-// Check for active shift - redirect to shift page if no open shift
-$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE employee_id = ? AND status = 'open' LIMIT 1");
-$shiftStmt->bind_param('i', $employeeId);
+// Reconcile missed 2:00 AM boundaries and use the shared branch shift.
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+pos_reconcile_branch_shift($connect, $branchId, $employeeId);
+$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE branch_id = ? AND status = 'open' LIMIT 1");
+$shiftStmt->bind_param('i', $branchId);
 $shiftStmt->execute();
 $shiftResult = $shiftStmt->get_result()->fetch_assoc();
 $shiftStmt->close();
@@ -52,7 +55,7 @@ $openingCash = $shiftResult['opening_cash_float'];
 $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Get branch_id from session - POS employees are assigned to specific branches
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
 
 // Get employee name for display
 $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] : 'Cashier';
@@ -735,6 +738,7 @@ if ($paymentMethodKey === 'qrph') {
         }
     </script>
     <script src="order-notify.js"></script>
+    <script src="shift-monitor.js"></script>
 </body>
 
 </html>

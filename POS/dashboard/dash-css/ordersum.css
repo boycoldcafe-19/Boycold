@@ -11,8 +11,8 @@ html, body {
 
 body {
     font-family: 'Afacad', sans-serif;
-    color: #1e1e1e;
-    background: #f7f6f4;
+    color: var(--text);
+    background: var(--bg);
 }
 
 a {
@@ -24,28 +24,96 @@ button {
     font-family: inherit;
 }
 
-:root {
-    --border-color: #C4C1C1;
-    --border: 1.5px solid var(--border-color);
-    --radius: 12px;
+::-webkit-scrollbar {
+    background: var(--surface);
+    -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar-thumb{
+    background: var(--text-light);
+    border-radius: 100px;
+    border: 4px solid var(--surface);
+}
+
+:root{
+    /* Light Theme */
+    --bg: #f7f6f4;
+    --surface: #ffffff;
+    --sidebar: #ffffff;
+    --text: #1e1e1e;
+    --text-light: #8a8a8a;
+    --border: #ececec;
+    --primary: #692727;
+    --primary-text: #ffffff;
+    --header: #ffffff;
+    --table-header: #DADCE5;
+    --shadow: rgba(0,0,0,.12);
+
+    /* Product card is always a dark card with light text, regardless of theme */
+    --card-bg: #1e1e1e;
+    --card-text: #f7f6f4;
 }
 
 /* ══════════════════════════════
-   APP SHELL
+   DARK THEME — Facebook dark-mode palette
+   bg #18191A / surface #242526 / tertiary #3A3B3C
+   text #E4E6EB / text-light #B0B3B8 / border #3E4042
 ══════════════════════════════ */
+body.dark-theme{
+    --bg: #18191a;
+    --surface: #242526;
+    --sidebar: #18191a;
+    --header: #242526;
+    --text: #e4e6eb;
+    --text-light: #b0b3b8;
+    --border: #3e4042;
+    --primary: #692727;
+    --primary-text: #ffffff;
+    --table-header: #3a3b3c;
+    --shadow: rgba(0,0,0,.4);
+
+    /* Facebook dark-mode elevated surface + primary text for menu cards */
+    --card-bg: #3a3b3c;
+    --card-text: #e4e6eb;
+}
+
+/* Components that had fixed light-mode-only colors now get proper
+   translucent dark-mode variants instead of glowing pastel boxes */
+body.dark-theme .inventory-bell-icon {
+    background: rgba(201, 138, 87, 0.16);
+}
+
+body.dark-theme .inventory-status-badge.instock {
+    background: rgba(26, 156, 63, 0.18);
+    color: #4bd07a;
+}
+body.dark-theme .inventory-status-badge.instock .status-dot { background: #4bd07a; }
+
+body.dark-theme .inventory-status-badge.low {
+    background: rgba(196, 122, 0, 0.2);
+    color: #ffb84d;
+}
+body.dark-theme .inventory-status-badge.low .status-dot { background: #ffb84d; }
+
+body.dark-theme .inventory-status-badge.critical,
+body.dark-theme .inventory-status-badge.outstock {
+    background: rgba(208, 52, 44, 0.2);
+    color: #ff6b60;
+}
+body.dark-theme .inventory-status-badge.critical .status-dot,
+body.dark-theme .inventory-status-badge.outstock .status-dot { background: #ff6b60; }
+
 .app-shell {
     display: flex;
     min-height: 100vh;
 }
 
-/* ══════════════════════════════
-   SIDEBAR
-══════════════════════════════ */
+/* SIDEBAR */
 .sidebar {
     width: 400px;
     flex-shrink: 0;
-    background: #fff;
-    border-right: 1px solid #ececec;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -55,29 +123,37 @@ button {
 
 .sidebar-brand {
     display: flex;
+
     align-items: center;
     gap: 12px;
     padding: 18px 20px;
     height: 120px;
-    border-bottom: 1px solid #ececec;
+    border-bottom: 1px solid var(--border);
 }
 
 .brand-mark {
-    width: 80px;
-    height: 80px;
-    border-radius: none;
+    width: 75px;
+    height: 70px;
     display: flex;
-    align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
+    align-items: center;
+
 }
 
-.brand-mark img {
+.brand-mark img{
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
+
+.brand-mark .logo-dark { display: none; }
+
+body.dark-theme .brand-mark .logo-light { display: none; }
+body.dark-theme .brand-mark .logo-dark  { display: block; }
+
+.profile-avatar .logo-dark { display:none; }
+body.dark-theme .profile-avatar .logo-light { display:none; }
+body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
 .brand-text {
     display: flex;
@@ -96,9 +172,19 @@ button {
 
 .brand-sub {
     font-size: 22px;
-    color: #000;
-    font-family: 'Gaegu', cursive;
+    color: var(--text-light);
+    font-family: 'Afacad', sans-serif;
     letter-spacing: 0.3px;
+}
+
+.special-letter {
+  position: relative;
+  top: -2px;
+}
+
+.special-letter-2 {
+  position: relative;
+  top: -7px;
 }
 
 .sidebar-nav {
@@ -122,15 +208,14 @@ button {
     border-radius: 10px;
     font-weight: 600;
     font-size: 20px;
-    color: #1e1e1e; /* black when not active */
+    color: var(--text);
     transition: background 0.15s, color 0.15s;
 }
 
 
-
 .sidebar-nav ul li a.active {
-    background: #6F4E37;
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
 }
 
 .nav-icon svg{
@@ -160,7 +245,6 @@ button {
 }
 
 
-
 .nav-label {
     flex: 1;
     min-width: 0;
@@ -173,29 +257,29 @@ button {
 }
 
 .nav-badge {
-    background: #9E6741;
+    background: #e53935;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
     min-width: 18px;
-    height: 18px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 4px;
+    padding: 0 6px;
     flex-shrink: 0;
 }
 
 .sidebar-divider {
     height: 1px;
-    background: #ececec;
+    background: var(--border);
     margin: 10px 6px;
 }
 
 .sidebar-footer {
     padding: 14px;
-    border-top: 1px solid #ececec;
+    border-top: 1px solid var(--border);
 }
 
 .logout-link {
@@ -207,54 +291,8 @@ button {
     font-weight: 600;
     font-size: 20px;
     color: #e53935;
-}
+    transition: background 0.15s;
 
-.shift-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    color: #000;
-    font-weight: 600;
-    font-size: 15px;
-    padding: 10px 16px;
-    border-radius: 50px;
-    border: 1px solid #1e1e1e;
-}
-
-.shift-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #2fb765;
-    flex-shrink: 0;
-}
-
-.shift-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.shift-details {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-left: 8px;
-}
-
-.shift-detail-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: #000;
-    font-weight: 500;
-}
-
-.shift-detail-item i {
-    font-size: 12px;
-    color: #888;
 }
 
 /* ══════════════════════════════
@@ -271,7 +309,7 @@ button {
     gap: 8px;
     font-size: 14px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 20px;
 }
 
@@ -315,7 +353,7 @@ button {
 }
 
 .product-photo {
-    border: var(--border);
+    border: 1.5px solid var(--border);
     width: 250px;
     height: 230px;
     padding: 15px;
@@ -325,6 +363,7 @@ button {
     justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
+    background: var(--surface);
 }
 
 .product-photo img {
@@ -336,7 +375,7 @@ button {
 .product-title-block h2 {
     font-size: 54px;
     font-weight: 700;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 6px;
     font-family: 'Afacad', sans-serif;
 }
@@ -344,12 +383,12 @@ button {
 .product-price {
     font-size: 40px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: var(--text);
     font-family: 'Afacad', sans-serif;
 }
 
 .options-panel {
-    border: var(--border);
+    border: 1.5px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
     margin-bottom: 20px;
@@ -372,7 +411,7 @@ button {
     gap: 8px;
     font-size: 20px;
     font-weight: 700;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 10px;
 }
 
@@ -384,13 +423,11 @@ button {
 }
 
 .option-btn {
-    width: 20%;
-    margin-left: 15px;
     padding: 9px 10px;
-    border: var(--border);
-    border-color: #000;
+    border: 1.5px solid var(--border);
+    border-color: var(--text);
     background: transparent;
-    color: #1e1e1e;
+    color: var(--text);
     border-radius: 10px;
     font-size: 16px;
     font-weight: 600;
@@ -410,7 +447,7 @@ button {
 
 .option-btn.active {
     background: #9E6741;
-    border-color: #6F4E37;
+    border-color: var(--primary);
     color: #fff;
 }
 
@@ -418,7 +455,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 16px;
-    border: 2px solid #000;
+    border: 2px solid var(--text);
     border-radius: 50px;
     padding: 6px 18px;
 }
@@ -428,7 +465,8 @@ button {
     height: 24px;
     border-radius: 10%;
     border: none;
-    background: #f2f2f2;
+    background: var(--bg);
+    color: var(--text);
     font-size: 24px;
     font-weight: 700;
     cursor: pointer;
@@ -442,13 +480,14 @@ button {
     font-size: 20px;
     min-width: 16px;
     text-align: center;
+    color: var(--text);
 }
 
 .total-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border: var(--border);
+    border: 1.5px solid var(--border);
     border-radius: 12px;
     padding: 18px 22px;
     flex-shrink: 0; /* stays pinned at the bottom of the stretched column */
@@ -456,7 +495,7 @@ button {
 
 .total-label {
     font-size: 25px;
-    color: #000;
+    color: var(--text);
     margin-bottom: 2px;
     font-weight: 600;
 }
@@ -464,13 +503,13 @@ button {
 .total-value {
     font-size: 28px;
     font-weight: 700;
-    color: #1e1e1e;
+    color: var(--text);
 }
 
 .confirm-btn {
     flex-shrink: 0;
-    background: #6F4E37;
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
     border: none;
     border-radius: 10px;
     padding: 16px 36px;
@@ -480,37 +519,38 @@ button {
     transition: opacity 0.15s;
 }
 
-.confirm-btn:hover {
-    opacity: 0.92;
-}
-
-.button-group {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
 .add-order-btn {
     flex-shrink: 0;
-    background: #8B7355;
-    color: #fff;
-    border: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
     border-radius: 10px;
-    padding: 16px 24px;
+    padding: 16px 30px;
     font-weight: 600;
     font-size: 18px;
     cursor: pointer;
-    transition: opacity 0.15s;
+    transition: background-color 0.15s, border-color 0.15s;
 }
 
 .add-order-btn:hover {
+    background: var(--bg);
+    border-color: var(--text);
+}
+
+.add-order-btn:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.confirm-btn:hover {
     opacity: 0.92;
 }
 
 /* RIGHT COLUMN — ORDER SUMMARY */
 .order-right {
-    border: var(--border);
+    border: 1.5px solid var(--border);
     border-radius: var(--radius);
+    background: var(--surface);
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -523,15 +563,17 @@ button {
     align-items: center;
     justify-content: space-between;
     padding: 14px;
-    border-bottom: 2px solid #ececec;
+    border-bottom: 2px solid var(--border);
     margin-bottom: 6px;
-    background-color: rgba(190, 188, 188, 0.3);
+    background-color: var(--table-header);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
 }
 
 .summary-header span {
     font-weight: 700;
     font-size: 22px;
-    color: #1e1e1e;
+    color: var(--text);
 }
 
 .clear-all {
@@ -556,7 +598,7 @@ button {
 
 .summary-empty {
     text-align: center;
-    color: #b0b0b0;
+    color: var(--text-light);
     font-size: 25px;
     padding: 40px 10px;
 }
@@ -565,7 +607,7 @@ button {
     display: flex;
     gap: 12px;
     padding: 14px 10px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border);
     position: relative;
 }
 
@@ -573,10 +615,10 @@ button {
     width: 66px;
     height: 66px;
     object-fit: contain;
-    border: 2px solid #C4C1C1;
+    border: 1.5px solid var(--text-light);
     border-radius: 10px;
     flex-shrink: 0;
-    background-color: #fff;
+    background: var(--table-header);
     padding: 5px 5px;
 }
 
@@ -595,13 +637,13 @@ button {
 .summary-item-name {
     font-weight: 600;
     font-size: 20px;
-    color: #1e1e1e;
+    color: var(--text);
 }
 
 .summary-item-price {
     font-weight: 600;
     font-size: 18px;
-    color: #1e1e1e;
+    color: var(--text);
     white-space: nowrap;
     padding: 0 15px;
 }
@@ -613,7 +655,7 @@ button {
 
 .summary-item-info li {
     font-size: 15px;
-    color: #000;
+    color: var(--text-light);
     line-height: 1.5;
 }
 
@@ -627,7 +669,7 @@ button {
     right: 0;
     background: none;
     border: none;
-    color: #b0b0b0;
+    color: var(--text-light);
     cursor: pointer;
     font-size: 13px;
 }
@@ -637,7 +679,7 @@ button {
 }
 
 .summary-totals {
-    border-top: 1px solid #ececec;
+    border-top: 1px solid var(--border);
     padding-top: 12px;
     margin-top: 8px;
     flex-shrink: 0;
@@ -649,7 +691,7 @@ button {
     display: flex;
     justify-content: space-between;
     font-size: 20px;
-    color: #1e1e1e;
+    color: var(--text);
     padding: 6px 20px 0 20px;
 }
 
@@ -665,8 +707,8 @@ button {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: #6F4E37;
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
     border: none;
     border-radius: 10px;
     padding: 14px;
@@ -683,13 +725,9 @@ button {
    CHECKOUT VIEW
 ══════════════════════════════ */
 #checkoutView {
-    /* No wrapping border here — each .checkout-panel already draws its own
-       border. A border on #checkoutView too created a visible double-border
-       seam around the panels and boxed in the header text, which the
-       reference design doesn't show. */
+
     width: 100%;
-    flex: 1; /* grow so .checkout-footer stays pinned to the bottom,
-                level with the bottom of order-right */
+    flex: 1; 
     display: flex;
     flex-direction: column;
 }
@@ -705,17 +743,17 @@ button {
 .checkout-header h2 {
     font-size: 35px;
     font-weight: 700;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 4px;
 }
 
 .checkout-header p {
     font-size: 18px;
-    color: #8a8a8a;
+    color: var(--text-light);
 }
 
 .checkout-panel {
-    border: var(--border);
+    border: 1.5px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
     margin-bottom: 20px;
@@ -725,7 +763,7 @@ button {
 .checkout-panel h3 {
     font-size: 18px;
     font-weight: 700;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 16px;
 }
 
@@ -743,16 +781,16 @@ button {
     justify-content: center;
     gap: 8px;
     padding: 24px 16px;
-    border: 2px solid #e5e5e5;
+    border: 2px solid var(--border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface);
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
 }
 
 .payment-option.active {
     border-color: #9E6741;
-    background: #FBF6F1;
+    background: var(--primary-soft);
 }
 
 .payment-check {
@@ -786,12 +824,12 @@ button {
 .payment-name {
     font-weight: 700;
     font-size: 16px;
-    color: #1e1e1e;
+    color: var(--text);
 }
 
 .payment-sub {
     font-size: 13px;
-    color: #8a8a8a;
+    color: var(--text-light);
 }
 
 .change-block {
@@ -801,7 +839,7 @@ button {
 .change-label {
     font-size: 14px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: var(--text);
     margin-bottom: 4px;
 }
 
@@ -817,7 +855,7 @@ button {
 
 .gcash-note {
     font-size: 14px;
-    color: #8a8a8a;
+    color: var(--text-light);
     line-height: 1.5;
 }
 
@@ -831,9 +869,9 @@ button {
 .cancel-order-btn {
     flex: 1;
     padding: 14px;
-    border: 2px solid #1e1e1e;
-    background: #fff;
-    color: #1e1e1e;
+    border: 2px solid var(--text);
+    background: var(--surface);
+    color: var(--text);
     border-radius: 8px;
     font-weight: 600;
     font-size: 16px;
@@ -841,15 +879,15 @@ button {
 }
 
 .cancel-order-btn:hover {
-    background: #f7f6f4;
+    background: var(--bg);
 }
 
 .complete-payment-btn {
     flex: 1;
     padding: 14px;
     border: none;
-    background: #6F4E37;
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
     border-radius: 8px;
     font-weight: 600;
     font-size: 16px;
@@ -881,21 +919,27 @@ button {
 .receipt-header h2 {
     font-size: 35px;
     font-weight: 700;
-    color: #1E1E1E;
+    color: var(--text);
     margin-bottom: 10px;
 }
 
 .receipt-header p {
     font-size: 23px;
-    color: #666;
+    color: var(--text-light);
     line-height: 1;
 }
 
 .receipt-header strong {
-    color: #6F4E37;
+    color: var(--primary);
     font-weight: 600;
 }
 
+/* ──────────────────────────────
+   The receipt paper itself is intentionally NOT themed — it mimics a
+   physical printed receipt, which stays white with black ink regardless
+   of the app's light/dark mode, and must stay this way for the print
+   stylesheet below to render correctly on paper.
+────────────────────────────── */
 .receipt-paper {
     background: #fff;
     width: 100%;
@@ -1079,8 +1123,8 @@ button {
 }
 
 .print-receipt-btn {
-    background: #6F4E37;
-    color: #fff;
+    background: var(--primary);
+    color: var(--primary-text);
 }
 
 .print-receipt-btn:hover {
@@ -1088,13 +1132,13 @@ button {
 }
 
 .new-order-btn {
-    background: #fff;
-    border: 2px solid #1e1e1e;
-    color: #1e1e1e;
+    background: var(--surface);
+    border: 2px solid var(--text);
+    color: var(--text);
 }
 
 .new-order-btn:hover {
-    background: #f7f6f4;
+    background: var(--bg);
 }
 
 
@@ -1143,19 +1187,9 @@ button {
 /* ══════════════════════════════
    RESPONSIVE
 ══════════════════════════════ */
-@media (max-width: 1100px) {
-    .order-layout {
-        grid-template-columns: 1fr 340px;
-        gap: 18px;
-    }
-}
-
-/* ══════════════════════════════
-   TABLET / IPAD (768px - 1024px)
-══════════════════════════════ */
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
     .sidebar {
-    width: 260px;
+        width: 240px;
     }
 
     .sidebar-brand {
@@ -1163,9 +1197,9 @@ button {
         padding: 16px;
     }
 
-    .brand-mark {
+    .brand-mark img {
         width: 60px;
-        height: 60px;
+        height: 55px;
     }
 
     .brand-name {
@@ -1174,6 +1208,144 @@ button {
 
     .brand-sub {
         font-size: 18px;
+    }
+
+    .sidebar {
+        width: 350px;
+    }
+
+    .sidebar-nav{
+        padding: 17px 10px;
+    }
+
+    .sidebar-nav ul{
+        padding: 0;
+    }
+
+    .sidebar-nav ul li a {
+        padding: 14px 12px;
+        font-size: 22px;
+    }
+    .nav-icon svg{
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-icon1 svg{
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nav-icon2 {
+        font-size: 30px;
+    }
+
+    .logout-link {
+        padding: 14px 12px;
+        font-size: 17px;
+    }
+
+    .top-header {
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .sidebar-brand {
+        height: 90px;
+        padding: 16px;
+    }
+
+    .brand-mark img {
+        width: 60px;
+        height: 55px;
+    }
+
+    .brand-name {
+        font-size: 24px;
+    }
+
+    .brand-sub {
+        font-size: 18px;
+    }
+
+    .sidebar {
+        width: 310px;
+    }
+
+    .sidebar-nav{
+        padding: 17px 10px;
+    }
+
+    .sidebar-nav ul{
+        padding: 0;
+    }
+
+    .sidebar-nav ul li a {
+        padding: 14px 12px;
+        font-size: 22px;
+    }
+    .nav-icon svg{
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-icon1 svg{
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nav-icon2 {
+        font-size: 30px;
+    }
+
+    .logout-link {
+        padding: 14px 12px;
+        font-size: 17px;
+    }
+
+    .top-header {
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 1024px){
+    .sidebar {
+        width: 250px;
+    }
+
+    .sidebar-brand {
+        height: 75px;
+        padding: 11px;
+    }
+
+    .brand-mark img {
+        width: 50px;
+        height: 45px;
+    }
+
+    .brand-name {
+        font-size: 20px;
+    }
+
+    .brand-sub {
+        font-size: 18px;
+    }
+
+    .sidebar-nav{
+        padding: 14px 10px;
+    }
+
+    .sidebar-nav ul{
+        padding: 0;
     }
 
     .sidebar-nav ul li a {
@@ -1186,114 +1358,8 @@ button {
         font-size: 17px;
     }
 
-    .order-page {
-        padding: 20px 20px 32px;
-    }
-
-    .order-layout {
-        grid-template-columns: 1fr 300px;   /* stays side-by-side, just narrower */
-        gap: 14px;
-    }
-
-    .product-display {
-        gap: 14px;
-    }
-
-    .product-photo {
-        width: 150px;
-        height: 140px;
-        padding: 10px;
-    }
-
-    .product-title-block h2 {
-        font-size: 26px;
-    }
-
-    .product-price {
-        font-size: 20px;
-    }
-
-    .options-panel {
-        padding: 14px;
-    }
-
-    .option-label {
-        font-size: 16px;
-    }
-
-    .option-buttons {
-        margin-left: 0;
-        gap: 10px;
-    }
-
-    .option-btn {
-        width: calc(50% - 5px);   /* 2-across since column is narrower now */
-        font-size: 14px;
-        padding: 8px;
-    }
-
-    .option-btn span {
-        font-size: 13px;
-    }
-
-    .total-bar {
-        flex-wrap: wrap;
-        gap: 12px;
-        padding: 14px 16px;
-    }
-
-    .total-label {
-        font-size: 16px;
-    }
-
-    .total-value {
-        font-size: 20px;
-    }
-
-    .confirm-btn {
-        font-size: 16px;
-        padding: 10px 20px;
-    }
-
-    .order-right {
-        margin-top: 0;
-    }
-
-    .summary-header span {
-        font-size: 16px;
-    }
-
-    .summary-item-name {
-        font-size: 14px;
-    }
-
-    .summary-item-price {
-        font-size: 13px;
-        padding: 0 6px;
-    }
-
-    .summary-item img {
-        width: 50px;
-        height: 50px;
-    }
-
-    .summary-item-info li {
-        font-size: 12px;
-    }
-
-    .summary-empty {
-        font-size: 15px;
-        padding: 24px 10px;
-    }
-
-    .summary-totals .row {
-        font-size: 15px;
-        padding: 6px 10px 0 10px;
-    }
-
-    .checkout-btn {
-        font-size: 15px;
-        padding: 12px;
+    .top-header {
+        padding: 0 20px;
     }
 }
 
@@ -1380,6 +1446,11 @@ button {
     }
 
     .confirm-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .add-order-btn {
         width: 100%;
         text-align: center;
     }

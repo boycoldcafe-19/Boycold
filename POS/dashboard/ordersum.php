@@ -2,6 +2,7 @@
 session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/shift_manager.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -24,9 +25,11 @@ if (!$employee || (int) $employee['is_active'] === 0) {
 }
 $stmt->close();
 
-// Check for active shift - redirect to shift page if no open shift
-$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE employee_id = ? AND status = 'open' LIMIT 1");
-$shiftStmt->bind_param('i', $employeeId);
+// Reconcile missed 2:00 AM boundaries and use the shared branch shift.
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+pos_reconcile_branch_shift($connect, $branchId, $employeeId);
+$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE branch_id = ? AND status = 'open' LIMIT 1");
+$shiftStmt->bind_param('i', $branchId);
 $shiftStmt->execute();
 $shiftResult = $shiftStmt->get_result()->fetch_assoc();
 $shiftStmt->close();
@@ -43,7 +46,7 @@ $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Get branch name for profile display
 $branchName = 'Main Branch';
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
 
 // Get employee name for display
 $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] : 'Cashier';
@@ -99,7 +102,8 @@ if ($shiftResult) {
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../img/ChatGPT Image Jul 1, 2026, 12_58_44 PM 1.png" alt="">
+                     <img class="logo-light" src="../img/icon2.png" alt="LOGO">
+                     <img class="logo-dark" src="../img/ChatGPT Image Jul 1, 2026, 12_58_44 PM 1.png" alt="LOGO">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">BoyCold Cafe</span>
@@ -767,20 +771,18 @@ if ($shiftResult) {
             });
         }
 
-        // Confirm — add current customization to cart
-        document.getElementById('confirmBtn').addEventListener('click', async () => {
+        function buildCurrentCartItem() {
             // Prevent adding items with no price (placeholder products)
             if (!currentProduct.id || currentProduct.price <= 0) {
                 alert('Please select a product from the menu first.');
-                window.location.href = 'pos-menu.php';
-                return;
+                return null;
             }
-            
+
             const confirmProductType = getProductType(currentProduct);
             const isNoCustomization = confirmProductType === 'no-customization';
             const hideMilk = isNoCustomization || confirmProductType === 'fries' || confirmProductType === 'poppers';
-            
-            const cartItem = {
+
+            return {
                 product_id: currentProduct.id,
                 name: currentProduct.name,
                 img: currentProduct.img,
@@ -793,7 +795,16 @@ if ($shiftResult) {
                 qty: quantity,
                 itemTotal: calculateItemTotal()
             };
-            
+        }
+
+        // Confirm — add current customization to cart
+        document.getElementById('confirmBtn').addEventListener('click', async () => {
+            const cartItem = buildCurrentCartItem();
+            if (!cartItem) {
+                window.location.href = 'pos-menu.php';
+                return;
+            }
+
             const success = await saveCartItem(cartItem);
             if (success) {
                 renderSummary();
@@ -831,8 +842,18 @@ if ($shiftResult) {
         // Add Order - go back to menu to add more items to current order
         document.getElementById('addOrderBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-            // Save current cart state and go back to menu
-            window.location.href = 'pos-menu.php';
+            const cartItem = buildCurrentCartItem();
+            if (!cartItem) return;
+
+            const addOrderButton = e.currentTarget;
+            addOrderButton.disabled = true;
+            const success = await saveCartItem(cartItem);
+            if (success) {
+                window.location.href = 'pos-menu.php';
+            } else {
+                addOrderButton.disabled = false;
+                alert('Failed to add item to cart. Please try again.');
+            }
         });
 
         const customizeView = document.getElementById('customizeView');
@@ -1280,5 +1301,6 @@ if ($shiftResult) {
 
     </script>
     <script src="order-notify.js"></script>
+    <script src="shift-monitor.js"></script>
 </body>
 </html>

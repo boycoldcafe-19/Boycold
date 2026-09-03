@@ -260,6 +260,7 @@ CREATE TABLE `orders` (
   `branch_id` int DEFAULT NULL,
   `device_id` int DEFAULT NULL,
   `cashier_id` int DEFAULT NULL,
+  `shift_id` int DEFAULT NULL,
   `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -512,18 +513,21 @@ CREATE TABLE `shift_logs` (
   `branch_id` int DEFAULT NULL,
   `device_id` int DEFAULT NULL,
   `employee_id` int NOT NULL,
-  `opening_cash_float` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `closing_cash_count` decimal(10,2) DEFAULT NULL,
+  `shift_date` date NOT NULL,
+  `opening_cash_float` decimal(10,3) NOT NULL DEFAULT '0.000',
+  `closing_cash_count` decimal(10,3) DEFAULT NULL,
   `cash_sales` decimal(10,2) DEFAULT '0.00',
   `gcash_sales` decimal(10,2) DEFAULT '0.00',
   `total_sales` decimal(10,2) DEFAULT '0.00',
   `cash_orders` int DEFAULT '0',
   `gcash_orders` int DEFAULT '0',
   `total_orders` int DEFAULT '0',
-  `cash_difference` decimal(10,2) DEFAULT '0.00',
+  `cash_difference` decimal(10,3) DEFAULT '0.000',
   `opened_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `closed_at` timestamp NULL DEFAULT NULL,
-  `status` enum('open','closed') COLLATE utf8mb4_unicode_ci DEFAULT 'open',
+  `status` enum('open','closed','auto-closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'open',
+  `close_reason` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `open_reason` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -532,9 +536,9 @@ CREATE TABLE `shift_logs` (
 -- Dumping data for table `shift_logs`
 --
 
-INSERT INTO `shift_logs` (`id`, `branch_id`, `device_id`, `employee_id`, `opening_cash_float`, `closing_cash_count`, `cash_sales`, `gcash_sales`, `total_sales`, `cash_orders`, `gcash_orders`, `total_orders`, `cash_difference`, `opened_at`, `closed_at`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, NULL, 1, 1000.00, NULL, 0.00, 0.00, 0.00, 0, 0, 0, 0.00, '2026-07-17 12:16:38', NULL, 'open', '2026-07-17 12:16:38', '2026-07-17 12:16:38'),
-(2, 2, NULL, 2, 500.00, NULL, 0.00, 0.00, 0.00, 0, 0, 0, 0.00, '2026-07-17 13:27:37', NULL, 'open', '2026-07-17 13:27:37', '2026-07-17 13:27:37');
+INSERT INTO `shift_logs` (`id`, `branch_id`, `device_id`, `employee_id`, `shift_date`, `opening_cash_float`, `closing_cash_count`, `cash_sales`, `gcash_sales`, `total_sales`, `cash_orders`, `gcash_orders`, `total_orders`, `cash_difference`, `opened_at`, `closed_at`, `status`, `close_reason`, `open_reason`, `created_at`, `updated_at`) VALUES
+(1, 1, NULL, 1, '2026-07-17', 1000.00, NULL, 0.00, 0.00, 0.00, 0, 0, 0, 0.00, '2026-07-17 12:16:38', NULL, 'open', NULL, 'manual', '2026-07-17 12:16:38', '2026-07-17 12:16:38'),
+(2, 2, NULL, 2, '2026-07-17', 500.00, NULL, 0.00, 0.00, 0.00, 0, 0, 0, 0.00, '2026-07-17 13:27:37', NULL, 'open', NULL, 'manual', '2026-07-17 13:27:37', '2026-07-17 13:27:37');
 
 -- --------------------------------------------------------
 
@@ -666,6 +670,7 @@ ALTER TABLE `orders`
   ADD KEY `branch_id` (`branch_id`),
   ADD KEY `device_id` (`device_id`),
   ADD KEY `cashier_id` (`cashier_id`),
+  ADD KEY `idx_orders_shift_id` (`shift_id`),
   ADD KEY `idx_orders_created_at` (`created_at`),
   ADD KEY `idx_payment_reference` (`payment_reference`),
   ADD KEY `idx_orders_status_created_at` (`status`,`created_at`);
@@ -720,11 +725,20 @@ ALTER TABLE `product_sales_daily`
 --
 ALTER TABLE `shift_logs`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_shift_branch_sales_day` (`branch_id`,`shift_date`),
   ADD KEY `idx_branch_id` (`branch_id`),
   ADD KEY `idx_device_id` (`device_id`),
   ADD KEY `idx_employee_id` (`employee_id`),
   ADD KEY `idx_status` (`status`),
   ADD KEY `idx_opened_at` (`opened_at`);
+
+--
+-- Indexes for table `shift_events`
+--
+ALTER TABLE `shift_events`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_shift_events_shift` (`shift_id`),
+  ADD KEY `idx_shift_events_branch_date` (`branch_id`,`created_at`);
 
 --
 -- Indexes for table `users`
@@ -846,6 +860,12 @@ ALTER TABLE `product_sales_daily`
 --
 ALTER TABLE `shift_logs`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `shift_events`
+--
+ALTER TABLE `shift_events`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`

@@ -42,11 +42,15 @@ button {
     --text: #1e1e1e;
     --text-light: #8a8a8a;
     --border: #ececec;
-    --primary: #6F4E37;
+    --primary: #692727;
     --primary-text: #ffffff;
     --header: #ffffff;
     --table-header: #DADCE5;
     --shadow: rgba(0,0,0,.12);
+
+    /* Product card is always a dark card with light text, regardless of theme */
+    --card-bg: #1e1e1e;
+    --card-text: #f7f6f4;
 }
 
 body.dark-theme{
@@ -57,10 +61,14 @@ body.dark-theme{
     --text: #e4e6eb;
     --text-light: #b0b3b8;
     --border: #3e4042;
-    --primary: #c98a57;
+    --primary: #692727;
     --primary-text: #ffffff;
     --table-header: #3a3b3c;
     --shadow: rgba(0,0,0,.4);
+
+    /* Facebook dark-mode elevated surface + primary text for menu cards */
+    --card-bg: #3a3b3c;
+    --card-text: #e4e6eb;
 }
 
 
@@ -143,6 +151,16 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     letter-spacing: 0.3px;
 }
 
+.special-letter {
+  position: relative;
+  top: -2px;
+}
+
+.special-letter-2 {
+  position: relative;
+  top: -7px;
+}
+
 .sidebar-nav {
     flex: 1;
     padding: 20px 14px;
@@ -213,17 +231,17 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .nav-badge {
-    background: #9E6741;
+    background: #e53935;
     color: #fff;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     min-width: 18px;
-    height: 18px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 4px;
+    padding: 0 6px;
     flex-shrink: 0;
 }
 
@@ -403,62 +421,15 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     font-size: 15px;
     padding: 10px 16px;
     border-radius: 50px;
-    border: 1px solid var(--border);
-}
-
-.shift-pill.is-closed {
-    background: var(--surface);
-    border-color: var(--border);
-    color: var(--text-light);
-}
-
-.shift-pill.is-open {
-    background: var(--surface);
-    border-color: var(--border);
-    color: #49D04D;
-}
-
-.shift-pill.is-closed .shift-dot {
-    background: var(--text-light);
-}
-
-.shift-pill.is-open .shift-dot {
-    background: #49D04D;
+    border: 2px solid var(--border);
 }
 
 .shift-dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #2fb765;
+    background: #2fb765; /* status color — stays green in both themes, not tied to bg */
     flex-shrink: 0;
-}
-
-.shift-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.shift-details {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-left: 8px;
-}
-
-.shift-detail-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text);
-    font-weight: 500;
-}
-
-.shift-detail-item i {
-    font-size: 12px;
-    color: var(--text);
 }
 
 .icon-btn {
@@ -1156,17 +1127,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 /* ══════════════════════════════
    RESPONSIVE
 ══════════════════════════════ */
-@media (max-width: 1100px) {
-    .product-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
 
-/* ══════════════════════════════
-   TABLET / IPAD (768px - 1024px)
-══════════════════════════════ */
-@media (max-width: 1024px) {
-
+@media (max-width: 1280px) {
     .sidebar {
         width: 240px;
     }
@@ -1176,13 +1138,138 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         padding: 16px;
     }
 
-    .brand-mark {
+    .brand-mark img {
         width: 60px;
-        height: 60px;
+        height: 55px;
     }
 
     .brand-name {
         font-size: 24px;
+    }
+
+    .brand-sub {
+        font-size: 18px;
+    }
+
+    .sidebar {
+        width: 350px;
+    }
+
+    .sidebar-nav{
+        padding: 17px 10px;
+    }
+
+    .sidebar-nav ul{
+        padding: 0;
+    }
+
+    .sidebar-nav ul li a {
+        padding: 14px 12px;
+        font-size: 22px;
+    }
+    .nav-icon svg{
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-icon1 svg{
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nav-icon2 {
+        font-size: 30px;
+    }
+
+    .logout-link {
+        padding: 14px 12px;
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .sidebar-brand {
+        height: 90px;
+        padding: 16px;
+    }
+
+    .brand-mark img {
+        width: 60px;
+        height: 55px;
+    }
+
+    .brand-name {
+        font-size: 24px;
+    }
+
+    .brand-sub {
+        font-size: 18px;
+    }
+
+    .sidebar {
+        width: 310px;
+    }
+
+    .sidebar-nav{
+        padding: 17px 10px;
+    }
+
+    .sidebar-nav ul{
+        padding: 0;
+    }
+
+    .sidebar-nav ul li a {
+        padding: 14px 12px;
+        font-size: 22px;
+    }
+    .nav-icon svg{
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-icon1 svg{
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nav-icon2 {
+        font-size: 30px;
+    }
+
+    .logout-link {
+        padding: 14px 12px;
+        font-size: 17px;
+    }
+}
+
+/* ══════════════════════════════
+   TABLET / IPAD (768px - 1024px)
+══════════════════════════════ */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 250px;
+    }
+
+    .sidebar-brand {
+        height: 75px;
+        padding: 11px;
+    }
+
+    .brand-mark img {
+        width: 50px;
+        height: 45px;
+    }
+
+    .brand-name {
+        font-size: 20px;
     }
 
     .brand-sub {

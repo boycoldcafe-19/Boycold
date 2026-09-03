@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 session_name('POS_SESSION');
 session_start();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/shift_manager.php';
 
 header('Content-Type: application/json');
 
@@ -178,23 +179,29 @@ try {
     }
     $total = $subtotal + $deliveryFee + $tax;
 
+    // Reconcile the branch before writing so a late request cannot use a prior sales day.
+    $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+    $cashierId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
+    $currentShift = pos_reconcile_branch_shift($connect, $branchId, $cashierId);
+    if (!$currentShift) {
+        pos_json_response(['success' => false, 'error' => 'There is no open POS shift for this sales day.'], 409);
+    }
+    $shiftId = (int) $currentShift['id'];
+
     $connect->begin_transaction();
 
     $userName = pos_ensure_walk_in_customer($connect);
 
-    // Get branch_id and cashier_id from session
-    $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
-    $cashierId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
     $userId = null; // POS orders are typically walk-in customers
 
     $stmt = $connect->prepare(
         "INSERT INTO orders
            (user_name, user_id, status, order_type, payment_method, payment_status,
-            subtotal, delivery_fee, tax, total, address, notes, branch_id, cashier_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    );
+            subtotal, delivery_fee, tax, total, address, notes, branch_id, cashier_id, shift_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
     $stmt->bind_param(
-        'sisssssdddssii',
+        'sissssddddssiii',
         $userName,
         $userId,
         $status,
@@ -208,7 +215,8 @@ try {
         $address,
         $notes,
         $branchId,
-        $cashierId
+        $cashierId,
+        $shiftId
     );
     $stmt->execute();
     $orderId = (int) $connect->insert_id;

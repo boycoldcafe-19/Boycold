@@ -65,19 +65,20 @@ UPDATE products SET category = 'smoothie' WHERE category = 'fruit-shake';
 UPDATE products SET category = 'light-snack' WHERE category = 'bites';
 UPDATE products SET category = 'waffle' WHERE category = 'waffles';
 
--- Update image paths to match new /public/assets/ structure
-UPDATE products SET image = REPLACE(image, '/picture/', '/public/assets/img/') WHERE image LIKE '/picture/%';
+-- Keep image paths relative to the application's shared picture directory.
+UPDATE products SET image = CONCAT('/picture/', SUBSTRING_INDEX(image, '/', -1))
+WHERE image IS NOT NULL AND image <> '';
 
 -- Add new products
 INSERT INTO products (product_name, description, price, image, category, is_available) VALUES
-('Mont Blanc', 'Mont Blanc coffee blend', 179.00, '/public/assets/img/Mont Blanc.png', 'coffee', 1),
-('Horchata', 'Coffee Horchata', 189.00, '/public/assets/img/Coffee Horchata.png', 'coffee', 1),
-('Ocean Mist', 'Ocean Mist coffee', 189.00, '/public/assets/img/Ocean mist.png', 'coffee', 1),
-('Creme Brulee', 'Creme Brulee coffee', 199.00, '/public/assets/img/ChatGPT Image Aug 29, 2026, 12_20_12 AM.png', 'coffee', 1),
-('Black Forrest', 'Black Forrest frappe', 169.00, '/public/assets/img/Gemini_Generated_Image_op5lniop5lniop5l 1.png', 'frappe-series', 1),
-('Honey Gochujang Katsu', 'Honey Gochujang Katsu rice meal', 219.00, '/public/assets/img/Honey Gochujang Katsu 1.png', 'rice-meal', 1),
-('Dak Galbi', 'Dak Galbi rice meal', 199.00, '/public/assets/img/Dak galbi 1.png', 'rice-meal', 1),
-('Salted Egg Fish Fillet', 'Salted Egg Fish Fillet rice meal', 229.00, '/public/assets/img/Salted egg Fish fillet.png', 'rice-meal', 1),
-('Fries & Chicken Tenders', 'Fries and Chicken tenders', 219.00, '/public/assets/img/Fries and Chicken tenders.png', 'light-snack', 1),
-('Nachos', 'Nachos', 179.00, '/public/assets/img/Nachos.png', 'light-snack', 1),
-('Aglio Olio', 'Aglio Olio pasta', 239.00, '/public/assets/img/Aglio olio sardines 1.png', 'pasta', 1);
+('Mont Blanc', 'Mont Blanc coffee blend', 179.00, '/picture/Mont Blanc.png', 'coffee', 1),
+('Horchata', 'Coffee Horchata', 189.00, '/picture/Coffee Horchata.png', 'coffee', 1),
+('Ocean Mist', 'Ocean Mist coffee', 189.00, '/picture/Ocean mist.png', 'coffee', 1),
+('Creme Brulee', 'Creme Brulee coffee', 199.00, '/picture/ChatGPT Image Aug 29, 2026, 12_20_12 AM.png', 'coffee', 1),
+('Black Forrest', 'Black Forrest frappe', 169.00, '/picture/blackforest.png', 'frappe-series', 1),
+('Honey Gochujang Katsu', 'Honey Gochujang Katsu rice meal', 219.00, '/picture/Honey Gochujang Katsu 1.png', 'rice-meal', 1),
+('Dak Galbi', 'Dak Galbi rice meal', 199.00, '/picture/Dak galbi 1.png', 'rice-meal', 1),
+('Salted Egg Fish Fillet', 'Salted Egg Fish Fillet rice meal', 229.00, '/picture/Salted egg Fish fillet.png', 'rice-meal', 1),
+('Fries & Chicken Tenders', 'Fries and Chicken tenders', 219.00, '/picture/Fries and Chicken tenders.png', 'light-snack', 1),
+('Nachos', 'Nachos', 179.00, '/picture/Nachos.png', 'light-snack', 1),
+('Aglio Olio', 'Aglio Olio pasta', 239.00, '/picture/Aglio olio sardines 1.png', 'pasta', 1);

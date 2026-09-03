@@ -102,6 +102,16 @@ git push origin main
    - Choose the `.sql` file
    - Click **Go**
 
+### Configure automatic POS shift reset
+
+After importing the schema, create a Hostinger/cPanel cron job that runs every minute:
+
+```text
+* * * * * /usr/bin/php /home/USERNAME/domains/DOMAIN/public_html/config/cron_reset_shifts.php >> /home/USERNAME/shift-cron.log 2>&1
+```
+
+Replace `USERNAME`, `DOMAIN`, and the PHP path with the values shown by Hostinger. The script uses `Asia/Manila`, closes any prior open sales-day shift, saves its totals, and creates at most one open shift for the current sales day. It is safe to run repeatedly.
+
 ---
 
 ## 🔍 Step 5: Verify Setup

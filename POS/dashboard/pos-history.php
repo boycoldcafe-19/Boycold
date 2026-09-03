@@ -2,6 +2,7 @@
 session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/shift_manager.php';
 require_once '../../config/payments.php';
 
 // Session guard — redirect to flash screen if not logged in
@@ -25,9 +26,11 @@ if (!$employee || (int) $employee['is_active'] === 0) {
 }
 $stmt->close();
 
-// Check for active shift - redirect to shift page if no open shift
-$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE employee_id = ? AND status = 'open' LIMIT 1");
-$shiftStmt->bind_param('i', $employeeId);
+// Reconcile missed 2:00 AM boundaries and use the shared branch shift.
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+pos_reconcile_branch_shift($connect, $branchId, $employeeId);
+$shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE branch_id = ? AND status = 'open' LIMIT 1");
+$shiftStmt->bind_param('i', $branchId);
 $shiftStmt->execute();
 $shiftResult = $shiftStmt->get_result()->fetch_assoc();
 $shiftStmt->close();
@@ -44,7 +47,7 @@ $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Get branch name for profile display
 $branchName = 'Main Branch';
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
 
 // Get employee name for display
 $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] : 'Cashier';
@@ -589,5 +592,6 @@ function orderhis_format_group_label(string $dateStr): string {
         }
     </script>
     <script src="order-notify.js"></script>
+    <script src="shift-monitor.js"></script>
 </body>
 </html>

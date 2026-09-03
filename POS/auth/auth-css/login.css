@@ -248,7 +248,7 @@ select.error-input {
     padding: 1rem;
     border-radius: 10px;
     border: none;
-    background-color: #6F4E37;
+    background-color: #692727;
     color: #fff;
     font-size: 1.8rem;
     font-family: 'Gaegu', cursive;
@@ -266,7 +266,7 @@ select.error-input {
 .cancel-btn {
     padding: 1rem;
     border-radius: 10px;
-    border: 2px solid #483121;
+    border: 2px solid #692727;
     background-color: transparent;
     color: #1e1e1e;
     font-size: 1.8rem;

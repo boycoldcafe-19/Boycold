@@ -2,6 +2,7 @@
 session_name('POS_SESSION');
 session_start();
 require_once '../config/db_config.php';
+require_once '../../config/shift_manager.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -44,10 +45,19 @@ if ($branchId > 0) {
     $branchStmt->close();
 }
 
-// Check for active shift - also validate branch ownership
+// Reconcile missed 2:00 AM boundaries before reading the shared branch shift.
+$branchId = (int) $employee['branch_id'];
+$historyStmt = $connect->prepare('SELECT id FROM shift_logs WHERE branch_id = ? LIMIT 1');
+$historyStmt->bind_param('i', $branchId);
+$historyStmt->execute();
+$hasShiftHistory = (bool) $historyStmt->get_result()->fetch_assoc();
+$historyStmt->close();
+pos_reconcile_branch_shift($connect, $branchId, $employeeId, $hasShiftHistory);
+
+// Check for the branch-wide active shift shared by all POS terminals.
 $currentShift = null;
-$shiftStmt = $connect->prepare("SELECT * FROM shift_logs WHERE employee_id = ? AND status = 'open' AND branch_id = ? ORDER BY opened_at DESC LIMIT 1");
-$shiftStmt->bind_param('ii', $employeeId, $branchId);
+$shiftStmt = $connect->prepare("SELECT * FROM shift_logs WHERE status = 'open' AND branch_id = ? ORDER BY opened_at DESC LIMIT 1");
+$shiftStmt->bind_param('i', $branchId);
 $shiftStmt->execute();
 $shiftResult = $shiftStmt->get_result()->fetch_assoc();
 $shiftStmt->close();
@@ -55,6 +65,22 @@ $shiftStmt->close();
 if ($shiftResult) {
     $currentShift = $shiftResult;
 }
+
+$historyStmt = $connect->prepare(
+  "SELECT s.shift_date, s.opened_at, s.closed_at, s.status, s.total_sales, s.total_orders,
+      s.open_reason, s.close_reason,
+      GROUP_CONCAT(DISTINCT e.event_type ORDER BY e.created_at SEPARATOR ', ') AS events
+   FROM shift_logs s
+   LEFT JOIN shift_events e ON e.shift_id = s.id
+   WHERE s.branch_id = ?
+   GROUP BY s.id
+   ORDER BY s.shift_date DESC, s.id DESC
+   LIMIT 20"
+);
+$historyStmt->bind_param('i', $branchId);
+$historyStmt->execute();
+$shiftHistory = $historyStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$historyStmt->close();
 
 // Handle API requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -64,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'open_shift') {
-        $openingCash = floatval($_POST['opening_cash'] ?? 0);
+        $openingCash = (float) str_replace(',', '', (string) ($_POST['opening_cash'] ?? 0));
 
         if ($openingCash < 0) {
             $response['errors']['opening_cash'] = 'Opening cash cannot be negative.';
@@ -77,62 +103,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($currentShift) {
                 $response['errors']['opening_cash'] = 'You already have an open shift.';
             } else {
-                // Insert shift with branch_id - strict branch isolation
-                $insertStmt = $connect->prepare("INSERT INTO shift_logs (branch_id, employee_id, opening_cash_float, status) VALUES (?, ?, ?, 'open')");
-                $insertStmt->bind_param('iid', $branchId, $employeeId, $openingCash);
+                $salesDate = pos_sales_date();
+              $closedStmt = $connect->prepare("SELECT id FROM shift_logs WHERE branch_id = ? AND shift_date = ? AND status IN ('closed', 'auto-closed') LIMIT 1");
+              $closedStmt->bind_param('is', $branchId, $salesDate);
+              $closedStmt->execute();
+              $closedShift = $closedStmt->get_result()->fetch_assoc();
+              $closedStmt->close();
 
-                if ($insertStmt->execute()) {
-                    $response['success'] = true;
-                    $response['shift_id'] = $insertStmt->insert_id;
-                } else {
-                    $response['errors']['opening_cash'] = 'Failed to open shift. Please try again. Error: ' . $insertStmt->error;
-                }
+              if ($closedShift) {
+                $reopenStmt = $connect->prepare(
+                  "UPDATE shift_logs SET employee_id = ?, opening_cash_float = ?, closed_at = NULL,
+                    status = 'open', close_reason = NULL, open_reason = 'manual'
+                   WHERE id = ? AND branch_id = ? AND status IN ('closed', 'auto-closed')"
+                );
+                $closedShiftId = (int) $closedShift['id'];
+                $reopenStmt->bind_param('idii', $employeeId, $openingCash, $closedShiftId, $branchId);
+                $reopened = $reopenStmt->execute() && $reopenStmt->affected_rows === 1;
+                $reopenStmt->close();
+                $newShiftId = $closedShiftId;
+              } else {
+                $insertStmt = $connect->prepare("INSERT INTO shift_logs (branch_id, employee_id, opening_cash_float, shift_date, status, open_reason) VALUES (?, ?, ?, ?, 'open', 'manual')");
+                $insertStmt->bind_param('iids', $branchId, $employeeId, $openingCash, $salesDate);
+                $reopened = $insertStmt->execute();
+                $newShiftId = (int) $insertStmt->insert_id;
                 $insertStmt->close();
+              }
+
+              if ($reopened) {
+                $response['success'] = true;
+                $response['shift_id'] = $newShiftId;
+                $response['opened_at'] = pos_business_now()->format('Y-m-d H:i:s');
+                    $response['opening_cash'] = $openingCash;
+                pos_shift_event($connect, $newShiftId, $branchId, 'manual-open', $employeeId);
+                } else {
+                $response['errors']['opening_cash'] = 'Unable to open the shift for this sales day. Please refresh and try again.';
+                }
             }
         }
     } elseif ($action === 'close_shift') {
         if (!$currentShift) {
             $response['errors']['shift'] = 'No open shift found.';
         } else {
-            $closingCash = floatval($_POST['closing_cash'] ?? 0);
+            $closingCash = (float) str_replace(',', '', (string) ($_POST['closing_cash'] ?? 0));
             
             // Calculate sales from orders database for this shift
             $shiftId = $currentShift['id'];
-            $shiftOpenedAt = $currentShift['opened_at'];
-            
-            // Query orders placed during this shift
-            $ordersQuery = "SELECT 
-                SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN total ELSE 0 END) as cash_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN total ELSE 0 END) as qrph_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN 1 ELSE 0 END) as cash_orders,
-                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN 1 ELSE 0 END) as qrph_orders,
-                SUM(total) as total_sales,
-                COUNT(*) as total_orders
-                FROM orders 
-                WHERE branch_id = ? 
-                AND created_at >= ? 
-                AND (status != 'cancelled' OR status IS NULL)";
-            
-            $ordersStmt = $connect->prepare($ordersQuery);
-            $ordersStmt->bind_param('is', $branchId, $shiftOpenedAt);
-            $ordersStmt->execute();
-            $ordersResult = $ordersStmt->get_result()->fetch_assoc();
-            $ordersStmt->close();
-            
-            $cashSales = floatval($ordersResult['cash_sales'] ?? 0);
-            $qrphSales = floatval($ordersResult['qrph_sales'] ?? 0);
-            $cashOrders = intval($ordersResult['cash_orders'] ?? 0);
-            $qrphOrders = intval($ordersResult['qrph_orders'] ?? 0);
-            $totalSales = floatval($ordersResult['total_sales'] ?? 0);
-            $totalOrders = intval($ordersResult['total_orders'] ?? 0);
+            $sales = pos_shift_sales($connect, (int) $currentShift['id']);
+            $cashSales = $sales['cash_sales'];
+            $qrphSales = $sales['digital_sales'];
+            $cashOrders = $sales['cash_orders'];
+            $qrphOrders = $sales['digital_orders'];
+            $totalSales = $sales['total_sales'];
+            $totalOrders = $sales['total_orders'];
             
             $cashDifference = $closingCash - ($currentShift['opening_cash_float'] + $cashSales);
             
-            $updateStmt = $connect->prepare("UPDATE shift_logs SET closing_cash_count = ?, cash_sales = ?, qrph_sales = ?, total_sales = ?, cash_orders = ?, qrph_orders = ?, total_orders = ?, cash_difference = ?, closed_at = NOW(), status = 'closed' WHERE id = ? AND branch_id = ?");
+            $updateStmt = $connect->prepare("UPDATE shift_logs SET closing_cash_count = ?, cash_sales = ?, gcash_sales = ?, total_sales = ?, cash_orders = ?, gcash_orders = ?, total_orders = ?, cash_difference = ?, closed_at = NOW(), status = 'closed', close_reason = 'manual' WHERE id = ? AND branch_id = ? AND status = 'open'");
             $updateStmt->bind_param('ddddiiidii', $closingCash, $cashSales, $qrphSales, $totalSales, $cashOrders, $qrphOrders, $totalOrders, $cashDifference, $currentShift['id'], $branchId);
             
             if ($updateStmt->execute()) {
                 $response['success'] = true;
+                pos_shift_event($connect, (int) $currentShift['id'], $branchId, 'manual-close', $employeeId);
                 $response['calculated'] = [
                     'cash_sales' => $cashSales,
                     'qrph_sales' => $qrphSales,
@@ -153,35 +184,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$currentShift) {
             $response['errors']['shift'] = 'No open shift found.';
         } else {
-            $shiftOpenedAt = $currentShift['opened_at'];
-            
-            // Query orders placed during this shift
-            $ordersQuery = "SELECT 
-                SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN total ELSE 0 END) as cash_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN total ELSE 0 END) as qrph_sales,
-                SUM(CASE WHEN LOWER(payment_method) = 'cod' THEN 1 ELSE 0 END) as cash_orders,
-                SUM(CASE WHEN LOWER(payment_method) = 'qrph' THEN 1 ELSE 0 END) as qrph_orders,
-                SUM(total) as total_sales,
-                COUNT(*) as total_orders
-                FROM orders 
-                WHERE branch_id = ? 
-                AND created_at >= ? 
-                AND (status != 'cancelled' OR status IS NULL)";
-            
-            $ordersStmt = $connect->prepare($ordersQuery);
-            $ordersStmt->bind_param('is', $branchId, $shiftOpenedAt);
-            $ordersStmt->execute();
-            $ordersResult = $ordersStmt->get_result()->fetch_assoc();
-            $ordersStmt->close();
-            
+          $sales = pos_shift_sales($connect, (int) $currentShift['id']);
             $response['success'] = true;
             $response['sales'] = [
-                'cash_sales' => floatval($ordersResult['cash_sales'] ?? 0),
-                'qrph_sales' => floatval($ordersResult['qrph_sales'] ?? 0),
-                'cash_orders' => intval($ordersResult['cash_orders'] ?? 0),
-                'qrph_orders' => intval($ordersResult['qrph_orders'] ?? 0),
-                'total_sales' => floatval($ordersResult['total_sales'] ?? 0),
-                'total_orders' => intval($ordersResult['total_orders'] ?? 0)
+            'cash_sales' => $sales['cash_sales'],
+            'qrph_sales' => $sales['digital_sales'],
+            'cash_orders' => $sales['cash_orders'],
+            'qrph_orders' => $sales['digital_orders'],
+            'total_sales' => $sales['total_sales'],
+            'total_orders' => $sales['total_orders']
             ];
         }
     }
@@ -432,7 +443,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <p class="field-label">Opening Cash Float</p>
           <div class="price-input">
             <span>₱</span>
-            <input type="number" id="openingCash" placeholder="0.00" min="0" step="0.01">
+            <input type="text" id="openingCash" placeholder="0,000.000" inputmode="decimal" autocomplete="off">
           </div>
 
           <button class="btn-primary" id="openShiftBtn">Open Shift</button>
@@ -465,14 +476,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="row">
               <span class="row-label">Opening Cash Float</span>
-              <span class="row-value" id="cfOpeningFloat">₱0.00</span>
+              <span class="row-value" id="cfOpeningFloat">₱0,000.000</span>
             </div>
 
             <div class="row">
               <span class="row-label">Actual Cash Count</span>
               <span>
                 <span>₱</span>
-                <input type="number" class="row-input" id="countedCash" placeholder="0.00" min="0" step="0.01">
+                <input type="text" class="row-input" id="countedCash" placeholder="0,000.000" inputmode="decimal" autocomplete="off">
               </span>
             </div>
 
@@ -533,6 +544,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button class="btn-primary danger" id="closeShiftBtn">Close Shift</button>
       </section>
+
+      <section class="shift-history" aria-labelledby="shiftHistoryTitle">
+        <div class="shift-history-header">
+          <h2 id="shiftHistoryTitle">Shift History</h2>
+          <span><?= count($shiftHistory) ?> recorded shifts</span>
+        </div>
+        <div class="shift-history-table-wrap">
+          <table class="shift-history-table">
+            <thead>
+              <tr>
+                <th>Sales Day</th>
+                <th>Opened</th>
+                <th>Closed</th>
+                <th>Status</th>
+                <th>Total Sales</th>
+                <th>Orders</th>
+                <th>Audit Event</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($shiftHistory as $history): ?>
+                <tr>
+                  <td><?= htmlspecialchars((string) $history['shift_date']) ?></td>
+                  <td><?= htmlspecialchars((string) $history['opened_at']) ?></td>
+                  <td><?= htmlspecialchars((string) ($history['closed_at'] ?? '—')) ?></td>
+                  <td><?= htmlspecialchars(strtoupper((string) $history['status'])) ?></td>
+                  <td>₱<?= number_format((float) $history['total_sales'], 2) ?></td>
+                  <td><?= (int) $history['total_orders'] ?></td>
+                  <td><?= htmlspecialchars((string) ($history['events'] ?? '—')) ?></td>
+                </tr>
+              <?php endforeach; ?>
+              <?php if (!$shiftHistory): ?>
+                <tr><td colspan="7">No shift history yet.</td></tr>
+              <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   </div>
 </div>
@@ -555,6 +604,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   function parsePeso(text) {
     const cleaned = String(text).replace(/[₱,]/g, '');
     return parseFloat(cleaned) || 0;
+  }
+
+  function formatCashFloat(amount) {
+    return '₱' + (Number(amount) || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    });
+  }
+
+  function parseCashFloat(text) {
+    return parseFloat(String(text).replace(/,/g, '')) || 0;
+  }
+
+  function formatCashInput(input) {
+    const value = parseCashFloat(input.value);
+    if (input.value.trim() !== '' && value >= 0) {
+      input.value = value.toLocaleString('en-US', {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3
+      });
+    }
   }
 
 
@@ -874,8 +944,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       });
 
       // Update opening float display
-      cfOpeningFloat.textContent = formatPeso(openingFloatAmount);
-      cfLessFloat.textContent = '-' + formatPeso(openingFloatAmount);
+      cfOpeningFloat.textContent = formatCashFloat(openingFloatAmount);
+      cfLessFloat.textContent = '-' + formatCashFloat(openingFloatAmount);
 
       // Fetch live sales data from database
       fetchLiveSales();
@@ -921,10 +991,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       // Reset displays
       statShiftStart.textContent = '—';
       statDuration.textContent = '—';
-      cfOpeningFloat.textContent = '₱0.00';
-      cfCashInDrawer.textContent = '₱0.00';
-      cfLessFloat.textContent = '-₱0.00';
-      cfDifference.textContent = '₱0.00';
+      cfOpeningFloat.textContent = '₱0,000.000';
+      cfCashInDrawer.textContent = '₱0,000.000';
+      cfLessFloat.textContent = '-₱0,000.000';
+      cfDifference.textContent = '₱0,000.000';
       countedCash.value = '';
     }
 
@@ -944,14 +1014,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     function renderCashFloat() {
       const hasInput = countedCash.value !== '';
-      const cashInDrawer = hasInput ? parsePeso(countedCash.value) : 0;
+      const cashInDrawer = hasInput ? parseCashFloat(countedCash.value) : 0;
 
-      cfOpeningFloat.textContent = formatPeso(openingFloatAmount);
-      cfCashInDrawer.textContent = formatPeso(cashInDrawer);
-      cfLessFloat.textContent = '-' + formatPeso(openingFloatAmount);
+      cfOpeningFloat.textContent = formatCashFloat(openingFloatAmount);
+      cfCashInDrawer.textContent = formatCashFloat(cashInDrawer);
+      cfLessFloat.textContent = '-' + formatCashFloat(openingFloatAmount);
 
       const cashDifference = cashInDrawer - openingFloatAmount;
-      cfDifference.textContent = formatPeso(cashDifference);
+      cfDifference.textContent = formatCashFloat(cashDifference);
 
       if (!hasInput) {
         cfDifferenceNote.textContent = '(Expected)';
@@ -1018,7 +1088,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       // Open shift button - calls backend API
       openShiftBtn.addEventListener('click', function () {
-        const cash = parseFloat(openingCash.value) || 0;
+        const cash = parseCashFloat(openingCash.value);
 
         if (isNaN(cash) || cash < 0) {
           alert('Please enter a valid opening cash amount.');
@@ -1118,6 +1188,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       // Counted cash input
       countedCash.addEventListener('input', renderCashFloat);
+      openingCash.addEventListener('blur', () => formatCashInput(openingCash));
+      countedCash.addEventListener('blur', () => {
+        formatCashInput(countedCash);
+        renderCashFloat();
+      });
 
       // Periodically refresh sales data when shift is open
       setInterval(function() {
@@ -1150,5 +1225,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </script>
   <script src="order-notify.js"></script>
+  <script src="shift-monitor.js"></script>
 </body>
 </html>
