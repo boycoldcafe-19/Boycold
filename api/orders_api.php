@@ -46,7 +46,7 @@ $sessionCookieParams = [
     'samesite' => 'Lax'
 ];
 
-function startOrderApiSession(string $name, array $cookieParams): void
+function startOrderApiSession(string $name, array $cookieParams, ?string $sessionId = null): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_write_close();
@@ -54,6 +54,9 @@ function startOrderApiSession(string $name, array $cookieParams): void
 
     session_name($name);
     session_set_cookie_params($cookieParams);
+    if ($sessionId !== null && preg_match('/^[a-zA-Z0-9,-]+$/', $sessionId)) {
+        session_id($sessionId);
+    }
     session_start();
 }
 
@@ -84,7 +87,7 @@ foreach (array_unique($sessionCandidates) as $sessionName) {
     }
 
     $startedSession = true;
-    startOrderApiSession($sessionName, $sessionCookieParams);
+    startOrderApiSession($sessionName, $sessionCookieParams, (string) $_COOKIE[$sessionName]);
 
     if (orderApiSessionHasAuth()) {
         break;

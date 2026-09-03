@@ -700,6 +700,7 @@ $branches = $branches ?? [];
             try {
                 const res    = await fetch(ORDER_API, {
                     method:  'POST',
+                    credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
                     body:    JSON.stringify(orderData)
                 });
@@ -793,6 +794,7 @@ $branches = $branches ?? [];
                 try {
                     const res = await fetch(ORDER_API, {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'payment_status', order_id: orderId })
                     });
