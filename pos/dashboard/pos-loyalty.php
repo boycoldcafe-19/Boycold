@@ -518,7 +518,7 @@ if ($branchName === '-') {
 
                 const imageData = qrCtx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
                 const code = window.jsQR ? jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: 'dontInvert'
+                    inversionAttempts: 'attemptBoth'
                 }) : null;
 
                 if (code && code.data) {

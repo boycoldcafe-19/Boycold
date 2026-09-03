@@ -205,6 +205,31 @@
         width: 42px;
         height: 42px;
     }
+
+    .loyalty-workspace .qr-scanner {
+        width: min(100%, 320px);
+        min-height: 220px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .loyalty-workspace .qr-overlay {
+        display: flex !important;
+        z-index: 5;
+        pointer-events: auto;
+    }
+
+    .loyalty-workspace .qr-enable-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        min-width: 150px;
+        padding: 12px 18px;
+        position: relative;
+        z-index: 6;
+        touch-action: manipulation;
+    }
 }
 
 @media (max-width: 600px) {
@@ -265,5 +290,25 @@
 
     .menu-content {
         padding: 0 10px;
+    }
+
+    .loyalty-workspace .qr-scanner {
+        width: min(100%, 300px);
+        min-height: 230px;
+    }
+
+    .loyalty-workspace .qr-overlay {
+        padding: 14px;
+        gap: 8px;
+    }
+
+    .loyalty-workspace .qr-overlay p {
+        font-size: 13px;
+    }
+
+    .loyalty-workspace .qr-enable-btn {
+        min-height: 48px;
+        min-width: 170px;
+        font-size: 14px;
     }
 }
