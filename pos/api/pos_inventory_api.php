@@ -33,7 +33,7 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
-function getInventory($connect, $branchId) {
+function getInventory(mysqli $connect, int $branchId): array {
     $stmt = $connect->prepare("SELECT name, unit, stock, max_stock FROM ingredients WHERE branch_id = ?");
     $stmt->bind_param('i', $branchId);
     $stmt->execute();
@@ -70,11 +70,15 @@ function getInventory($connect, $branchId) {
     return ['success' => true, 'inventory' => $inventory];
 }
 
-function updateInventory($connect, $branchId, $input) {
+function updateInventory(mysqli $connect, int $branchId, mixed $input): array {
+    if (!is_array($input)) {
+        return ['success' => false, 'error' => 'Invalid inventory data'];
+    }
+
     foreach ($input as $key => $data) {
         $ingredientName = mapKeyToIngredient($key);
-        if ($ingredientName) {
-            $current = $data['current'] ?? 0;
+        if ($ingredientName && is_array($data)) {
+            $current = (float) ($data['current'] ?? 0);
             $stmt = $connect->prepare("UPDATE ingredients SET stock = ? WHERE branch_id = ? AND name = ?");
             $stmt->bind_param('dis', $current, $branchId, $ingredientName);
             $stmt->execute();
@@ -84,7 +88,7 @@ function updateInventory($connect, $branchId, $input) {
     return ['success' => true];
 }
 
-function resetInventory($connect, $branchId) {
+function resetInventory(mysqli $connect, int $branchId): array {
     $defaults = [
         'Coffee Beans' => 1000,
         'Whole Milk' => 1000,
@@ -106,7 +110,7 @@ function resetInventory($connect, $branchId) {
     return ['success' => true];
 }
 
-function mapIngredientToKey($name) {
+function mapIngredientToKey(string $name): ?string {
     $map = [
         'Coffee Beans' => 'coffeeBeans',
         'Whole Milk' => 'milk',
@@ -118,7 +122,7 @@ function mapIngredientToKey($name) {
     return $map[$name] ?? null;
 }
 
-function mapKeyToIngredient($key) {
+function mapKeyToIngredient(string $key): ?string {
     $map = [
         'coffeeBeans' => 'Coffee Beans',
         'milk' => 'Whole Milk',
