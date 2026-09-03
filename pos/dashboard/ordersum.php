@@ -84,6 +84,7 @@ if ($shiftResult) {
     <link rel="stylesheet" href="dash-css/pos-menu.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="stylesheet" href="dash-css/ordersum.css">
+    <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1296,6 +1297,7 @@ if ($shiftResult) {
         
 
     </script>
+    <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

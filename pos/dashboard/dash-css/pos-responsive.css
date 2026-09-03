@@ -1,0 +1,269 @@
+/* Shared responsive behavior for POS dashboard pages. */
+
+.pos-mobile-menu {
+    display: none;
+}
+
+.pos-sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .app-shell {
+        min-height: 100dvh;
+    }
+
+    .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 1100;
+        width: min(82vw, 300px) !important;
+        height: 100dvh;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        box-shadow: 8px 0 24px rgba(0, 0, 0, 0.22);
+    }
+
+    .sidebar.pos-sidebar-open {
+        transform: translateX(0);
+    }
+
+    .sidebar-brand {
+        height: 84px;
+        padding: 12px 16px;
+    }
+
+    .brand-text,
+    .nav-label,
+    .nav-chevron,
+    .profile-name {
+        display: inline;
+    }
+
+    .sidebar-nav ul li a,
+    .logout-link {
+        justify-content: flex-start;
+        min-height: 48px;
+        padding: 13px 16px;
+        font-size: 16px;
+    }
+
+    .sidebar-nav {
+        padding: 14px 12px;
+    }
+
+    .sidebar-footer {
+        padding: 14px 12px;
+    }
+
+    .pos-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1090;
+        display: block;
+        background: rgba(0, 0, 0, 0.42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    .pos-sidebar-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .main-panel {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .top-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        height: 64px;
+        padding: 0 12px;
+        gap: 10px;
+    }
+
+    .pos-mobile-menu {
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 20px;
+    }
+
+    .top-header .header-divider:first-of-type {
+        display: none;
+    }
+
+    .shift-pill {
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    .profile-btn {
+        padding-right: 8px;
+    }
+
+    .profile-btn .profile-name,
+    .profile-btn .profile-caret {
+        display: none;
+    }
+
+    .loyalty-workspace,
+    .online-workspace,
+    .status-workspace,
+    .history-workspace,
+    .settings-workspace,
+    .menu-workspace {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .orders-table-shell,
+    .orderhis-table-wrap,
+    .shift-history-table-wrap,
+    .inventory-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        min-width: 640px;
+    }
+
+    .category-bar {
+        gap: 8px;
+        padding: 14px 12px;
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .category-bar .cat-pill,
+    .category-bar .cat-add {
+        flex: 0 0 auto;
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .menu-section {
+        padding: 16px 0 36px;
+    }
+
+    .menu-content {
+        width: 100%;
+        padding: 0 12px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .card-image-placeholder {
+        height: 190px;
+    }
+
+    .card-info {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .card-name {
+        font-size: 24px;
+        line-height: 1.05;
+    }
+
+    .card-price {
+        font-size: 21px;
+    }
+
+    .drink-status,
+    .drink-ingredient,
+    .drink-cups {
+        font-size: 12px;
+    }
+
+    .card-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+@media (max-width: 600px) {
+    .top-header {
+        height: 58px;
+        padding: 0 10px;
+    }
+
+    .pos-mobile-menu {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
+
+    .shift-pill {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .notif-wrap {
+        position: static;
+    }
+
+    .notif-dropdown {
+        position: fixed;
+        top: 66px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+    }
+
+    .loyalty-workspace,
+    .online-workspace,
+    .status-workspace,
+    .history-workspace,
+    .settings-workspace,
+    .menu-workspace {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    table {
+        min-width: 560px;
+    }
+
+    .product-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .card-image-placeholder {
+        height: 210px;
+    }
+
+    .card-name {
+        font-size: 27px;
+    }
+
+    .menu-content {
+        padding: 0 10px;
+    }
+}

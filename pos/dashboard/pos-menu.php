@@ -68,6 +68,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="dash-css/pos-menu.css">
+    <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -261,7 +262,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                 <a href="#" data-filter="rice-meal" class="cat-pill">Rice Meal</a>
                 <a href="#" data-filter="light-snack" class="cat-pill">Light Snack</a>
                 <a href="#" data-filter="pasta" class="cat-pill">Pasta</a>
-                <a href="#" data-filter="waffle" class="cat-pill">Waffles</a>
+                <a href="#" data-filter="waffles" class="cat-pill">Waffles</a>
                 <a href="#" data-filter="quesadilla" class="cat-pill">Quesadilla</a>
                 <button class="cat-add" id="addProductBtn" aria-label="Add category">
                     <i class="fa-solid fa-plus"></i>
@@ -1046,6 +1047,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         }
 
     </script>
+    <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

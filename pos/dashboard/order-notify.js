@@ -103,38 +103,13 @@
         return item;
     }
 
-    function buildDropdownMarkup(hasBadgeCount) {
-        const items = hasBadgeCount ? `
-            <div class="notif-item unread">
-                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                <div class="notif-content">
-                    <p class="notif-item-title">New online order received</p>
-                    <p class="notif-item-sub">Order #0001</p>
-                </div>
-                <div class="notif-time">
-                    <span class="notif-time-main">10:30 am</span>
-                    <span class="notif-time-sub">Just now</span>
-                </div>
-            </div>
-            <div class="notif-item unread">
-                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                <div class="notif-content">
-                    <p class="notif-item-title">Payment Confirmed</p>
-                    <p class="notif-item-sub">Order #0003</p>
-                </div>
-                <div class="notif-time">
-                    <span class="notif-time-main">10:30 am</span>
-                    <span class="notif-time-sub">Just now</span>
-                </div>
-            </div>
-        ` : '<div class="notif-empty">No new notifications</div>';
-
+    function buildDropdownMarkup() {
         return `
             <div class="notif-header">
                 <span class="notif-title">Notifications</span>
                 <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
             </div>
-            <div class="notif-list" id="notifList">${items}</div>
+            <div class="notif-list" id="notifList"><div class="notif-empty">Loading notifications...</div></div>
             <a href="pos-online.php" class="notif-footer">
                 View all notifications <i class="fa-solid fa-chevron-right"></i>
             </a>
@@ -144,7 +119,7 @@
     function ensureNotificationUi() {
         const existingBtn = document.getElementById('notifBtn');
         const existingDropdown = document.getElementById('notifDropdown');
-        const shouldBindDropdown = !(existingBtn && existingDropdown);
+        const shouldBindDropdown = !(existingBtn && existingDropdown) || existingBtn.dataset.orderNotifyBound !== 'true';
 
         const notifBtn = findNotificationButton();
         if (!notifBtn) return null;
@@ -173,11 +148,10 @@
 
         let notifDropdown = document.getElementById('notifDropdown');
         if (!notifDropdown) {
-            const badgeCount = parseInt(notifBadge.textContent || '0', 10);
             notifDropdown = document.createElement('div');
             notifDropdown.className = 'notif-dropdown';
             notifDropdown.id = 'notifDropdown';
-            notifDropdown.innerHTML = buildDropdownMarkup(badgeCount > 0);
+            notifDropdown.innerHTML = buildDropdownMarkup();
             notifWrap.appendChild(notifDropdown);
         }
 
@@ -230,6 +204,43 @@
 
         ui.badge.style.display = 'flex';
         ui.badge.textContent = (parseInt(ui.badge.textContent || '0', 10) + 1).toString();
+    }
+
+    function renderNotifications(notifications) {
+        const ui = ensureNotificationUi();
+        if (!ui?.list) return;
+
+        ui.list.innerHTML = '';
+        if (!notifications.length) {
+            ui.list.innerHTML = '<div class="notif-empty">No new notifications</div>';
+            return;
+        }
+
+        notifications.forEach((order) => {
+            const item = buildNotificationItem(
+                order.status === 'pending' ? 'New online order received' : 'Online order updated',
+                `Order #${order.id}`,
+                'notif-icon-bag'
+            );
+            const date = new Date(String(order.created_at || '').replace(' ', 'T'));
+            if (!Number.isNaN(date.getTime())) {
+                item.querySelector('.notif-time-main').textContent = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+                item.querySelector('.notif-time-sub').textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+            ui.list.appendChild(item);
+        });
+    }
+
+    async function refreshNotificationList() {
+        try {
+            const res = await fetch(`${ORDER_API}?action=notifications`, { cache: 'no-store' });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.notifications)) {
+                renderNotifications(data.notifications);
+            }
+        } catch (err) {
+            console.error('Notification list refresh failed', err);
+        }
     }
 
     function showPopup(orderId) {
@@ -344,6 +355,8 @@
     bindGeneratedDropdown(ensureNotificationUi());
     setInterval(pollOnlineOrders, POLL_INTERVAL);
     setInterval(refreshOrderCount, POLL_INTERVAL);
+    setInterval(refreshNotificationList, POLL_INTERVAL);
     pollOnlineOrders();
     refreshOrderCount();
+    refreshNotificationList();
 })();

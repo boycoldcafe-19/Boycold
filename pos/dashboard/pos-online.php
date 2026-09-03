@@ -185,6 +185,7 @@ if ($branchId > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold - POS</title>
     <link rel="stylesheet" href="dash-css/pos-online.css">
+    <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -454,6 +455,7 @@ if ($branchId > 0) {
 
         applyStatusFilter('all');
     </script>
+    <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

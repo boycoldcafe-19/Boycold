@@ -2,6 +2,7 @@
 require_once __DIR__ . '/auth/guard.php';
 pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/loyalty.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 header('Content-Type: application/json');
@@ -15,23 +16,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$cardNo = trim($input['card_no'] ?? '');
+$cardPayload = trim($input['card_no'] ?? '');
 $action = trim($input['action'] ?? 'lookup');
 
-if ($cardNo === '') {
+if ($cardPayload === '') {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Card number is required']);
     exit;
 }
 
-if (!preg_match('/^BY-\d{4}\d{3}$/', $cardNo)) {
+ $token = extractLoyaltyTokenFromPayload($cardPayload);
+$cardNo = preg_match('/^BY-\d{4}\d{3}$/', $cardPayload) ? $cardPayload : '';
+
+if ($token === '' && $cardNo === '') {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid card format']);
+    echo json_encode(['success' => false, 'error' => 'Invalid loyalty card or QR code']);
     exit;
 }
 
-$stmt = $connect->prepare("SELECT id, firstname, lastname, card_no, loyalty_beans, loyalty_stamps FROM users WHERE card_no = ? LIMIT 1");
-$stmt->bind_param('s', $cardNo);
+$lookupColumn = $token !== '' ? 'loyalty_token' : 'card_no';
+$lookupValue = $token !== '' ? $token : $cardNo;
+$stmt = $connect->prepare("SELECT id, firstname, lastname, email, phone, card_no, created_at, loyalty_beans, loyalty_stamps FROM users WHERE {$lookupColumn} = ? LIMIT 1");
+$stmt->bind_param('s', $lookupValue);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
@@ -40,6 +46,39 @@ if (!$user) {
     http_response_code(404);
     echo json_encode(['success' => false, 'error' => 'No customer found for this card']);
     exit;
+}
+
+$cardNo = (string) ($user['card_no'] ?? '');
+
+function getRecentLoyaltyTransactions(mysqli $connect, int $userId): array
+{
+    $stmt = $connect->prepare(
+        "SELECT transaction_type, points_awarded, created_at
+         FROM loyalty_transactions
+         WHERE user_id = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 10"
+    );
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $transactions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $transactions;
+}
+
+function customerPayload(array $user, array $transactions): array
+{
+    return [
+        'id' => (int) $user['id'],
+        'name' => trim($user['firstname'] . ' ' . $user['lastname']),
+        'email' => (string) ($user['email'] ?? ''),
+        'phone' => (string) ($user['phone'] ?? ''),
+        'card_no' => (string) ($user['card_no'] ?? ''),
+        'member_since' => (string) ($user['created_at'] ?? ''),
+        'loyalty_beans' => (int) ($user['loyalty_beans'] ?? 0),
+        'loyalty_stamps' => (int) ($user['loyalty_stamps'] ?? 0),
+        'transactions' => $transactions,
+    ];
 }
 
 if ($action === 'award') {
@@ -52,14 +91,14 @@ if ($action === 'award') {
     $previousBalance = (int) $user['loyalty_beans'] + ((int) $user['loyalty_stamps'] * 10);
 
     // Award loyalty stamp directly
-    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = loyalty_stamps + 1 WHERE card_no = ?");
-    $awardStmt->bind_param('s', $cardNo);
+    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = loyalty_stamps + 1 WHERE id = ?");
+    $awardStmt->bind_param('i', $user['id']);
     $awardStmt->execute();
     $awardStmt->close();
 
     // Get updated balance
-    $refreshStmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps FROM users WHERE card_no = ? LIMIT 1");
-    $refreshStmt->bind_param('s', $cardNo);
+    $refreshStmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps FROM users WHERE id = ? LIMIT 1");
+    $refreshStmt->bind_param('i', $user['id']);
     $refreshStmt->execute();
     $updated = $refreshStmt->get_result()->fetch_assoc();
     $refreshStmt->close();
@@ -75,26 +114,12 @@ if ($action === 'award') {
     echo json_encode([
         'success' => true,
         'message' => 'Loyalty stamp awarded',
-        'customer' => [
-            'id' => (int) $user['id'],
-            'name' => trim($user['firstname'] . ' ' . $user['lastname']),
-            'card_no' => $user['card_no'],
-            'loyalty_beans' => (int) ($updated['loyalty_beans'] ?? 0),
-            'loyalty_stamps' => (int) ($updated['loyalty_stamps'] ?? 0),
-            'current_points' => $newBalance
-        ]
+        'customer' => customerPayload(array_merge($user, $updated), getRecentLoyaltyTransactions($connect, (int) $user['id']))
     ]);
     exit;
 }
 
 echo json_encode([
     'success' => true,
-    'customer' => [
-        'id' => (int) $user['id'],
-        'name' => trim($user['firstname'] . ' ' . $user['lastname']),
-        'card_no' => $user['card_no'],
-        'loyalty_beans' => 0, // Always 0 in new system
-        'loyalty_stamps' => (int) $user['loyalty_stamps'],
-        'current_points' => (int) (((int) $user['loyalty_beans']) + ((int) $user['loyalty_stamps'] * 10))
-    ]
+    'customer' => customerPayload($user, getRecentLoyaltyTransactions($connect, (int) $user['id']))
 ]);

@@ -40,6 +40,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'counts') {
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'notifications') {
+    $notificationStmt = $connect->prepare(
+        "SELECT id, status, created_at
+         FROM orders
+         WHERE $onlineOrderTypeSql
+           AND status IN ('pending', 'confirmed')
+           AND branch_id = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 10"
+    );
+    $notificationStmt->bind_param('i', $branchId);
+    $notificationStmt->execute();
+    $notifications = $notificationStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $notificationStmt->close();
+
+    echo json_encode([
+        'success' => true,
+        'notifications' => $notifications,
+    ]);
+    exit;
+}
+
 $stmt = $connect->prepare(
     "SELECT id, user_name, status, payment_method, payment_status, order_type, subtotal, delivery_fee, tax, total, address, created_at
      FROM orders

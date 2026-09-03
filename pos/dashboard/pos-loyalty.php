@@ -1,3 +1,31 @@
+<?php
+require_once '../auth/guard.php';
+pos_start_session();
+require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
+require_once '../../config/shift_manager.php';
+require_once '../../config/loyalty.php';
+
+$employeeId = (int) $guardEmployee['id'];
+$branchId = (int) ($guardEmployee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+pos_reconcile_branch_shift($connect, $branchId, $employeeId);
+
+$shiftStmt = $connect->prepare("SELECT id FROM shift_logs WHERE branch_id = ? AND status = 'open' LIMIT 1");
+$shiftStmt->bind_param('i', $branchId);
+$shiftStmt->execute();
+$shiftResult = $shiftStmt->get_result()->fetch_assoc();
+$shiftStmt->close();
+
+if (!$shiftResult) {
+    header('Location: pos-shift.php');
+    exit;
+}
+
+$branchName = strtoupper(trim(($guardEmployee['branch_code'] ?? '') . ' - ' . ($guardEmployee['branch_name'] ?? '')));
+if ($branchName === '-') {
+    $branchName = 'MAIN BRANCH';
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,6 +34,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold - POS</title>
     <link rel="stylesheet" href="dash-css/pos-loyalty.css">
+    <link rel="stylesheet" href="dash-css/pos-responsive.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -132,7 +162,7 @@
             </nav>
 
             <div class="sidebar-footer">
-                <a href="#" class="logout-link">
+                <a href="../auth/logout.php" class="logout-link">
                     <span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                     <span class="nav-label">Log Out</span>
                 </a>
@@ -153,7 +183,7 @@
                 <div class="notif-wrap">
                     <button class="icon-btn" id="notifBtn" aria-label="Notifications">
                         <i class="fa-regular fa-bell"></i>
-                        <span class="icon-badge" id="notifBadge">2</span>
+                        <span class="icon-badge" id="notifBadge" style="display:none;">0</span>
                     </button>
 
                     <div class="notif-dropdown" id="notifDropdown">
@@ -163,29 +193,7 @@
                         </div>
 
                         <div class="notif-list" id="notifList">
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New online order received</p>
-                                    <p class="notif-item-sub">Order #0001</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Payment Confirmed</p>
-                                    <p class="notif-item-sub">Order #0003</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
+                            <div class="notif-empty">Loading notifications...</div>
                         </div>
 
                         <a href="notification.html" class="notif-footer">
@@ -211,7 +219,7 @@
                                 fill="white" />
                         </svg>
                     </div>
-                    <span class="profile-name">Main Branch</span>
+                    <span class="profile-name"><?= htmlspecialchars($branchName, ENT_QUOTES, 'UTF-8') ?></span>
                 </button>
             </div>
 
@@ -240,7 +248,7 @@
 
                                 <div class="qr-scan-line" id="qrScanLine"></div>
 
-                                <img class="qr-icon" id="qrIcon" src="../img/ChatGPT Image Jul 8, 2026, 01_01_59 AM 1.png" alt=""
+                                <img class="qr-icon" id="qrIcon" src="../../img/qr.png" alt="QR code scanner icon"
                                     aria-hidden="true">
 
                                 <div class="qr-overlay" id="qrOverlay">
@@ -271,37 +279,26 @@
                                     <i class="fa-solid fa-user"></i>
                                 </div>
                                 <div class="customer-details">
-                                    <strong>Juan Dela Cruz</strong>
-                                    <span>0912 345 6789</span>
-                                    <small>Member since May 01, 2026</small>
+                                    <strong id="customerName">Scan a customer card</strong>
+                                    <span id="customerPhone">No customer selected</span>
+                                    <small id="customerMemberSince">Scan the customer's QR code</small>
                                 </div>
                             </div>
 
                             <div class="stamps-heading">
                                 <strong>Stamps Collected</strong>
-                                <span id="stampsHeadingCount">8 / 10</span>
+                                <span id="stampsHeadingCount">0 / 10</span>
                             </div>
 
-                            <div class="stamps-grid" id="stampsGrid" aria-label="8 of 10 stamps collected">
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp filled"><i class="fa-solid fa-mug-hot"></i></span>
-                                <span class="stamp empty"><span>9</span></span>
-                                <span class="stamp empty"><span>10</span></span>
-                            </div>
+                            <div class="stamps-grid" id="stampsGrid" aria-label="0 of 10 stamps collected"></div>
 
                             <div class="reward-progress">
                                 <div class="reward-star"><i class="fa-solid fa-star"></i></div>
                                 <div class="reward-progress-info">
-                                    <span id="rewardMessage">2 stamps away from the free drink!</span>
+                                    <span id="rewardMessage">Scan a customer card to view rewards.</span>
                                     <div class="progress-track"><span id="progressBarFill"></span></div>
                                 </div>
-                                <strong id="rewardCountText">8 / 10</strong>
+                                <strong id="rewardCountText">0 / 10</strong>
                             </div>
                         </section>
                     </div>
@@ -344,32 +341,7 @@
                             </div>
 
                             <div class="transactions-list" id="transactionsList">
-                                <div class="transaction-item">
-                                    <span class="transaction-icon"><i class="fa-solid fa-bag-shopping"></i></span>
-                                    <div class="transaction-details">
-                                        <strong>Purchase</strong>
-                                        <span>May 05, 2026&nbsp; 8:30 am</span>
-                                    </div>
-                                    <strong class="transaction-stamp">+1 Stamp</strong>
-                                </div>
-
-                                <div class="transaction-item">
-                                    <span class="transaction-icon"><i class="fa-solid fa-bag-shopping"></i></span>
-                                    <div class="transaction-details">
-                                        <strong>Purchase</strong>
-                                        <span>May 02, 2026&nbsp; 8:30 am</span>
-                                    </div>
-                                    <strong class="transaction-stamp">+1 Stamp</strong>
-                                </div>
-
-                                <div class="transaction-item">
-                                    <span class="transaction-icon"><i class="fa-solid fa-bag-shopping"></i></span>
-                                    <div class="transaction-details">
-                                        <strong>Purchase</strong>
-                                        <span>May 01, 2026&nbsp; 8:30 am</span>
-                                    </div>
-                                    <strong class="transaction-stamp">+1 Stamp</strong>
-                                </div>
+                                <div class="transaction-item"><span>No transactions yet.</span></div>
                             </div>
                         </section>
                     </div>
@@ -390,17 +362,6 @@
     </div>
 
     <script>
-        // ---- Notification dropdown ----
-        const notifBtn = document.getElementById('notifBtn');
-        const notifDropdown = document.getElementById('notifDropdown');
-        if (notifBtn && notifDropdown) {
-            notifBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                notifDropdown.classList.toggle('open');
-            });
-            document.addEventListener('click', () => notifDropdown.classList.remove('open'));
-        }
-
         // =========================================================
         // Live camera QR scanner (getUserMedia + jsQR)
         // =========================================================
@@ -572,7 +533,8 @@
             scanPaused = true;
             qrScanner.classList.remove('scanning');
             qrScanner.classList.add('success');
-            setStatus(`Card found: ${data}`);
+            setStatus('Loading customer loyalty data...');
+            loadCustomer(data);
 
             // Brief pause so the same code isn't read multiple times in a row,
             // then resume scanning for the next customer.
@@ -593,10 +555,9 @@
         // Stamp card: Add Stamp / Clear / auto-redeem at 10/10
         // =========================================================
         const TOTAL_LOYALTY_STAMPS = 10;
-        const BASE_STAMPS = 8; // stamps this customer had when the card was scanned
-
-        let currentStamps = BASE_STAMPS;
-        const addedTransactions = []; // stack of transaction DOM elements created by "Add Stamp" this session
+        let currentStamps = 0;
+        let selectedCardPayload = '';
+        let selectedCustomer = null;
 
         const stampsGrid = document.getElementById('stampsGrid');
         const stampsHeadingCount = document.getElementById('stampsHeadingCount');
@@ -606,6 +567,58 @@
         const addStampBtn = document.getElementById('addStampBtn');
         const clearStampBtn = document.getElementById('clearStampBtn');
         const transactionsList = document.getElementById('transactionsList');
+        const customerName = document.getElementById('customerName');
+        const customerPhone = document.getElementById('customerPhone');
+        const customerMemberSince = document.getElementById('customerMemberSince');
+
+        function formatMemberSince(value) {
+            if (!value) return 'Member date unavailable';
+            const date = new Date(value.replace(' ', 'T'));
+            return Number.isNaN(date.getTime()) ? 'Member date unavailable' : `Member since ${date.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' })}`;
+        }
+
+        function renderTransactions(transactions) {
+            if (!transactions || transactions.length === 0) {
+                transactionsList.innerHTML = '<div class="transaction-item"><span>No transactions yet.</span></div>';
+                return;
+            }
+            transactionsList.innerHTML = transactions.map((transaction) => {
+                const label = transaction.transaction_type === 'redemption' ? 'Reward Redeemed' : 'Purchase';
+                const points = Number(transaction.points_awarded || 0);
+                const stampText = transaction.transaction_type === 'redemption' ? 'Free Drink' : `+${Math.max(1, Math.round(points / 10))} Stamp`;
+                const date = new Date(String(transaction.created_at || '').replace(' ', 'T'));
+                const dateText = Number.isNaN(date.getTime()) ? 'Date unavailable' : date.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).toLowerCase();
+                return `<div class="transaction-item"><span class="transaction-icon"><i class="fa-solid ${transaction.transaction_type === 'redemption' ? 'fa-gift' : 'fa-bag-shopping'}"></i></span><div class="transaction-details"><strong>${label}</strong><span>${dateText}</span></div><strong class="transaction-stamp">${stampText}</strong></div>`;
+            }).join('');
+        }
+
+        function applyCustomer(customer) {
+            selectedCustomer = customer;
+            currentStamps = Math.min(TOTAL_LOYALTY_STAMPS, Math.max(0, Number(customer.loyalty_stamps || 0)));
+            customerName.textContent = customer.name || 'Unnamed customer';
+            customerPhone.textContent = customer.phone || customer.email || 'Contact information unavailable';
+            customerMemberSince.textContent = formatMemberSince(customer.member_since);
+            renderTransactions(customer.transactions);
+            renderStampCard();
+        }
+
+        async function loadCustomer(payload) {
+            selectedCardPayload = payload;
+            try {
+                const response = await fetch('../loyalty_scan_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_no: payload, action: 'lookup' })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Customer card not found.');
+                applyCustomer(result.customer);
+                setStatus(`Card found: ${result.customer.card_no}`);
+            } catch (error) {
+                selectedCustomer = null;
+                setStatus(error.message);
+            }
+        }
 
         function stampMarkup(count) {
             return Array.from({ length: TOTAL_LOYALTY_STAMPS }, (_, i) => {
@@ -651,54 +664,34 @@
             const dateText = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
             const timeText = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
 
-            const item = document.createElement('div');
-            item.className = 'transaction-item';
-            item.innerHTML = `
-                <span class="transaction-icon"><i class="fa-solid ${iconClass}"></i></span>
-                <div class="transaction-details">
-                    <strong>${label}</strong>
-                    <span>${dateText}&nbsp; ${timeText}</span>
-                </div>
-                <strong class="transaction-stamp">${stampText}</strong>
-            `;
-            transactionsList.insertBefore(item, transactionsList.firstChild);
-            return item;
+            return { label, stampText, iconClass, dateText, timeText };
         }
 
-        addStampBtn.addEventListener('click', () => {
-            if (currentStamps >= TOTAL_LOYALTY_STAMPS) {
-                // Redeem: cash in the completed card and start a fresh cycle.
-                addTransactionEntry('Reward Redeemed', 'Free Drink', 'fa-gift');
-                currentStamps = 0;
-                addedTransactions.length = 0; // nothing left to undo after a redeem
-                renderStampCard();
+        addStampBtn.addEventListener('click', async () => {
+            if (!selectedCustomer) {
+                setStatus('Scan a customer QR code first.');
                 return;
             }
-
-            currentStamps += 1;
-            renderStampCard();
-            const entry = addTransactionEntry('Purchase', '+1 Stamp', 'fa-bag-shopping');
-            addedTransactions.push(entry);
-
-            // Clear the pulse class after the animation plays once.
-            const newest = stampsGrid.querySelector('.stamp.just-added');
-            if (newest) {
-                setTimeout(() => newest.classList.remove('just-added'), 600);
+            if (currentStamps >= TOTAL_LOYALTY_STAMPS) {
+                setStatus('Reward redemption must be recorded by the cashier workflow.');
+                return;
+            }
+            addStampBtn.disabled = true;
+            try {
+                const response = await fetch('../loyalty_scan_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ card_no: selectedCardPayload, action: 'award' }) });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to add stamp.');
+                applyCustomer(result.customer);
+                setStatus('Loyalty stamp added and saved.');
+            } catch (error) {
+                setStatus(error.message);
+            } finally {
+                addStampBtn.disabled = false;
             }
         });
 
         clearStampBtn.addEventListener('click', () => {
-            if (currentStamps <= 0) return;
-
-            currentStamps -= 1;
-            renderStampCard();
-
-            // Undo the transaction entry that this stamp created, if it was
-            // added during this session (pre-existing history is left alone).
-            const lastAdded = addedTransactions.pop();
-            if (lastAdded && lastAdded.parentNode) {
-                lastAdded.parentNode.removeChild(lastAdded);
-            }
+            setStatus('Stamps are managed from completed customer purchases.');
         });
 
         renderStampCard();
@@ -713,6 +706,8 @@
             }
         });
     </script>
+    <script src="pos-responsive.js"></script>
+    <script src="order-notify.js"></script>
 </body>
 
 </html>
