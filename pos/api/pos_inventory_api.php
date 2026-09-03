@@ -1,18 +1,13 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
 
 header('Content-Type: application/json');
 
-// Session guard
-if (!isset($_SESSION['employee_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-$employeeId = (int) $_SESSION['employee_id'];
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+$employee = pos_require_employee($connect, true);
+$employeeId = (int) $employee['id'];
+$branchId = (int) $employee['branch_id'];
 
 $action = $_GET['action'] ?? '';
 

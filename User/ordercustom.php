@@ -25,14 +25,31 @@ $_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
 $_SESSION['user_email'] = $user['email'];
 
 // Product data passed from menu.php via URL query params
-$productName  = isset($_GET['name'])  ? htmlspecialchars(strip_tags($_GET['name']))  : 'Unknown Product';
+$productNameRaw = isset($_GET['name']) ? strip_tags($_GET['name']) : 'Unknown Product';
+$productName  = htmlspecialchars($productNameRaw);
 $productPrice = isset($_GET['price']) ? htmlspecialchars(strip_tags($_GET['price'])) : '0.00';
 $productImage = isset($_GET['image']) ? htmlspecialchars(strip_tags($_GET['image'])) : '../picture/SC-Einspanner Latte _ 149 1.png';
 $productAddon = isset($_GET['addon']) ? htmlspecialchars(strip_tags($_GET['addon'])) : '';
 
+// Product category controls customization; order_type is only the pickup/delivery choice.
+$productCategory = '';
+$categoryStmt = $connect->prepare('SELECT category FROM products WHERE product_name = ? LIMIT 1');
+$categoryStmt->bind_param('s', $productNameRaw);
+$categoryStmt->execute();
+$categoryRow = $categoryStmt->get_result()->fetch_assoc();
+$categoryStmt->close();
+$productCategory = strtolower(trim((string) ($categoryRow['category'] ?? '')));
+$productCategory = match ($productCategory) {
+    'bites' => 'light-snack',
+    'waffle' => 'waffles',
+    default => $productCategory,
+};
+$simpleCategories = ['rice-meal', 'light-snack', 'pasta'];
+$isSimpleCategory = in_array($productCategory, $simpleCategories, true);
+
 // Bites items: use addon system, hide milk/espresso options
 $bitesItems  = ['French Fries', 'Chicken Poppers', 'Chicken poppers and fries', 'Fries and Chicken Poppers'];
-$isBitesItem = in_array($productName, $bitesItems);
+$isBitesItem = !$isSimpleCategory && in_array($productNameRaw, $bitesItems, true);
 
 // Sauce/flavor options per item [label => price]
 $sauceOptions = [];
@@ -73,7 +90,7 @@ $noAddonItems = [
     'Messy Tuna Quesadilla',
     'Beef Natchos',
 ];
-$isNoAddonItem = in_array($productName, $noAddonItems);
+$isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, true);
 ?>
 
 <!DOCTYPE html>
@@ -280,15 +297,17 @@ $isNoAddonItem = in_array($productName, $noAddonItems);
                         </div>
                     </div>
                     <!-- Right -->
-                    <div style="flex:1; min-width:250px;">
-                        <div class="section">
-                            <div class="section-title">
-                                <input type="checkbox">
-                                Special Instructions
+                    <?php if (!$isSimpleCategory): ?>
+                        <div style="flex:1; min-width:250px;">
+                            <div class="section">
+                                <div class="section-title">
+                                    <input type="checkbox">
+                                    Special Instructions
+                                </div>
+                                <textarea placeholder="Any special request? (e.g less ice, less sugar)"></textarea>
                             </div>
-                            <textarea placeholder="Any special request? (e.g less ice, less sugar)"></textarea>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
                 <!-- Bottom -->
                 <div class="bottom-area">
@@ -331,6 +350,7 @@ $isNoAddonItem = in_array($productName, $noAddonItems);
         let basePrice = parseFloat('<?= $productPrice ?>');
         const isBitesItem = <?= $isBitesItem ? 'true' : 'false' ?>;
         const isNoAddonItem = <?= $isNoAddonItem ? 'true' : 'false' ?>;
+        const isSimpleCategory = <?= $isSimpleCategory ? 'true' : 'false' ?>;
         const hasSauceOptions = <?= $hasSauceOptions ? 'true' : 'false' ?>;
         let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
         let addOnTotal = 0;
@@ -442,7 +462,7 @@ $isNoAddonItem = in_array($productName, $noAddonItems);
             const orderType = activeOrder ? activeOrder.textContent.trim() : 'Pick-Up';
 
             // Special instructions
-            const notes = document.querySelector('textarea')?.value.trim() || '';
+            const notes = isSimpleCategory ? '' : (document.querySelector('textarea')?.value.trim() || '');
 
             // Unit price (basePrice already updated by sauce selection)
             const unitPrice = basePrice + addOnTotal;

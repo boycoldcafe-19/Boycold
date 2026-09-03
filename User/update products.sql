@@ -63,7 +63,7 @@ UPDATE products SET price = 179.00 WHERE product_name = 'Beef Quesadilla';
 UPDATE products SET category = 'coffee' WHERE category = 'special-coffee';
 UPDATE products SET category = 'smoothie' WHERE category = 'fruit-shake';
 UPDATE products SET category = 'light-snack' WHERE category = 'bites';
-UPDATE products SET category = 'waffle' WHERE category = 'waffles';
+UPDATE products SET category = 'waffles' WHERE category = 'waffle';
 
 -- Keep image paths relative to the application's shared picture directory.
 UPDATE products SET image = CONCAT('/picture/', SUBSTRING_INDEX(image, '/', -1))

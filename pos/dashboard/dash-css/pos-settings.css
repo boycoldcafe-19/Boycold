@@ -1726,6 +1726,26 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     filter: brightness(0.9);
 }
 
+.btn-solid:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.form-message {
+    min-height: 18px;
+    margin: -4px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.form-message.error {
+    color: #e53935;
+}
+
+.form-message.success {
+    color: #2e9d52;
+}
+
 /* --- Session & About cards --- */
 .settings-info-list {
     margin-top: 22px;

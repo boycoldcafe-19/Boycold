@@ -50,7 +50,6 @@ try {
     }
     
     $connect->set_charset('utf8mb4');
-    $connect->query("SET time_zone = '+08:00'");
     
     // Test connection using query instead of deprecated ping()
     $testQuery = $connect->query("SELECT 1");

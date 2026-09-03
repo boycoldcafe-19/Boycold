@@ -134,7 +134,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 <li><a href="#" data-filter="rice-meal">Rice Meal</a></li>
                 <li><a href="#" data-filter="light-snack">Light Snack</a></li>
                 <li><a href="#" data-filter="pasta">Pasta</a></li>
-                <li><a href="#" data-filter="waffle">Waffles</a></li>
+                <li><a href="#" data-filter="waffles">Waffles</a></li>
                 <li><a href="#" data-filter="quesadilla">Quesadilla</a></li>
             </ul>
 
@@ -156,7 +156,13 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                             $name  = htmlspecialchars($product['product_name']);
                             $price = htmlspecialchars($product['price']);
                             $image = htmlspecialchars($product['image'] ?? '');
-                            $category = htmlspecialchars($product['category'] ?? '');
+                            $categoryValue = strtolower(trim((string) ($product['category'] ?? '')));
+                            $categoryValue = match ($categoryValue) {
+                                'bites' => 'light-snack',
+                                'waffle' => 'waffles',
+                                default => $categoryValue,
+                            };
+                            $category = htmlspecialchars($categoryValue);
 
                             // Normalize for comparison: trim whitespace, lowercase
                             $normalizedName = strtolower(trim($product['product_name']));

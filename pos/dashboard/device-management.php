@@ -1,16 +1,12 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 
 // Check if user is logged in and is a super admin (branch_id = 0 or admin role)
-if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/flashscreen.php');
-    exit;
-}
-
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
-$employeeRole = $_SESSION['employee_role'] ?? '';
+$branchId = (int) $guardEmployee['branch_id'];
+$employeeRole = $guardEmployee['role'];
 
 // Only allow super admins (branch_id = 0 or admin role with branch_id = 0)
 if ($branchId !== 0 && $employeeRole !== 'admin') {

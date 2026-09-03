@@ -1,7 +1,8 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 require_once '../../config/payments.php';
 
@@ -58,12 +59,7 @@ if ($branchId > 0) {
     $branchStmt->execute();
     $branchResult = $branchStmt->get_result()->fetch_assoc();
     if ($branchResult) {
-        // Baliuag = Main Branch, Bustos = Bustos Branch
-        if (stripos($branchResult['branch_name'], 'Baliuag') !== false) {
-            $branchName = 'Main Branch';
-        } else {
-            $branchName = $branchResult['branch_name'] . ' Branch';
-        }
+        $branchName = strtoupper($guardEmployee['branch_code'] . ' - ' . $guardEmployee['branch_name']);
     }
     $branchStmt->close();
 }

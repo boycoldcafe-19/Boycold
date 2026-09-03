@@ -1,19 +1,14 @@
 <?php
 
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../../config/db_config.php';
 require_once '../../config/shift_manager.php';
 
 header('Content-Type: application/json');
 
-if (empty($_SESSION['employee_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-$employeeId = (int) $_SESSION['employee_id'];
+$employee = pos_require_employee($connect, true);
+$employeeId = (int) $employee['id'];
 $stmt = $connect->prepare('SELECT branch_id, is_active FROM employees WHERE id = ? LIMIT 1');
 $stmt->bind_param('i', $employeeId);
 $stmt->execute();

@@ -450,18 +450,24 @@ INSERT INTO `products` (`id`, `product_name`, `description`, `price`, `image`, `
 (53, 'Choco Banana Pudding', 'Chocolate banana pudding drink', 179.00, '/picture/Choco Banana Pudding.png', 'non-coffee', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
 (54, 'Milky Oreo', 'Oreo milk drink', 89.00, '/picture/Milky Oreo.png', 'non-coffee', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
 (55, 'Java Chips', 'Java chips blended drink', 99.00, '/picture/Java Chips.png', 'frappe-series', 1, '2026-06-14 15:51:13', '2026-06-16 14:02:14'),
-(56, 'French Fries', 'Crispy French fries', 69.00, '/picture/Fries.png', 'bites', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
-(57, 'Chicken Poppers', 'Crispy chicken poppers', 79.00, '/picture/Chicken Poppers.png', 'bites', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
-(58, 'Chicken poppers and fries', 'Poppers with fries combo', 99.00, '/picture/Chicken poppers and fries.png', 'bites', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
-(59, 'Beef Natchos', 'Beef loaded nachos', 149.00, '/picture/Beef Natchos.png', 'bites', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
-(60, 'Fries and Chicken Poppers', 'Fries with chicken poppers', 99.00, '/picture/Chicken poppers and fries.png', 'bites', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
+(56, 'French Fries', 'Crispy French fries', 69.00, '/picture/Fries.png', 'light-snack', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
+(57, 'Chicken Poppers', 'Crispy chicken poppers', 79.00, '/picture/Chicken Poppers.png', 'light-snack', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
+(58, 'Chicken poppers and fries', 'Poppers with fries combo', 99.00, '/picture/Chicken poppers and fries.png', 'light-snack', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
+(59, 'Beef Natchos', 'Beef loaded nachos', 149.00, '/picture/Beef Natchos.png', 'light-snack', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
+(60, 'Fries and Chicken Poppers', 'Fries with chicken poppers', 99.00, '/picture/Chicken poppers and fries.png', 'light-snack', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
 (61, 'Beef Quesadilla', 'Grilled beef quesadilla', 149.00, '/picture/Beef Quesadilla.png', 'quesadilla', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
 (62, 'Chicken Quesadilla', 'Grilled chicken quesadilla', 159.00, '/picture/Chicken Quesadilla.png', 'quesadilla', 1, '2026-06-14 15:51:13', '2026-06-14 15:51:13'),
 (63, 'Messy Tuna Quesadilla', 'Tuna and spinach quesadilla', 129.00, '/picture/Messy Tuna Spinach.png', 'quesadilla', 1, '2026-06-14 15:51:13', '2026-06-16 13:45:58'),
 (64, 'Choco Berry', 'Chocolate berry drink', 179.00, '/picture/Choco Berry.png', 'non-coffee', 1, '2026-06-16 13:01:53', '2026-06-16 13:03:33'),
 (65, 'Einspanner Latte', 'Strong espresso with whipped cream', 149.00, '/picture/Einspanner Latte.png', 'special-coffee', 1, '2026-06-16 13:13:02', '2026-06-16 13:13:02'),
 (66, 'hershey delight', 'Hershey chocolate frappe', 95.00, '/picture/hershey delight.png', 'frappe-series', 1, '2026-06-16 13:34:49', '2026-06-16 13:34:49'),
-(67, 'White Smores', 'White chocolate smores frappe', 129.00, '/picture/white smores.png', 'frappe-series', 1, '2026-06-16 14:13:32', '2026-06-16 14:13:32');
+(67, 'White Smores', 'White chocolate smores frappe', 129.00, '/picture/white smores.png', 'frappe-series', 1, '2026-06-16 14:13:32', '2026-06-16 14:13:32'),
+(68, 'Honey Gochujang Katsu', 'Honey Gochujang Katsu rice meal', 219.00, '/picture/Honey Gochujang Katsu 1.png', 'rice-meal', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(69, 'Dak Galbi', 'Dak Galbi rice meal', 199.00, '/picture/Dak galbi 1.png', 'rice-meal', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(70, 'Salted Egg Fish Fillet', 'Salted Egg Fish Fillet rice meal', 229.00, '/picture/Salted egg Fish fillet.png', 'rice-meal', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(71, 'Fries & Chicken Tenders', 'Fries and Chicken tenders', 219.00, '/picture/Fries and Chicken tenders.png', 'light-snack', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(72, 'Nachos', 'Nachos', 179.00, '/picture/Nachos.png', 'light-snack', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(73, 'Aglio Olio', 'Aglio Olio pasta', 239.00, '/picture/Aglio olio sardines 1.png', 'pasta', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- --------------------------------------------------------
 
@@ -841,7 +847,7 @@ ALTER TABLE `pos_devices`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT for table `product_ingredients`

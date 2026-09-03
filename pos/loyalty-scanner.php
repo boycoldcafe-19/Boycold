@@ -1,12 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$posEmployee = pos_require_employee($connect);
 
 // Session guard - POS staff only
-if (!isset($_SESSION['employee_id']) && !isset($_SESSION['admin_logged_in'])) {
-    header('Location: auth/login.php');
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -1,19 +1,14 @@
 <?php
-session_name('POS_SESSION');
-session_start();
-require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/guard.php';
+pos_start_session();
 
 // Check if user is already logged in - redirect to login for PIN verification
-if (isset($_SESSION['employee_id'])) {
+if (!empty($_SESSION['pos_pin_verified'])) {
     header('Location: login.php');
     exit;
 }
 
-// Check if user has previously created an account (stored in session)
-$hasAccount = isset($_SESSION['has_account']) && $_SESSION['has_account'] === true;
-
-// If no account status in session, default to signup
-$redirectPage = $hasAccount ? 'login.php' : 'signup.php';
+$redirectPage = 'login.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

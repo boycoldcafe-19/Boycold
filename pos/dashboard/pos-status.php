@@ -1,15 +1,8 @@
 <?php
-session_name('POS_SESSION');
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => false,
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 require_once '../../config/loyalty.php';
 require_once '../../config/payments.php';
@@ -68,12 +61,7 @@ if ($branchId > 0) {
     $branchStmt->execute();
     $branchResult = $branchStmt->get_result()->fetch_assoc();
     if ($branchResult) {
-        // Baliuag = Main Branch, Bustos = Bustos Branch
-        if (stripos($branchResult['branch_name'], 'Baliuag') !== false) {
-            $branchName = 'Main Branch';
-        } else {
-            $branchName = $branchResult['branch_name'] . ' Branch';
-        }
+        $branchName = strtoupper($guardEmployee['branch_code'] . ' - ' . $guardEmployee['branch_name']);
     }
     $branchStmt->close();
 }
@@ -127,12 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             "UPDATE orders
              SET status = ?,
                  payment_status = IF(payment_method = 'cod', 'paid', payment_status)
-             WHERE id = ?"
+             WHERE id = ? AND branch_id = ?"
         );
+        $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
     } else {
-        $stmt = $connect->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $stmt = $connect->prepare("UPDATE orders SET status = ? WHERE id = ? AND branch_id = ?");
+        $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
     }
-    $stmt->bind_param("si", $newStatus, $orderId);
 
     if ($stmt->execute()) {
         if ($newStatus === 'completed' && ($existingOrder['status'] ?? '') !== 'completed') {

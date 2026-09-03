@@ -3,20 +3,15 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
 
 header('Content-Type: application/json');
 
-// Session guard
-if (!isset($_SESSION['employee_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-$employeeId = (int) $_SESSION['employee_id'];
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+$employee = pos_require_employee($connect, true);
+$employeeId = (int) $employee['id'];
+$branchId = (int) $employee['branch_id'];
 
 // Generate or get session ID
 $sessionId = isset($_SESSION['pos_session_id']) ? $_SESSION['pos_session_id'] : null;

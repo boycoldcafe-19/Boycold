@@ -1,14 +1,6 @@
 <?php
-session_name('POS_SESSION');
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => false,
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-session_start();
+require_once __DIR__ . '/guard.php';
+pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
@@ -32,7 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
 
     if (empty($response['errors'])) {
         $stmt = $connect->prepare(
-            'SELECT id, employee_name, email, password, pin, role, is_active, branch_id FROM employees WHERE email = ?'
+            "SELECT e.id, e.employee_name, e.email, e.password, e.pin, e.role, e.is_active, e.branch_id
+             FROM employees e
+             INNER JOIN branches b ON b.id = e.branch_id AND b.status = 'active'
+             WHERE e.email = ? AND e.branch_id > 0
+             LIMIT 1"
         );
         $stmt->bind_param('s', $email);
         $stmt->execute();
@@ -42,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
 
         if (!$employee || !password_verify($password, $employee['password'])) {
             // Same generic message on both fields — don't reveal which one was wrong
-            $response['errors']['password'] = 'Incorrect email or password.';
+            $response['errors']['password'] = 'Invalid email or password.';
         } elseif ((int) $employee['is_active'] === 0) {
             $response['errors']['password'] = 'This account has been deactivated.';
         } else {
@@ -52,15 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
             $_SESSION['employee_email'] = $employee['email'];
             $_SESSION['employee_role']  = $employee['role'];
             $_SESSION['branch_id']     = $employee['branch_id'];
-            $_SESSION['has_account']  = true; // Mark that user has an account
+            $_SESSION['pos_pin_verified'] = false;
+            $_SESSION['pos_login_at'] = null;
 
-            // No PIN set yet (e.g. admin-created account) — go set one first
-            if (empty($employee['pin'])) {
-                $response['redirect'] = 'pin.php';
-            } else {
-                // PIN exists - require verification
-                $response['redirect'] = 'verify_pin.php';
-            }
+            $response['redirect'] = 'verify_pin.php';
             $response['success'] = true;
         }
     }
@@ -128,9 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
                         </button>
                     </div>
                     
-                    <div class="signup-link">
-                        <p>Don't have an account? <a href="signup.php">Sign up</a></p>
-                    </div>
                 </div>
             </form>
         </div>

@@ -1,12 +1,7 @@
 <?php
-session_name('POS_SESSION');
-session_start();
-
-// Clear all session data
-$_SESSION = [];
-
-// Destroy the session
-session_destroy();
+require_once __DIR__ . '/guard.php';
+pos_start_session();
+pos_clear_session();
 
 // Redirect to flash screen
 header('Location: flashscreen.php');

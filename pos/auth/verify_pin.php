@@ -1,11 +1,11 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once __DIR__ . '/guard.php';
+pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 
 // Check if user is logged in
-if (!isset($_SESSION['employee_id'])) {
-    header('Location: flashscreen.php');
+if (empty($_SESSION['employee_id'])) {
+    header('Location: login.php');
     exit;
 }
 
@@ -20,15 +20,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
     }
 
     if (empty($response['errors'])) {
-        $stmt = $connect->prepare('SELECT pin FROM employees WHERE id = ?');
+        $stmt = $connect->prepare('SELECT pin, is_active, branch_id FROM employees WHERE id = ? LIMIT 1');
         $stmt->bind_param('i', $_SESSION['employee_id']);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$result || !password_verify($pin, $result['pin'])) {
-            $response['errors']['pin'] = 'Incorrect PIN. Please try again.';
+        if (!$result || (int) $result['is_active'] !== 1 || (int) $result['branch_id'] <= 0 || empty($result['pin']) || !password_verify($pin, $result['pin'])) {
+            $response['errors']['pin'] = 'Incorrect PIN.';
         } else {
+            session_regenerate_id(true);
+            $_SESSION['pos_pin_verified'] = true;
+            $_SESSION['pos_authenticated'] = true;
+            $_SESSION['pos_login_at'] = date('c');
             $response['success'] = true;
             $response['redirect'] = '../dashboard/pos-shift.php';
         }

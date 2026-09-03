@@ -1,10 +1,12 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once __DIR__ . '/auth/guard.php';
+pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 header('Content-Type: application/json');
+
+$employee = pos_require_employee($connect, true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -42,9 +44,9 @@ if (!$user) {
 
 if ($action === 'award') {
     // Get branch_id, device_id, and employee_id from session
-    $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
+    $branchId = (int) $employee['branch_id'];
     $deviceId = isset($_SESSION['device_id']) ? (int) $_SESSION['device_id'] : 0;
-    $employeeId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
+    $employeeId = (int) $employee['id'];
 
     // Get current balance before update (using direct stamp counting: 1 stamp = 10 points)
     $previousBalance = (int) $user['loyalty_beans'] + ((int) $user['loyalty_stamps'] * 10);

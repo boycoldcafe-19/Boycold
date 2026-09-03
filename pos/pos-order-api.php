@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-session_name('POS_SESSION');
-session_start();
+require_once __DIR__ . '/auth/guard.php';
+pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/shift_manager.php';
 
@@ -140,12 +140,7 @@ try {
         pos_json_response(['success' => false, 'error' => 'Method not allowed'], 405);
     }
 
-    // Allow established employee sessions, and keep the existing user-session fallback for local/dev POS use.
-    $hasEmployeeSession = !empty($_SESSION['employee_id']) || !empty($_SESSION['employee_name']) || !empty($_SESSION['employee_email']);
-    $hasUserSession = !empty($_SESSION['user_id']) && (!empty($_SESSION['user_email']) || !empty($_SESSION['user_name']));
-    if (!$hasEmployeeSession && !$hasUserSession) {
-        pos_json_response(['success' => false, 'error' => 'Unauthorized. Please log in to the POS first.'], 401);
-    }
+    $employee = pos_require_employee($connect, true);
 
     $raw = file_get_contents('php://input');
     $body = json_decode($raw, true);
@@ -180,8 +175,8 @@ try {
     $total = $subtotal + $deliveryFee + $tax;
 
     // Reconcile the branch before writing so a late request cannot use a prior sales day.
-    $branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
-    $cashierId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
+    $branchId = (int) $employee['branch_id'];
+    $cashierId = (int) $employee['id'];
     $currentShift = pos_reconcile_branch_shift($connect, $branchId, $cashierId);
     if (!$currentShift) {
         pos_json_response(['success' => false, 'error' => 'There is no open POS shift for this sales day.'], 409);

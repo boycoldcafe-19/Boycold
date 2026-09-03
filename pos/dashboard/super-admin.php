@@ -1,15 +1,11 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 
 // Session guard — redirect to flash screen if not logged in
-if (!isset($_SESSION['employee_id'])) {
-    header('Location: ../auth/flashscreen.php');
-    exit;
-}
-
-$employeeId = (int) $_SESSION['employee_id'];
+$employeeId = (int) $guardEmployee['id'];
 
 // Fetch fresh employee data from DB to validate session
 $stmt = $connect->prepare("SELECT id, employee_name, email, is_active, branch_id, role FROM employees WHERE id=?");

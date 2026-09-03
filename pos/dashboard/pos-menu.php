@@ -1,7 +1,8 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 
 // Session guard — redirect to flash screen if not logged in
@@ -54,28 +55,13 @@ while ($row = $productsResult->fetch_assoc()) {
 }
 $productsStmt->close();
 
-// Get branch name for profile display
-$branchName = 'Main Branch';
-$branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+// Branch identity comes from the authenticated employee record.
+$branchId = (int) $guardEmployee['branch_id'];
+$branchName = strtoupper($guardEmployee['branch_code'] . ' - ' . $guardEmployee['branch_name']);
 
 // Get employee name for display
 $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] : 'Cashier';
 
-if ($branchId > 0) {
-    $branchStmt = $connect->prepare("SELECT branch_name FROM branches WHERE id = ?");
-    $branchStmt->bind_param('i', $branchId);
-    $branchStmt->execute();
-    $branchResult = $branchStmt->get_result()->fetch_assoc();
-    if ($branchResult) {
-        // Baliuag = Main Branch, Bustos = Bustos Branch
-        if (stripos($branchResult['branch_name'], 'Baliuag') !== false) {
-            $branchName = 'Main Branch';
-        } else {
-            $branchName = $branchResult['branch_name'] . ' Branch';
-        }
-    }
-    $branchStmt->close();
-}
 ?>
 <html lang="en">
 <head>

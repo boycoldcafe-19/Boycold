@@ -1,7 +1,8 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once '../auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
+$guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 
 // Session guard — redirect to flash screen if not logged in
@@ -13,7 +14,7 @@ if (!isset($_SESSION['employee_id'])) {
 $employeeId = (int) $_SESSION['employee_id'];
 
 // Fetch fresh employee data from DB to validate session
-$stmt = $connect->prepare("SELECT id, employee_name, email, is_active, branch_id FROM employees WHERE id=?");
+$stmt = $connect->prepare("SELECT id, employee_name, email, pin, is_active, branch_id FROM employees WHERE id=?");
 $stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $employee = $stmt->get_result()->fetch_assoc();
@@ -24,6 +25,47 @@ if (!$employee || (int) $employee['is_active'] === 0) {
     exit;
 }
 $stmt->close();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_pin') {
+    header('Content-Type: application/json');
+
+    $currentPin = trim((string) ($_POST['current_pin'] ?? ''));
+    $newPin = trim((string) ($_POST['new_pin'] ?? ''));
+    $confirmPin = trim((string) ($_POST['confirm_pin'] ?? ''));
+    $errors = [];
+
+    if (!preg_match('/^\d{4}$/', $currentPin)) {
+        $errors['current_pin'] = 'Current PIN must contain exactly 4 digits.';
+    } elseif (empty($employee['pin']) || !password_verify($currentPin, $employee['pin'])) {
+        $errors['current_pin'] = 'Current PIN is incorrect.';
+    }
+    if (!preg_match('/^\d{4}$/', $newPin)) {
+        $errors['new_pin'] = 'New PIN must contain exactly 4 digits.';
+    }
+    if ($newPin !== $confirmPin) {
+        $errors['confirm_pin'] = 'PIN confirmation does not match.';
+    }
+    if (!$errors && password_verify($newPin, $employee['pin'])) {
+        $errors['new_pin'] = 'New PIN must be different from your current PIN.';
+    }
+
+    if ($errors) {
+        echo json_encode(['success' => false, 'errors' => $errors]);
+        exit;
+    }
+
+    $hashedPin = password_hash($newPin, PASSWORD_DEFAULT);
+    $pinStmt = $connect->prepare('UPDATE employees SET pin = ? WHERE id = ? AND is_active = 1');
+    $pinStmt->bind_param('si', $hashedPin, $employeeId);
+    $updated = $pinStmt->execute() && $pinStmt->affected_rows === 1;
+    $pinStmt->close();
+
+    echo json_encode($updated
+        ? ['success' => true, 'message' => 'PIN changed successfully.']
+        : ['success' => false, 'errors' => ['form' => 'Unable to change PIN. Please try again.']]
+    );
+    exit;
+}
 
 // Reconcile missed 2:00 AM boundaries and use the shared branch shift.
 $branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
@@ -57,12 +99,7 @@ if ($branchId > 0) {
     $branchStmt->execute();
     $branchResult = $branchStmt->get_result()->fetch_assoc();
     if ($branchResult) {
-        // Baliuag = Main Branch, Bustos = Bustos Branch
-        if (stripos($branchResult['branch_name'], 'Baliuag') !== false) {
-            $branchName = 'Main Branch';
-        } else {
-            $branchName = $branchResult['branch_name'] . ' Branch';
-        }
+        $branchName = strtoupper($guardEmployee['branch_code'] . ' - ' . $guardEmployee['branch_name']);
     }
     $branchStmt->close();
 }
@@ -328,6 +365,48 @@ if ($branchId > 0) {
                             <button type="submit" class="btn-solid">Update Password</button>
                         </form>
                     </section>
+
+                    <!-- Change PIN -->
+                    <section class="settings-card">
+                        <div class="settings-card-header">
+                            <h2>Change PIN</h2>
+                            <p>Update your 4-digit POS PIN</p>
+                        </div>
+                        <form class="password-form" id="pinForm" novalidate>
+                            <div class="password-group">
+                                <label for="currentPin">Current PIN</label>
+                                <div class="password-field">
+                                    <input type="password" id="currentPin" name="current_pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="current-password" placeholder="Enter your current PIN">
+                                    <button type="button" class="toggle-visibility" aria-label="Show PIN">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="password-group">
+                                <label for="newPin">New PIN</label>
+                                <div class="password-field">
+                                    <input type="password" id="newPin" name="new_pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password" placeholder="Enter a new 4-digit PIN">
+                                    <button type="button" class="toggle-visibility" aria-label="Show PIN">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="password-group">
+                                <label for="confirmPin">Confirm New PIN</label>
+                                <div class="password-field">
+                                    <input type="password" id="confirmPin" name="confirm_pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password" placeholder="Confirm your new PIN">
+                                    <button type="button" class="toggle-visibility" aria-label="Show PIN">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p class="form-message" id="pinMessage" role="status" aria-live="polite"></p>
+                            <button type="submit" class="btn-solid">Change PIN</button>
+                        </form>
+                    </section>
                     
                     <!--  ito yung Theme jeff -->
                     <section class="settings-card">
@@ -411,6 +490,43 @@ if ($branchId > 0) {
                 icon.classList.toggle('fa-eye-slash', isHidden);
                 this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
             });
+        });
+
+        const pinForm = document.getElementById('pinForm');
+        const pinMessage = document.getElementById('pinMessage');
+
+        pinForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            pinMessage.textContent = '';
+            pinMessage.className = 'form-message';
+
+            const formData = new FormData(pinForm);
+            formData.append('action', 'change_pin');
+            const submitButton = pinForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('pos-settings.php', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    pinMessage.textContent = Object.values(data.errors || {})[0] || 'Unable to change PIN.';
+                    pinMessage.classList.add('error');
+                    return;
+                }
+
+                pinMessage.textContent = data.message;
+                pinMessage.classList.add('success');
+                pinForm.reset();
+            } catch (error) {
+                pinMessage.textContent = 'Unable to change PIN. Please try again.';
+                pinMessage.classList.add('error');
+            } finally {
+                submitButton.disabled = false;
+            }
         });
         
 

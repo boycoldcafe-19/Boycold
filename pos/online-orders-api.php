@@ -1,29 +1,12 @@
 <?php
-session_name('POS_SESSION');
-session_start();
+require_once __DIR__ . '/auth/guard.php';
+pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 
 header('Content-Type: application/json');
 
-if (
-    empty($_SESSION['employee_id']) &&
-    empty($_SESSION['employee_name']) &&
-    empty($_SESSION['employee_email']) &&
-    (empty($_SESSION['user_id']) || empty($_SESSION['user_email']))
-) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-// Get branch_id from session - POS employees are assigned to specific branches
-$branchId = isset($_SESSION['branch_id']) ? (int) $_SESSION['branch_id'] : 0;
-
-if ($branchId <= 0) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'No branch assigned']);
-    exit;
-}
+$employee = pos_require_employee($connect, true);
+$branchId = (int) $employee['branch_id'];
 
 $lastOrderId = isset($_GET['last_order_id']) ? (int) $_GET['last_order_id'] : 0;
 
