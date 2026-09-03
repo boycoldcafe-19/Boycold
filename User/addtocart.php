@@ -74,7 +74,12 @@ $address  = $user['address'] ? htmlspecialchars($user['address']) : '';
 $avatar   = $user['avatar']  ? htmlspecialchars($user['avatar'])  : '';
 
 if ($avatar) $_SESSION['user_avatar'] = $avatar;
-$_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
+// IMPORTANT: keep $_SESSION['user_name'] as the real DB username (already
+// fetched into $userName above). cart_api.php uses this value to scope
+// every cart query (get/add/update/remove/clear) to the logged-in user.
+// Overwriting it with the display name here made those queries silently
+// match zero rows — most visibly, the delete button appearing to do nothing.
+$_SESSION['user_name']  = $userName;
 $_SESSION['user_email'] = $user['email'];
 ?>
 
@@ -372,9 +377,15 @@ $_SESSION['user_email'] = $user['email'];
                         cart_id: cartId
                     })
                 });
-                if ((await res.json()).success) await loadCart();
+                const data = await res.json();
+                if (data.success) {
+                    await loadCart();
+                } else {
+                    alert('Could not remove item: ' + (data.error || 'Unknown error'));
+                }
             } catch (err) {
                 console.error(err);
+                alert('Network error while removing item.');
             }
         }
 
