@@ -37,62 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$sessionCookieParams = [
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => false,
-    'httponly' => true,
-    'samesite' => 'Lax'
-];
-
-function startOrderApiSession(string $name, array $cookieParams): void
-{
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        session_write_close();
-    }
-
-    session_name($name);
-    session_set_cookie_params($cookieParams);
-    session_start();
-}
-
-function orderApiSessionHasAuth(): bool
-{
-    return !empty($_SESSION['user_id']) || !empty($_SESSION['employee_id']);
-}
+require_once '../config/session_config.php';
 
 function orderApiRequestCameFromPos(): bool
 {
     $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH);
-
     return is_string($refererPath) && stripos($refererPath, '/POS/') !== false;
 }
 
-// Customer pages use PHP's default session cookie, while POS pages use
-// POS_SESSION. This API is shared by both sides, so resume the session
-// that matches the caller when possible, then fall back to the other one.
-$defaultSessionName = session_name();
-$startedSession = false;
-$sessionCandidates = orderApiRequestCameFromPos()
-    ? ['POS_SESSION', $defaultSessionName]
-    : [$defaultSessionName, 'POS_SESSION'];
-
-foreach (array_unique($sessionCandidates) as $sessionName) {
-    if (empty($_COOKIE[$sessionName])) {
-        continue;
-    }
-
-    $startedSession = true;
-    startOrderApiSession($sessionName, $sessionCookieParams);
-
-    if (orderApiSessionHasAuth()) {
-        break;
-    }
-}
-
-if (!$startedSession) {
-    startOrderApiSession($defaultSessionName, $sessionCookieParams);
+if (orderApiRequestCameFromPos() && !empty($_COOKIE['POS_SESSION'])) {
+    boycold_start_session('POS_SESSION');
+} else {
+    boycold_start_session('PHPSESSID');
 }
 require_once '../config/db_config.php';
 require_once '../config/loyalty.php';
