@@ -1,5 +1,6 @@
 <?php
 require_once '../config/session_config.php';
+boycold_start_session();
 require_once '../config/google.php';
 require_once '../config/db_config.php';
 
