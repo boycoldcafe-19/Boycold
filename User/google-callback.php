@@ -52,11 +52,12 @@ function signInGoogleUser(array $user): void
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         session_regenerate_id(true);
-        $_SESSION['user_id'] = (int) $user['id'];
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_name'] = $user['user_name'];
+        $_SESSION = [];
+        $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
+        $_SESSION['user_email'] = $user['email'] ?? '';
+        $_SESSION['user_name'] = $user['user_name'] ?? '';
 
         header('Location: home.php');
         exit;
@@ -64,6 +65,56 @@ function signInGoogleUser(array $user): void
         error_log("Sign-in error: " . $e->getMessage());
         redirectWithGoogleError('An error occurred during sign-in. Please try again.');
     }
+}
+
+function fetchUsersByGoogleId(mysqli $connect, string $googleId): array
+{
+    $stmt = $connect->prepare(
+        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified
+         FROM users
+         WHERE google_id = ?
+         ORDER BY id"
+    );
+    if (!$stmt) {
+        throw new Exception('Database error: ' . $connect->error);
+    }
+
+    $stmt->bind_param('s', $googleId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $users = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    if (count($users) > 1) {
+        throw new Exception('Multiple user accounts share the same Google ID. Please contact support.');
+    }
+
+    return $users;
+}
+
+function fetchUsersByEmail(mysqli $connect, string $email): array
+{
+    $stmt = $connect->prepare(
+        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified
+         FROM users
+         WHERE email = ?
+         ORDER BY id"
+    );
+    if (!$stmt) {
+        throw new Exception('Database error: ' . $connect->error);
+    }
+
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $users = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    if (count($users) > 1) {
+        throw new Exception('Multiple user accounts share the same email address. Please contact support.');
+    }
+
+    return $users;
 }
 
 if ($expectedState === '' || !isset($_GET['state']) || !hash_equals($expectedState, (string) $_GET['state'])) {
@@ -108,45 +159,21 @@ try {
     }
 
     $existingUser = null;
-
-    $googleStmt = $connect->prepare(
-        "SELECT id, firstname, lastname, user_name, email, google_id, is_verified
-         FROM users
-         WHERE google_id = ?
-         LIMIT 1"
-    );
-    if (!$googleStmt) {
-        throw new Exception('Database error: ' . $connect->error);
-    }
-    
-    $googleStmt->bind_param("s", $googleId);
-    $googleStmt->execute();
-    $existingUser = $googleStmt->get_result()->fetch_assoc();
-    $googleStmt->close();
+    $googleUsers = fetchUsersByGoogleId($connect, $googleId);
+    $existingUser = $googleUsers[0] ?? null;
 
     if (!$existingUser) {
-        $emailStmt = $connect->prepare(
-            "SELECT id, firstname, lastname, user_name, email, google_id, is_verified
-             FROM users
-             WHERE email = ?
-             LIMIT 1"
-        );
-        if (!$emailStmt) {
-            throw new Exception('Database error: ' . $connect->error);
-        }
-        
-        $emailStmt->bind_param("s", $googleEmail);
-        $emailStmt->execute();
-        $existingUser = $emailStmt->get_result()->fetch_assoc();
-        $emailStmt->close();
+        $emailUsers = fetchUsersByEmail($connect, $googleEmail);
+        $existingUser = $emailUsers[0] ?? null;
     }
 
     if ($existingUser) {
+        $userId = (int) $existingUser['id'];
+
         if (!empty($existingUser['google_id']) && $existingUser['google_id'] !== $googleId) {
-            throw new Exception('This email is already linked to a different Google account.');
+            throw new Exception('This email is already linked to a different Google account. Please sign in with that Google account or contact support.');
         }
 
-        $userId = (int) $existingUser['id'];
         $linkStmt = $connect->prepare(
             "UPDATE users
              SET google_id = ?, auth_provider = 'google', is_verified = 1
@@ -155,8 +182,8 @@ try {
         if (!$linkStmt) {
             throw new Exception('Database error: ' . $connect->error);
         }
-        
-        $linkStmt->bind_param("si", $googleId, $userId);
+
+        $linkStmt->bind_param('si', $googleId, $userId);
         $linkStmt->execute();
         $linkStmt->close();
 
@@ -171,8 +198,8 @@ try {
         if (!$freshStmt) {
             throw new Exception('Database error: ' . $connect->error);
         }
-        
-        $freshStmt->bind_param("i", $userId);
+
+        $freshStmt->bind_param('i', $userId);
         $freshStmt->execute();
         $freshUser = $freshStmt->get_result()->fetch_assoc();
         $freshStmt->close();
