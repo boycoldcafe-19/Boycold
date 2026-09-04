@@ -206,6 +206,7 @@ $branches = $branches ?? [];
                         <option value="<?= $branch['id'] ?>"><?= htmlspecialchars($branch['branch_name'] . ' — ' . $branch['address']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <p id="branchAvailability" class="co-help-text" role="status" aria-live="polite"></p>
                 </div>
 
                 <!-- DELIVERY -->
@@ -599,10 +600,12 @@ $branches = $branches ?? [];
         const DIRECT_KEY = 'boycold_direct_order';
         let cartItems = [];
         let isDirectOrder = false; // true = "buy now" from ordercustom.php (single item only)
+        let branchIsAvailable = false;
 
         // Render the DELIVER TO field on page load
         renderAddressField();
         applySelectedStore();
+        checkBranchAvailability(document.getElementById('branchSelect')?.value || '');
 
         async function loadCart() {
             // ── Direct "buy now" order (came from ordercustom.php) ──
@@ -693,10 +696,45 @@ $branches = $branches ?? [];
 
             const btn = document.getElementById('coPlaceBtn');
             btn.textContent = 'Place Order — ₱' + total.toFixed(2);
-            btn.disabled = (subtotal === 0);
-            btn.style.opacity = subtotal === 0 ? '0.45' : '1';
-            btn.style.cursor  = subtotal === 0 ? 'not-allowed' : 'pointer';
+            btn.disabled = subtotal === 0 || !branchIsAvailable;
+            btn.style.opacity = btn.disabled ? '0.45' : '1';
+            btn.style.cursor  = btn.disabled ? 'not-allowed' : 'pointer';
             updatePaymentHints();
+        }
+
+        async function checkBranchAvailability(branchId) {
+            const message = document.getElementById('branchAvailability');
+            const placeButton = document.getElementById('coPlaceBtn');
+            if (!branchId) {
+                message.textContent = '';
+                branchIsAvailable = false;
+                return false;
+            }
+
+            message.textContent = 'Checking branch availability...';
+            try {
+                const response = await fetch('../api/store_status_api.php?branch_id=' + encodeURIComponent(branchId), {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                const result = await response.json();
+                const branchName = document.getElementById('branchSelect').selectedOptions[0]?.textContent.split(' — ')[0] || 'This branch';
+                if (!response.ok || !result.success || !result.is_open) {
+                    message.textContent = branchName + ' is currently closed and cannot accept online orders.';
+                    branchIsAvailable = false;
+                    placeButton.disabled = true;
+                    return false;
+                }
+                message.textContent = branchName + ' is currently accepting orders.';
+                branchIsAvailable = true;
+                placeButton.disabled = false;
+                return true;
+            } catch (error) {
+                message.textContent = 'Unable to verify branch availability. Please try again.';
+                branchIsAvailable = false;
+                placeButton.disabled = true;
+                return false;
+            }
         }
 
         async function placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, sourceId) {
@@ -784,6 +822,7 @@ $branches = $branches ?? [];
                 alert('Please select a store branch.');
                 return;
             }
+            if (!await checkBranchAvailability(branchId)) return;
             if (!address) {
                 alert('Please select or enter your address.');
                 return;
@@ -803,6 +842,10 @@ $branches = $branches ?? [];
 
             // Proceed with order placement
             await placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, null);
+        });
+
+        document.getElementById('branchSelect')?.addEventListener('change', function () {
+            checkBranchAvailability(this.value);
         });
 
         function startQrphWait(orderId, total, qrImageUrl) {

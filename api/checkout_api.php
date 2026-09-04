@@ -27,6 +27,7 @@ session_set_cookie_params([
 session_start();
 require_once '../config/db_config.php';
 require_once '../config/payments.php';
+require_once '../config/shift_manager.php';
 
 header('Content-Type: application/json');
 
@@ -112,29 +113,34 @@ $tax         = max(0, (float) ($body['tax']          ?? 0));
 $branchId    = isset($body['branch_id']) ? (int) $body['branch_id'] : 1; // Use selected branch, default to Baliuag
 $orderNotes  = trim($body['notes'] ?? '');
 
-$branchStatusStmt = $connect->prepare(
-    "SELECT b.id
-     FROM branches b
-     INNER JOIN shift_logs s ON s.branch_id = b.id AND s.status = 'open'
-     WHERE b.id = ? AND b.status = 'active'
-     LIMIT 1"
-);
-$branchStatusStmt->bind_param('i', $branchId);
-$branchStatusStmt->execute();
-$branchIsOpen = (bool) $branchStatusStmt->get_result()->fetch_assoc();
-$branchStatusStmt->close();
-
-if (!$branchIsOpen) {
-    echo json_encode(['success' => false, 'error' => 'Store is closed as of now. Please come back later.']);
+$connect->begin_transaction();
+$branchStatus = boycold_get_branch_order_status($connect, $branchId, true);
+if (!$branchStatus['exists']) {
+    $connect->rollback();
+    http_response_code(422);
+    echo json_encode(['success' => false, 'error' => 'The selected branch is not available.']);
+    exit;
+}
+if (!$branchStatus['is_open']) {
+    $connect->rollback();
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Online orders are currently unavailable for ' . $branchStatus['branch_name'] . ' because the branch is closed. Please select another available branch.',
+        'branch_closed' => true,
+        'branch_id' => $branchId,
+    ]);
     exit;
 }
 
 if ($address === '') {
+    $connect->rollback();
     echo json_encode(['success' => false, 'error' => 'Address is required.']);
     exit;
 }
 
 if (!preg_match('/^09\d{9}$/', $contactNumber)) {
+    $connect->rollback();
     echo json_encode(['success' => false, 'error' => 'A valid 11-digit mobile number starting with 09 is required.']);
     exit;
 }
@@ -194,6 +200,8 @@ foreach ($items as $item) {
     );
     $itemStmt->execute();
 }
+
+$connect->commit();
 
 $qrPayload = null;
 if ($paymentMethod === 'qrph') {

@@ -9,7 +9,11 @@ $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d', strtotim
 $branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : (isset($_SESSION['branch_id']) ? $_SESSION['branch_id'] : 'all');
 
 // Fetch available branches
-$branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";
+$branchesQuery = "SELECT b.id, b.branch_name,
+                         EXISTS (SELECT 1 FROM shift_logs s WHERE s.branch_id = b.id AND s.status = 'open') AS shift_open
+                  FROM branches b
+                  WHERE b.status = 'active'
+                  ORDER BY b.branch_name";
 $branchesResult = $connect->query($branchesQuery);
 $branches = [];
 while ($row = $branchesResult->fetch_assoc()) {
@@ -416,7 +420,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                                 <option value="all" <?php echo $branchId === 'all' ? 'selected' : ''; ?>>All Branches</option>
                                 <?php foreach ($branches as $branch): ?>
                                     <option value="<?php echo $branch['id']; ?>" <?php echo $branchId == $branch['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($branch['branch_name']); ?>
+                                        <?php echo htmlspecialchars($branch['branch_name'] . ' — Online orders: ' . ((int) $branch['shift_open'] === 1 ? 'ACCEPTING' : 'NOT ACCEPTING')); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

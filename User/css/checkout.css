@@ -1,3 +1,10 @@
+.co-help-text {
+    min-height: 1.25rem;
+    margin: 6px 0 0;
+    color: #6b4b3e;
+    font-size: 0.85rem;
+}
+
 * {
     margin: 0;
     box-sizing: border-box;

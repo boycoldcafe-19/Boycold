@@ -218,3 +218,41 @@ function pos_get_branch_open_shift(mysqli $connect, int $branchId): ?array
     $stmt->close();
     return $shift;
 }
+
+function boycold_get_branch_order_status(mysqli $connect, int $branchId, bool $forUpdate = false): array
+{
+    if ($branchId <= 0) {
+        return ['exists' => false, 'is_open' => false, 'branch_name' => ''];
+    }
+
+    $branchStmt = $connect->prepare('SELECT id, branch_name FROM branches WHERE id = ? AND status = \'active\' LIMIT 1');
+    $branchStmt->bind_param('i', $branchId);
+    $branchStmt->execute();
+    $branch = $branchStmt->get_result()->fetch_assoc() ?: null;
+    $branchStmt->close();
+
+    if (!$branch) {
+        return ['exists' => false, 'is_open' => false, 'branch_name' => ''];
+    }
+
+    $sql = "SELECT s.id
+            FROM shift_logs s
+            WHERE s.branch_id = ? AND s.status = 'open'
+            ORDER BY s.opened_at DESC, s.id DESC
+            LIMIT 1";
+    if ($forUpdate) {
+        $sql .= ' FOR UPDATE';
+    }
+
+    $shiftStmt = $connect->prepare($sql);
+    $shiftStmt->bind_param('i', $branchId);
+    $shiftStmt->execute();
+    $isOpen = (bool) $shiftStmt->get_result()->fetch_assoc();
+    $shiftStmt->close();
+
+    return [
+        'exists' => true,
+        'is_open' => $isOpen,
+        'branch_name' => (string) $branch['branch_name'],
+    ];
+}

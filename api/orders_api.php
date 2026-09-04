@@ -57,6 +57,7 @@ boycold_start_session(orderApiRequestCameFromPos() ? 'POS_SESSION' : 'PHPSESSID'
 require_once '../config/db_config.php';
 require_once '../config/loyalty.php';
 require_once '../config/payments.php';
+require_once '../config/shift_manager.php';
 
 boycold_ensure_payment_schema($connect);
 
@@ -244,6 +245,18 @@ switch ($action) {
 
         $connect->begin_transaction();
         try {
+            $branchStatus = boycold_get_branch_order_status($connect, (int) $branchId, true);
+            if (!$branchStatus['exists']) {
+                throw new RuntimeException('The selected branch is not available.');
+            }
+            if (!$branchStatus['is_open']) {
+                $error = 'Online orders are currently unavailable for ' . $branchStatus['branch_name'] . ' because the branch is closed. Please select another available branch.';
+                $connect->rollback();
+                http_response_code(409);
+                echo json_encode(['success' => false, 'error' => $error, 'branch_closed' => true, 'branch_id' => (int) $branchId]);
+                break;
+            }
+
             $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
             $stmt = $connect->prepare(
                 "INSERT INTO orders
