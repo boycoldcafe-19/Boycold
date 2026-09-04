@@ -142,6 +142,23 @@ $raw    = file_get_contents('php://input');
 $body   = json_decode($raw, true) ?? [];
 $action = $body['action'] ?? ($_GET['action'] ?? '');
 
+$connect->query("CREATE TABLE IF NOT EXISTS order_reports (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    user_id INT NOT NULL,
+    issue VARCHAR(120) NOT NULL,
+    details VARCHAR(500) NOT NULL DEFAULT '',
+    photo_paths TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_order_reports_order (order_id),
+    KEY idx_order_reports_user (user_id),
+    KEY idx_order_reports_created_at (created_at),
+    CONSTRAINT fk_order_report_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_report_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 // Log the request for debugging
 $actorLabel = $userName !== '' ? $userName : ('employee#' . $employeeId);
 error_log("Orders API - User: $actorLabel, Action: $action, Body Keys: " . implode(',', array_keys($body)));
@@ -205,6 +222,18 @@ switch ($action) {
         if ($paymentMethod === 'qrph' && $userId <= 0) {
             echo json_encode(['success' => false, 'error' => 'QRPh checkout requires a customer account.']);
             break;
+        }
+
+        if (!preg_match('/^09\d{9}$/', $contactNumber)) {
+            echo json_encode(['success' => false, 'error' => 'A valid 11-digit mobile number starting with 09 is required before QRPh payment.']);
+            break;
+        }
+
+        if ($userId > 0) {
+            $phoneStmt = $connect->prepare('UPDATE users SET phone = ? WHERE id = ?');
+            $phoneStmt->bind_param('si', $contactNumber, $userId);
+            $phoneStmt->execute();
+            $phoneStmt->close();
         }
 
         $subtotal = 0;
@@ -541,7 +570,7 @@ switch ($action) {
         }
 
         $stmt = $connect->prepare(
-            "SELECT id, status, payment_method, payment_status, total
+            "SELECT id, status, payment_method, payment_status, payment_expires_at, total
              FROM orders
              WHERE id = ?
                AND (user_id = ? OR (user_id IS NULL AND user_name = ?))"
@@ -556,14 +585,70 @@ switch ($action) {
             break;
         }
 
+        if ($order['payment_method'] === 'qrph'
+            && $order['payment_status'] === 'pending'
+            && !empty($order['payment_expires_at'])
+            && strtotime($order['payment_expires_at']) <= time()) {
+            $expireStmt = $connect->prepare(
+                "UPDATE orders
+                 SET payment_status = 'expired', status = IF(status = 'pending', 'cancelled', status)
+                 WHERE id = ? AND payment_status = 'pending'"
+            );
+            $expireStmt->bind_param('i', $orderId);
+            $expireStmt->execute();
+            $expireStmt->close();
+            $order['payment_status'] = 'expired';
+            if ($order['status'] === 'pending') $order['status'] = 'cancelled';
+        }
+
         echo json_encode([
             'success' => true,
             'order_id' => (int) $order['id'],
             'order_status' => $order['status'],
             'payment_method' => $order['payment_method'],
             'payment_status' => $order['payment_status'],
+            'payment_expires_at' => $order['payment_expires_at'],
             'total' => (float) $order['total'],
         ]);
+        break;
+
+    case 'report':
+        $orderId = (int)($body['order_id'] ?? 0);
+        $issue = trim((string)($body['issue'] ?? ''));
+        $details = trim((string)($body['details'] ?? ''));
+        $photos = is_array($body['photos'] ?? null) ? $body['photos'] : [];
+        if ($userId <= 0 || $orderId <= 0 || $issue === '' || $details === '' || strlen($details) > 500) {
+            echo json_encode(['success' => false, 'error' => 'Please provide the issue and report details.']);
+            break;
+        }
+
+        $orderCheck = $connect->prepare('SELECT id FROM orders WHERE id = ? AND user_id = ? LIMIT 1');
+        $orderCheck->bind_param('ii', $orderId, $userId);
+        $orderCheck->execute();
+        if (!$orderCheck->get_result()->fetch_assoc()) {
+            echo json_encode(['success' => false, 'error' => 'Order not found.']);
+            break;
+        }
+
+        $savedPhotos = [];
+        $uploadDir = __DIR__ . '/../User/uploads/reports';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        foreach (array_slice($photos, 0, 3) as $photo) {
+            if (!is_string($photo) || !preg_match('#^data:image/(jpeg|png|webp);base64,#i', $photo, $match)) continue;
+            $binary = base64_decode(substr($photo, strpos($photo, ',') + 1), true);
+            if ($binary === false || strlen($binary) > 5 * 1024 * 1024) continue;
+            $extension = strtolower($match[1]) === 'jpeg' ? 'jpg' : strtolower($match[1]);
+            $filename = 'report_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
+            if (file_put_contents($uploadDir . '/' . $filename, $binary) !== false) {
+                $savedPhotos[] = 'User/uploads/reports/' . $filename;
+            }
+        }
+
+        $photoPaths = json_encode($savedPhotos, JSON_UNESCAPED_SLASHES);
+        $reportStmt = $connect->prepare('INSERT INTO order_reports (order_id, user_id, issue, details, photo_paths) VALUES (?, ?, ?, ?, ?)');
+        $reportStmt->bind_param('iisss', $orderId, $userId, $issue, $details, $photoPaths);
+        $reportStmt->execute();
+        echo json_encode(['success' => true, 'message' => 'Report submitted successfully.']);
         break;
 
     case 'review':

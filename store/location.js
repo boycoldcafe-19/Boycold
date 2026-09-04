@@ -136,7 +136,7 @@
             const selection = { branchId: shop.id, branchName: shop.label, address: shop.address };
             localStorage.setItem('boycold_selected_store', JSON.stringify(selection));
             sessionStorage.setItem('boycold_selected_store', JSON.stringify(selection));
-            window.location.href = '../User/checkout.php';
+            window.location.href = '../User/menu.php';
         }
 
         /* ── Nav Sidebar ── */

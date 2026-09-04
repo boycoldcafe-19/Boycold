@@ -90,7 +90,7 @@ function boycold_apply_qrph_result(mysqli $connect, string $paymentIntentId, int
     $connect->begin_transaction();
     try {
         $stmt = $connect->prepare(
-            "SELECT id, total, payment_method, payment_status, status
+            "SELECT id, total, payment_method, payment_status, payment_expires_at, status
              FROM orders
              WHERE payment_reference = ?
              LIMIT 1
@@ -128,6 +128,19 @@ function boycold_apply_qrph_result(mysqli $connect, string $paymentIntentId, int
         $expected = (int) round(((float) $order['total']) * 100);
 
         if ($resultStatus === 'paid') {
+            if (!empty($order['payment_expires_at']) && strtotime($order['payment_expires_at']) <= time()) {
+                $expired = $connect->prepare(
+                    "UPDATE orders
+                     SET payment_status = 'expired', status = IF(status = 'pending', 'cancelled', status)
+                     WHERE id = ? AND payment_status <> 'paid'"
+                );
+                $expired->bind_param('i', $orderId);
+                $expired->execute();
+                $expired->close();
+                $connect->commit();
+                return true;
+            }
+
             if ($paidCentavos !== $expected) {
                 $fail = $connect->prepare(
                     "UPDATE orders SET payment_status = 'failed'

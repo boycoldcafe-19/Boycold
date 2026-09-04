@@ -56,6 +56,11 @@ h1, h2, p { margin: 0; }
 .review-card-head small { margin-top: 3px; }
 .review-card p { margin: 14px 0 10px; line-height: 1.5; }
 .review-card footer { font-size: 13px; }
+
+.problem-reports-section { margin-top: 24px; }
+.report-issue-label { color: var(--maroon); font-weight: 700; }
+.report-photo-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.report-photo-list img { width: 90px; height: 90px; border-radius: 8px; object-fit: cover; }
 .empty-feedback { padding: 54px 20px; text-align: center; color: var(--muted); }
 .empty-feedback i { margin-bottom: 12px; font-size: 36px; color: var(--maroon); }
 .empty-feedback p { font-size: 18px; color: var(--ink); }

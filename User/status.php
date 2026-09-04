@@ -316,7 +316,7 @@ function step_class(bool $reached)
                             <span>You haven't placed an order yet. Browse our menu and start your order!</span>
                         <?php endif; ?>
                     </div>
-                    <a href="../user/Menu.php" class="no-order-banner-btn">Order Now</a>
+                    <a href="../user/menu.php" class="no-order-banner-btn">Order Now</a>
                 </div>
             <?php else: ?>
                 <?php if ($hasActiveOrder): ?>
@@ -1049,14 +1049,48 @@ function step_class(bool $reached)
         }
 
         /* ── Submit report ── */
-        function submitReport() {
+        async function submitReport() {
             const issue = document.getElementById('selectDisplay').textContent;
             if (issue === 'Select an issue') {
                 alert('Please select an issue first.');
                 return;
             }
-            alert('Report submitted! We will look into this shortly.');
-            closeReportModalDirect();
+            const details = document.getElementById('reportTextarea').value.trim();
+            if (!details) {
+                alert('Please tell us more about the issue.');
+                return;
+            }
+
+            const submitButton = document.querySelector('.btn-submit[onclick="submitReport()"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+            }
+
+            try {
+                const response = await fetch('../api/orders_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'report',
+                        order_id: <?= (int)($latestOrder['id'] ?? 0) ?>,
+                        issue,
+                        details,
+                        photos: reportAttachments.map(attachment => attachment.dataUrl)
+                    })
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Unable to submit report.');
+                alert(result.message);
+                closeReportModalDirect();
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit Report';
+                }
+            }
         }
 
         <?php if ($hasOrder && strtolower((string) ($latestOrder['payment_method'] ?? '')) === 'qrph' && strtolower((string) ($latestOrder['payment_status'] ?? '')) === 'pending'): ?>

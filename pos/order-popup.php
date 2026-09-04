@@ -381,12 +381,12 @@ $isQrphUnpaid = $order
         // "Decline Order" cancels the customer's own still-pending order
         // (same permission model as status.php's cancel button) and
         // reloads this card in place to reflect the new status.
-        async function declineOrder(orderId) {
-            if (!confirm('Are you sure you want to cancel this order?')) return;
+        async function declineOrder(orderId, automatic = false) {
+            if (!automatic && !confirm('Are you sure you want to cancel this order?')) return;
 
             const btn = document.getElementById('declineBtn');
             btn.disabled = true;
-            btn.textContent = 'Cancelling…';
+            btn.textContent = automatic ? 'Payment expired…' : 'Cancelling…';
 
             try {
                 const res  = await fetch('../api/orders_api.php', {
@@ -402,11 +402,23 @@ $isQrphUnpaid = $order
                     }
                     location.reload();
                 } else {
+                    if (automatic) {
+                        if (isEmbeddedPopup()) {
+                            window.top.postMessage({ type: 'orderCancelled', orderId }, '*');
+                        } else {
+                            location.reload();
+                        }
+                        return;
+                    }
                     alert(data.error || 'Could not cancel this order.');
                     btn.disabled = false;
                     btn.textContent = 'Cancel Order';
                 }
             } catch (err) {
+                if (automatic) {
+                    window.top.postMessage({ type: 'orderCancelled', orderId }, '*');
+                    return;
+                }
                 alert('Network error. Please try again.');
                 btn.disabled = false;
                 btn.textContent = 'Cancel Order';
@@ -469,11 +481,11 @@ $isQrphUnpaid = $order
             function showExpired() {
                 if (paymentPoll) clearTimeout(paymentPoll);
                 if (expiryTimer) clearTimeout(expiryTimer);
-                if (cancelButton) cancelButton.disabled = true;
                 if (confirmButton) {
                     confirmButton.disabled = true;
                     confirmButton.textContent = 'QRPh Payment Expired';
                 }
+                declineOrder(<?= $orderId ?>, true);
             }
 
             async function checkPayment() {

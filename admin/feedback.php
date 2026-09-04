@@ -16,6 +16,16 @@ $reviewCount = count($reviews);
 $averageRating = $reviewCount ? array_sum(array_column($reviews, 'rating')) / $reviewCount : 0;
 $ratingCounts = array_fill(1, 5, 0);
 foreach ($reviews as $review) $ratingCounts[(int)$review['rating']]++;
+
+$reports = [];
+$reportQuery = $connect->query("SELECT r.id, r.order_id, r.issue, r.details, r.photo_paths, r.created_at,
+                                       CONCAT(u.firstname, ' ', u.lastname) AS customer_name, u.email
+                                FROM order_reports r
+                                INNER JOIN users u ON u.id = r.user_id
+                                ORDER BY r.created_at DESC, r.id DESC");
+if ($reportQuery) {
+    while ($row = $reportQuery->fetch_assoc()) $reports[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,6 +90,25 @@ foreach ($reviews as $review) $ratingCounts[(int)$review['rating']]++;
                         <div class="rating-line"><span><?= $rating ?> <i class="fa-solid fa-star"></i></span><div><span style="width: <?= $reviewCount ? round(($ratingCounts[$rating] / $reviewCount) * 100) : 0 ?>%"></span></div><small><?= $ratingCounts[$rating] ?></small></div>
                     <?php endfor; ?>
                 </div>
+            </section>
+
+            <section class="feedback-list-section problem-reports-section">
+                <div class="section-heading"><h2>Problem Reports</h2><span><?= count($reports) ?> total</span></div>
+                <?php if (!$reports): ?>
+                    <div class="empty-feedback"><i class="fa-regular fa-flag"></i><p>No problem reports yet.</p><small>Reports submitted from orders will appear here.</small></div>
+                <?php else: ?>
+                    <div class="review-list">
+                        <?php foreach ($reports as $report): ?>
+                            <?php $reportPhotos = json_decode((string)$report['photo_paths'], true) ?: []; ?>
+                            <article class="review-card problem-report-card">
+                                <div class="review-card-head"><div><strong><?= htmlspecialchars($report['customer_name']) ?></strong><small><?= htmlspecialchars($report['email']) ?></small></div><span class="report-issue-label"><?= htmlspecialchars($report['issue']) ?></span></div>
+                                <p><?= nl2br(htmlspecialchars($report['details'])) ?></p>
+                                <?php if ($reportPhotos): ?><div class="report-photo-list"><?php foreach ($reportPhotos as $photo): ?><a href="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" target="_blank" rel="noopener"><img src="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" alt="Customer report attachment"></a><?php endforeach; ?></div><?php endif; ?>
+                                <footer>Order #<?= (int)$report['order_id'] ?> · <?= htmlspecialchars(date('M d, Y g:i A', strtotime($report['created_at']))) ?></footer>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </section>
 
             <section class="feedback-list-section">

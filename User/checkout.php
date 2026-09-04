@@ -172,7 +172,7 @@ $branches = $branches ?? [];
                         <label class="co-label">Full Name</label>
                         <div class="co-input-wrap">
                             <i class="fa-regular fa-user co-icon"></i>
-                            <input type="tel"
+                            <input type="text"
                                    class="co-input"
                                    placeholder="Full Name"
                                    value="<?= $fullName ?>">
@@ -808,8 +808,13 @@ $branches = $branches ?? [];
         function startQrphWait(orderId, total, qrImageUrl) {
             const overlay = document.getElementById('qrphOverlay');
             const img = document.getElementById('qrphImage');
+            const waitMessage = document.getElementById('qrphWait');
+            const cancelButton = document.getElementById('cancelQrphPayment');
+            let pollTimer;
+            let expiryTimer;
+            let isExpired = false;
             document.getElementById('qrphAmount').textContent = 'Amount Due: ₱' + Number(total).toFixed(2);
-            document.getElementById('qrphWait').textContent = 'Waiting for payment...';
+            waitMessage.textContent = 'Waiting for payment... QRPh expires in 5:00.';
             if (qrImageUrl) {
                 img.src = qrImageUrl;
                 img.hidden = false;
@@ -818,24 +823,49 @@ $branches = $branches ?? [];
             }
             overlay.hidden = false;
 
-            document.getElementById('cancelQrphPayment').onclick = async () => {
-                if (!confirm('Cancel this QRPh payment and order?')) return;
-                const response = await fetch(ORDER_API, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'cancel', order_id: orderId })
-                });
-                const result = await response.json();
-                if (!result.success) {
-                    alert(result.error || 'Unable to cancel the order.');
-                    return;
+            const cancelOrder = async (automatic = false) => {
+                if (!automatic && !confirm('Cancel this QRPh payment and order?')) return;
+                if (pollTimer) clearTimeout(pollTimer);
+                if (expiryTimer) clearTimeout(expiryTimer);
+                cancelButton.disabled = true;
+                waitMessage.textContent = automatic ? 'QRPh payment expired. Cancelling order...' : 'Cancelling order...';
+                try {
+                    const response = await fetch(ORDER_API, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'cancel', order_id: orderId })
+                    });
+                    const result = await response.json();
+                    if (!result.success && !automatic) {
+                        alert(result.error || 'Unable to cancel the order.');
+                        cancelButton.disabled = false;
+                        return;
+                    }
+                } catch (error) {
+                    if (!automatic) {
+                        alert('Unable to cancel the order. Please try again.');
+                        cancelButton.disabled = false;
+                        return;
+                    }
                 }
                 overlay.hidden = true;
                 window.location.href = 'status.php?order_id=' + encodeURIComponent(orderId);
             };
 
+            cancelButton.onclick = () => cancelOrder(false);
+
+            const expireQrph = () => {
+                if (isExpired) return;
+                isExpired = true;
+                img.hidden = true;
+                cancelOrder(true);
+            };
+
+            expiryTimer = setTimeout(expireQrph, 5 * 60 * 1000);
+
             const poll = async () => {
+                if (isExpired) return;
                 try {
                     const res = await fetch(ORDER_API, {
                         method: 'POST',
@@ -844,16 +874,27 @@ $branches = $branches ?? [];
                         body: JSON.stringify({ action: 'payment_status', order_id: orderId })
                     });
                     const data = await res.json();
+                    if (data.success && data.payment_expires_at) {
+                        const remaining = new Date(data.payment_expires_at.replace(' ', 'T')).getTime() - Date.now();
+                        if (remaining <= 0) {
+                            expireQrph();
+                            return;
+                        }
+                        clearTimeout(expiryTimer);
+                        expiryTimer = setTimeout(expireQrph, remaining);
+                        waitMessage.textContent = 'Waiting for payment... QRPh expires in ' + Math.ceil(remaining / 60000) + ' minute(s).';
+                    }
                     if (data.success && data.payment_status === 'paid') {
+                        clearTimeout(expiryTimer);
                         window.location.href = 'status.php?order_id=' + encodeURIComponent(orderId);
                         return;
                     }
-                    if (data.success && ['failed', 'expired'].includes(data.payment_status)) {
-                        document.getElementById('qrphWait').textContent = 'Payment ' + data.payment_status + '. Please place a new order.';
+                    if (data.success && ['failed', 'expired', 'cancelled'].includes(data.payment_status)) {
+                        expireQrph();
                         return;
                     }
                 } catch (err) {}
-                setTimeout(poll, 3000);
+                pollTimer = setTimeout(poll, 3000);
             };
             poll();
         }
