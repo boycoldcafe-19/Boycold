@@ -159,6 +159,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                 <li><a href="menu.php">MENU</a></li>
                 <li><a href="../order/status.php">ORDERS</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
+                <li><a href="../store/store.php">STORES</a></li>
             </ul>
         </div>
         <div class="logo">

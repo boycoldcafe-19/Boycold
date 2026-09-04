@@ -190,7 +190,7 @@ if ($pendingStmt) {
 }
 
 $statusLabels = [
-    'pending'   => 'Pending',
+    'pending'   => 'Order Pending',
     'confirmed' => 'Order Confirmed',
     'preparing' => 'Preparing',
     'ready'     => 'Out for Delivery',
@@ -274,7 +274,7 @@ if ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
 
 // Define different status flows based on payment method
 if ($paymentMethodKey === 'qrph') {
-    // GCash flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
+    // QRPh flow: Order Confirmed → Payment Confirmed → Preparing → Out for Delivery → Delivered
     $statusIndex = [
         'pending'   => 0,
         'confirmed' => 0,

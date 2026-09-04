@@ -39,8 +39,6 @@ function paymongo_request(string $method, string $path, ?array $body = null): ar
     $raw = curl_exec($ch);
     $errno = curl_errno($ch);
     $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
     if ($errno) {
         throw new RuntimeException('Could not reach PayMongo. Please try again.');
     }
@@ -88,7 +86,7 @@ function paymongo_create_qrph(int $orderId, float $amountPhp, string $descriptio
         'data' => [
             'attributes' => [
                 'type' => 'qrph',
-                'expiry_seconds' => 1800,
+                'expiry_seconds' => 300,
             ],
         ],
     ]);

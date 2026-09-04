@@ -67,7 +67,6 @@ foreach ($reviews as $review) $ratingCounts[(int)$review['rating']]++;
                     <h1>Feedback & Reviews</h1>
                     <p>See what customers think about their completed orders.</p>
                 </div>
-                <a class="back-link" href="loyalty-card.php"><i class="fa-solid fa-arrow-left"></i> Loyalty Card</a>
             </header>
 
             <section class="feedback-summary">

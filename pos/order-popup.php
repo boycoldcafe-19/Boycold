@@ -156,6 +156,9 @@ if ($order) {
 $backUrl  = $isStaff ? 'dashboard/pos-online.php' : 'menu.php';
 $trackUrl = $isStaff ? ('dashboard/pos-status.php?order_id=' . $orderId) : ('status.php?order_id=' . $orderId);
 $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
+$isQrphUnpaid = $order
+    && strtolower((string) ($order['payment_method'] ?? '')) === 'qrph'
+    && strtolower((string) ($order['payment_status'] ?? '')) !== 'paid';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -342,13 +345,9 @@ $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
 
             <!-- Actions -->
             <div class="actions">
-                <?php
-                    $isQrphUnpaid = strtolower((string) ($order['payment_method'] ?? '')) === 'qrph'
-                        && strtolower((string) ($order['payment_status'] ?? '')) !== 'paid';
-                ?>
                 <?php if ($order['status'] === 'pending' && $isQrphUnpaid): ?>
-                    <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
-                    <button type="button" class="btn btn-confirm" disabled>Waiting for QRPh payment</button>
+                    <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Cancel Order</button>
+                    <button type="button" class="btn btn-confirm" id="confirmPaymentBtn" disabled>Confirm Payment</button>
                 <?php elseif ($order['status'] === 'pending'): ?>
                     <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
                     <button type="button" class="btn btn-confirm" id="acceptBtn" onclick="acceptOrder(<?= $orderId ?>)">Confirm Order</button>
@@ -405,12 +404,12 @@ $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
                 } else {
                     alert(data.error || 'Could not cancel this order.');
                     btn.disabled = false;
-                    btn.textContent = 'Decline Order';
+                    btn.textContent = 'Cancel Order';
                 }
             } catch (err) {
                 alert('Network error. Please try again.');
                 btn.disabled = false;
-                btn.textContent = 'Decline Order';
+                btn.textContent = 'Cancel Order';
             }
         }
 
@@ -456,6 +455,64 @@ $backButtonLabel = $isStaff ? 'Back to Online Orders' : 'Back to Menu';
                 }
             }
         }
+
+        <?php if ($isStaff && $order && $isQrphUnpaid && $order['status'] === 'pending'): ?>
+        (function monitorQrphPayment() {
+            const confirmButton = document.getElementById('confirmPaymentBtn');
+            const cancelButton = document.getElementById('declineBtn');
+            const expiresAt = <?= json_encode($order['payment_expires_at'] ?? '') ?>;
+            const pollUrl = `online-orders-api.php?action=payment_status&order_id=<?= $orderId ?>`;
+            let paymentPoll;
+            let expiryTimer;
+            let confirming = false;
+
+            function showExpired() {
+                if (paymentPoll) clearTimeout(paymentPoll);
+                if (expiryTimer) clearTimeout(expiryTimer);
+                if (cancelButton) cancelButton.disabled = true;
+                if (confirmButton) {
+                    confirmButton.disabled = true;
+                    confirmButton.textContent = 'QRPh Payment Expired';
+                }
+            }
+
+            async function checkPayment() {
+                try {
+                    const response = await fetch(pollUrl, { cache: 'no-store' });
+                    const result = await response.json();
+                    if (!result.success) throw new Error(result.error || 'Payment status unavailable');
+
+                    if (result.payment_status === 'paid' && !confirming) {
+                        confirming = true;
+                        if (confirmButton) {
+                            confirmButton.disabled = false;
+                            confirmButton.textContent = 'Payment Confirmed';
+                        }
+                        await acceptOrder(<?= $orderId ?>);
+                        return;
+                    }
+
+                    if (['expired', 'failed', 'cancelled'].includes(result.payment_status) || result.order_status === 'cancelled') {
+                        showExpired();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('QRPh payment status check failed:', error);
+                }
+                paymentPoll = setTimeout(checkPayment, 3000);
+            }
+
+            if (expiresAt) {
+                const remaining = new Date(expiresAt.replace(' ', 'T')).getTime() - Date.now();
+                expiryTimer = setTimeout(showExpired, Math.max(0, remaining));
+            }
+
+            confirmButton?.addEventListener('click', () => {
+                if (!confirming) checkPayment();
+            });
+            checkPayment();
+        })();
+        <?php endif; ?>
     </script>
 </body>
 </html>

@@ -113,7 +113,7 @@ try {
             }
             $statusSelect = $hasStatusColumn ? 'MAX(u.loyalty_card_status) AS loyalty_card_status' : "'active' AS loyalty_card_status";
                  $result = $connect->query("SELECT u.id, u.card_no, u.firstname, u.lastname, u.phone, u.created_at,
-                                    u.loyalty_stamps, $statusSelect,
+                                    LEAST(10, GREATEST(0, u.loyalty_stamps)) AS loyalty_stamps, $statusSelect,
                                     COALESCE(MIN(lt.created_at), u.created_at) AS activation_date,
                                     COUNT(DISTINCT o.id) AS order_count
                                 FROM users u

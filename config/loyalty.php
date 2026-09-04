@@ -373,7 +373,7 @@ function awardLoyaltyForCompletedOrder(
         }
 
         $previousStamps = max(0, (int) ($user['loyalty_stamps'] ?? 0));
-        $newStamps = $previousStamps + $stampsToAward;
+        $newStamps = min(BOYCOLD_LOYALTY_MAX_STAMPS, $previousStamps + $stampsToAward);
         if (BOYCOLD_LOYALTY_RESET_ON_REWARD && $newStamps >= BOYCOLD_LOYALTY_MAX_STAMPS) {
             $newStamps = $newStamps % BOYCOLD_LOYALTY_MAX_STAMPS;
         }

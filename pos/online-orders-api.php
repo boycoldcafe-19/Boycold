@@ -2,6 +2,9 @@
 require_once __DIR__ . '/auth/guard.php';
 pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/payments.php';
+
+boycold_ensure_payment_schema($connect);
 
 header('Content-Type: application/json');
 
@@ -58,6 +61,49 @@ if (isset($_GET['action']) && $_GET['action'] === 'notifications') {
     echo json_encode([
         'success' => true,
         'notifications' => $notifications,
+    ]);
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'payment_status') {
+    $orderId = (int) ($_GET['order_id'] ?? 0);
+    $statusStmt = $connect->prepare(
+        "SELECT id, payment_method, payment_status, status, payment_expires_at
+         FROM orders
+         WHERE id = ? AND branch_id = ?
+         LIMIT 1"
+    );
+    $statusStmt->bind_param('ii', $orderId, $branchId);
+    $statusStmt->execute();
+    $paymentOrder = $statusStmt->get_result()->fetch_assoc();
+    $statusStmt->close();
+
+    if (!$paymentOrder) {
+        echo json_encode(['success' => false, 'error' => 'Order not found.']);
+        exit;
+    }
+
+    if ($paymentOrder['payment_method'] === 'qrph'
+        && $paymentOrder['payment_status'] === 'pending'
+        && !empty($paymentOrder['payment_expires_at'])
+        && strtotime($paymentOrder['payment_expires_at']) <= time()) {
+        $expireStmt = $connect->prepare(
+            "UPDATE orders SET payment_status = 'expired', status = IF(status = 'pending', 'cancelled', status)
+             WHERE id = ? AND branch_id = ? AND payment_status = 'pending'"
+        );
+        $expireStmt->bind_param('ii', $orderId, $branchId);
+        $expireStmt->execute();
+        $expireStmt->close();
+        $paymentOrder['payment_status'] = 'expired';
+        if ($paymentOrder['status'] === 'pending') $paymentOrder['status'] = 'cancelled';
+    }
+
+    echo json_encode([
+        'success' => true,
+        'payment_method' => $paymentOrder['payment_method'],
+        'payment_status' => $paymentOrder['payment_status'],
+        'order_status' => $paymentOrder['status'],
+        'payment_expires_at' => $paymentOrder['payment_expires_at'],
     ]);
     exit;
 }

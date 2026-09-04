@@ -90,6 +90,7 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 <li><a href="menu.php" class="active">MENU</a></li>
                 <li><a href="status.php">ORDERS</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
+                <li><a href="../store/store.php">STORES</a></li>
             </ul>
         </div>
         <div class="logo">

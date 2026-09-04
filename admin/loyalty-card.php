@@ -432,19 +432,6 @@
                     </div>
                 </div>
 
-                <section class="reviews-section" aria-labelledby="reviewsTitle">
-                    <div class="reviews-section-header">
-                        <div>
-                            <h2 id="reviewsTitle">Customer Feedback</h2>
-                            <p>Ratings and reviews from completed orders.</p>
-                        </div>
-                        <span class="reviews-average" id="reviewsAverage">No ratings yet</span>
-                    </div>
-                    <div class="reviews-list" id="reviewsList">
-                        <p class="reviews-empty">Loading feedback...</p>
-                    </div>
-                </section>
-
             </div>
 
             <!-- OVERLAY BACKDROP -->
@@ -922,26 +909,6 @@
         // Initial Table Load
         renderFilteredTable();
 
-        fetch('admin_data_api.php?action=reviews')
-            .then(response => response.json())
-            .then(result => {
-                const list = document.getElementById('reviewsList');
-                const average = document.getElementById('reviewsAverage');
-                if (!result.success || !result.reviews.length) {
-                    list.innerHTML = '<p class="reviews-empty">No customer feedback yet.</p>';
-                    return;
-                }
-                const total = result.reviews.reduce((sum, item) => sum + Number(item.rating), 0);
-                average.textContent = `${(total / result.reviews.length).toFixed(1)} / 5 (${result.reviews.length})`;
-                list.innerHTML = result.reviews.map(item => `
-                    <article class="review-item">
-                        <div class="review-item-top"><strong>${item.customer_name}</strong><span class="review-rating">${'★'.repeat(Number(item.rating))}${'☆'.repeat(5 - Number(item.rating))}</span></div>
-                        <p>${item.review ? item.review.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])) : 'No written comment.'}</p>
-                        <small>Order #${item.order_id} · ${new Date(item.created_at).toLocaleDateString()}</small>
-                    </article>`).join('');
-            })
-            .catch(() => { document.getElementById('reviewsList').innerHTML = '<p class="reviews-empty">Feedback is unavailable.</p>'; });
-
         async function loadLoyaltyCards() {
             try {
                 const response = await fetch('admin_data_api.php?action=loyalty', { cache: 'no-store' });
@@ -956,7 +923,7 @@
                         customer: `${card.firstname} ${card.lastname}`,
                         phone: card.phone || 'No phone number',
                         initials: `${card.firstname[0] || ''}${card.lastname[0] || ''}`.toUpperCase(),
-                        stamps: Number(card.loyalty_stamps || 0),
+                        stamps: Math.min(10, Math.max(0, Number(card.loyalty_stamps || 0))),
                         reward: 'Free Drink',
                         redeemed: card.loyalty_card_status === 'completed',
                         dateRedeemed: '',

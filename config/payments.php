@@ -57,6 +57,12 @@ function boycold_ensure_payment_schema(mysqli $connect): void
             PRIMARY KEY (event_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+
+    $expiryCol = $connect->query("SHOW COLUMNS FROM orders LIKE 'payment_expires_at'");
+    if ($expiryCol && $expiryCol->num_rows === 0) {
+        $connect->query("ALTER TABLE orders ADD COLUMN payment_expires_at DATETIME NULL DEFAULT NULL AFTER payment_reference");
+        $connect->query("ALTER TABLE orders ADD INDEX idx_payment_expires_at (payment_expires_at)");
+    }
 }
 
 function boycold_create_qrph_for_order(mysqli $connect, int $orderId, float $total): array
@@ -66,7 +72,8 @@ function boycold_create_qrph_for_order(mysqli $connect, int $orderId, float $tot
     $ref = $qr['payment_intent_id'];
     $stmt = $connect->prepare(
         "UPDATE orders
-         SET payment_reference = ?, payment_status = 'pending'
+         SET payment_reference = ?, payment_status = 'pending',
+             payment_expires_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
          WHERE id = ? AND payment_method = 'qrph'"
     );
     $stmt->bind_param('si', $ref, $orderId);

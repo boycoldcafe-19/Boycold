@@ -339,7 +339,7 @@ $loyaltyQrPayload = buildLoyaltyScanUrl($loyaltyToken);
 $loyaltyQrDataUri = buildLoyaltyQrDataUri($loyaltyQrPayload);
 $userName = $user['user_name'];
 $loyaltyBeans = (int) ($user['loyalty_beans'] ?? 0);
-$loyaltyStamps = (int) ($user['loyalty_stamps'] ?? 0);
+$loyaltyStamps = min(10, max(0, (int) ($user['loyalty_stamps'] ?? 0)));
 $loyaltyDisplayStamps = min(10, max(0, $loyaltyStamps));
 $loyaltyProgressText = $loyaltyStamps === 0
     ? 'No stamps yet — complete an order to start'
@@ -496,6 +496,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 <li><a href="home.php">HOME</a></li>
                 <li><a href="menu.php">MENU</a></li>
                 <li><a href="status.php">ORDERS</a></li>
+                <li><a href="../store/store.php">STORES</a></li>
             </ul>
         </div>
         <div class="logo">

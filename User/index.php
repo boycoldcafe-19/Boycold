@@ -88,23 +88,113 @@ if ($reviewQuery) {
     <section class="customer-reviews" aria-labelledby="customerReviewsTitle">
         <div class="customer-reviews-heading">
             <h2 id="customerReviewsTitle">What Our Customers Say</h2>
-            <p>Feedback from completed orders</p>
         </div>
         <?php if ($reviews): ?>
-            <div class="customer-reviews-grid">
-                <?php foreach ($reviews as $review): ?>
-                    <article class="customer-review-card">
-                        <div class="customer-review-stars" aria-label="<?= (int)$review['rating'] ?> out of 5 stars"><?= str_repeat('★', (int)$review['rating']) . str_repeat('☆', 5 - (int)$review['rating']) ?></div>
-                        <p><?= $review['review'] !== '' ? nl2br(htmlspecialchars($review['review'])) : '<em>No written comment.</em>' ?></p>
-                        <strong><?= htmlspecialchars($review['customer_name']) ?></strong>
-                        <small><?= htmlspecialchars(date('M d, Y', strtotime($review['created_at']))) ?></small>
-                    </article>
-                <?php endforeach; ?>
+            <div class="customer-reviews-carousel">
+                <button type="button" class="customer-reviews-nav customer-reviews-prev" aria-label="Previous reviews">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <div class="customer-reviews-grid">
+                    <div class="customer-reviews-track">
+                    <?php foreach ($reviews as $review): ?>
+                        <article class="customer-review-card">
+                            <div class="customer-review-stars" aria-label="<?= (int)$review['rating'] ?> out of 5 stars"><?= str_repeat('★', (int)$review['rating']) . str_repeat('☆', 5 - (int)$review['rating']) ?></div>
+                            <p><?= $review['review'] !== '' ? nl2br(htmlspecialchars($review['review'])) : '<em>No written comment.</em>' ?></p>
+                            <strong><?= htmlspecialchars($review['customer_name']) ?></strong>
+                            <small><?= htmlspecialchars(date('M d, Y', strtotime($review['created_at']))) ?></small>
+                        </article>
+                    <?php endforeach; ?>
+                    </div>
+                </div>
+                <button type="button" class="customer-reviews-nav customer-reviews-next" aria-label="Next reviews">
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
             </div>
         <?php else: ?>
             <p class="customer-reviews-empty">Customer feedback will appear here after completed orders are reviewed.</p>
         <?php endif; ?>
     </section>
+
+    <script>
+        (() => {
+            const carousel = document.querySelector('.customer-reviews-carousel');
+            if (!carousel) return;
+            const grid = carousel.querySelector('.customer-reviews-grid');
+            const track = carousel.querySelector('.customer-reviews-track');
+            const cards = [...track.querySelectorAll('.customer-review-card')];
+            const previous = carousel.querySelector('.customer-reviews-prev');
+            const next = carousel.querySelector('.customer-reviews-next');
+            let currentIndex = 5;
+            let desktopReady = false;
+
+            function isResponsive() {
+                return window.matchMedia('(max-width: 700px)').matches;
+            }
+
+            function cardStep() {
+                const card = track.querySelector('.customer-review-card');
+                if (!card) return 0;
+                return card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap || '0');
+            }
+
+            function sizeDesktopCards() {
+                const gap = parseFloat(getComputedStyle(track).gap || '0');
+                const width = (grid.clientWidth - gap * 4) / 5;
+                cards.forEach((card) => { card.style.flex = `0 0 ${width}px`; });
+                track.querySelectorAll('.customer-review-card').forEach((card) => { card.style.flex = `0 0 ${width}px`; });
+            }
+
+            function moveTrack(animate = true) {
+                track.style.transition = animate ? 'transform 360ms ease' : 'none';
+                track.style.transform = `translateX(-${currentIndex * cardStep()}px)`;
+            }
+
+            function setupDesktop() {
+                if (desktopReady || isResponsive()) return;
+                const cloneCount = Math.min(5, cards.length);
+                sizeDesktopCards();
+                const firstClones = cards.slice(0, cloneCount).map((card) => card.cloneNode(true));
+                const lastClones = cards.slice(-cloneCount).map((card) => card.cloneNode(true));
+                track.prepend(...lastClones);
+                track.append(...firstClones);
+                currentIndex = cloneCount;
+                cards.forEach((card) => { card.hidden = false; });
+                desktopReady = true;
+                requestAnimationFrame(() => moveTrack(false));
+            }
+
+            function render() {
+                if (isResponsive()) {
+                    if (desktopReady) {
+                        track.innerHTML = '';
+                        cards.forEach((card) => track.appendChild(card));
+                        desktopReady = false;
+                    }
+                    track.style.transform = '';
+                    track.style.transition = '';
+                    cards.forEach((card) => { card.style.flex = ''; });
+                    cards.forEach((card) => { card.hidden = false; });
+                    return;
+                }
+                setupDesktop();
+            }
+
+            previous.addEventListener('click', () => { if (!isResponsive()) { currentIndex--; moveTrack(); } });
+            next.addEventListener('click', () => { if (!isResponsive()) { currentIndex++; moveTrack(); } });
+            track.addEventListener('transitionend', () => {
+                const cloneCount = Math.min(5, cards.length);
+                if (currentIndex >= cards.length + cloneCount) {
+                    currentIndex = cloneCount;
+                    moveTrack(false);
+                } else if (currentIndex < cloneCount) {
+                    currentIndex = cards.length + cloneCount - 1;
+                    moveTrack(false);
+                }
+            });
+            window.addEventListener('resize', () => { render(); if (!isResponsive()) { sizeDesktopCards(); moveTrack(false); } });
+            render();
+        })();
+    </script>
     
     <footer>
         <div class="footer-content">

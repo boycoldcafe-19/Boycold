@@ -42,10 +42,12 @@ try {
         exit;
     }
 
+    $displayStamps = min(BOYCOLD_LOYALTY_MAX_STAMPS, max(0, (int) $result['loyalty_stamps']));
+
     echo json_encode([
         'success' => true,
         'loyalty_beans' => (int) $result['loyalty_beans'],
-        'loyalty_stamps' => (int) $result['loyalty_stamps']
+        'loyalty_stamps' => $displayStamps
     ]);
 
 } catch (Exception $e) {

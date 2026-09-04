@@ -1,10 +1,16 @@
 /* ── Store Data ── */
+        const databaseBranches = Array.isArray(window.BOYCOLD_BRANCHES) ? window.BOYCOLD_BRANCHES : [];
+        const branchByCode = Object.fromEntries(databaseBranches.flatMap(branch => [
+            [String(branch.branch_code).toUpperCase(), branch],
+            [String(branch.id), branch]
+        ]));
         const stores = {
             baliwag: {
                 shops: [
                     {
+                        id: Number(branchByCode.BAL?.id || branchByCode.MAIN?.id || branchByCode[1]?.id || 1),
                         label: "BoyCold Cafe Baliwag",
-                        address: "40 Calle Rizal, Baliwag, 3006 Bulacan",
+                        address: branchByCode.BAL?.address || branchByCode.MAIN?.address || "40 Calle Rizal, Baliwag, 3006 Bulacan",
                         hours: "14:00 – 1:00",
                         phone: "0923-421-6448",
                         lat: 14.93564,
@@ -15,8 +21,9 @@
             bustos: {
                 shops: [
                     {
+                        id: Number(branchByCode.BUS?.id || branchByCode.BUSTOS?.id || branchByCode[2]?.id || 2),
                         label: "BoyCold Cafe Bustos",
-                        address: "Petron C.L. Hilario St., Tanawan, Bustos, Bulacan",
+                        address: branchByCode.BUS?.address || branchByCode.BUSTOS?.address || "Petron C.L. Hilario St., Tanawan, Bustos, Bulacan",
                         hours: "13:00 – 24:00",
                         phone: "0923-421-6448",
                         lat: 14.95409,
@@ -123,9 +130,13 @@
         }
 
         function chooseStore() {
-            const shopName = document.getElementById('shopSelect').options[document.getElementById('shopSelect').selectedIndex].text;
-            alert('Selected: ' + shopName);
-            // Wire to your ordering flow here
+            const city = document.getElementById('citySelect').value;
+            const idx = parseInt(document.getElementById('shopSelect').value) || 0;
+            const shop = stores[city].shops[idx];
+            const selection = { branchId: shop.id, branchName: shop.label, address: shop.address };
+            localStorage.setItem('boycold_selected_store', JSON.stringify(selection));
+            sessionStorage.setItem('boycold_selected_store', JSON.stringify(selection));
+            window.location.href = '../User/checkout.php';
         }
 
         /* ── Nav Sidebar ── */

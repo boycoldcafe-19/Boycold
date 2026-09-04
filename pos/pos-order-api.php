@@ -299,7 +299,7 @@ try {
             $loyaltyStmt = $connect->prepare(
                 "UPDATE users
                  SET loyalty_beans = 0,
-                     loyalty_stamps = loyalty_stamps + 1
+                     loyalty_stamps = LEAST(10, loyalty_stamps + 1)
                  WHERE user_name = ?"
             );
             $loyaltyStmt->bind_param("s", $userName);

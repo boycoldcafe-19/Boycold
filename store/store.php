@@ -22,6 +22,9 @@ if ($avatarRaw !== '' && !preg_match('#^(https?://|/)#', $avatarRaw)) {
 }
 $avatar    = $avatarRaw !== '' ? htmlspecialchars($avatarRaw) : '';
 
+$branchResult = $connect->query("SELECT id, branch_code, branch_name, address FROM branches WHERE status = 'active' ORDER BY branch_name");
+$branchData = $branchResult ? $branchResult->fetch_all(MYSQLI_ASSOC) : [];
+
 $_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
 $_SESSION['user_email'] = $user['email'];
 ?>
@@ -92,6 +95,7 @@ $_SESSION['user_email'] = $user['email'];
                 <li><a href="../User/menu.php" class="active">MENU</a></li>
                 <li><a href="../User/status.php">ORDERS</a></li>
                 <li><a href="../User/favorites.php">FAVORITES</a></li>
+                <li><a href="store.php">STORES</a></li>
             </ul>
         </div>
         <div class="logo">
@@ -233,6 +237,7 @@ $_SESSION['user_email'] = $user['email'];
             </div>
         </footer>
 
+    <script>window.BOYCOLD_BRANCHES = <?= json_encode($branchData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../store/location.js"></script>
 </body>

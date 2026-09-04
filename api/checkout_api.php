@@ -106,10 +106,21 @@ if (!in_array($paymentMethod, ['cod', 'qrph'], true)) {
     $paymentMethod = 'cod';
 }
 $address     = trim($body['address']     ?? '');
+$contactNumber = trim($body['contact_number'] ?? '');
 $deliveryFee = max(0, (float) ($body['delivery_fee'] ?? 0));
 $tax         = max(0, (float) ($body['tax']          ?? 0));
 $branchId    = isset($body['branch_id']) ? (int) $body['branch_id'] : 1; // Use selected branch, default to Baliuag
 $orderNotes  = trim($body['notes'] ?? '');
+
+if ($address === '') {
+    echo json_encode(['success' => false, 'error' => 'Address is required.']);
+    exit;
+}
+
+if (!preg_match('/^09\d{9}$/', $contactNumber)) {
+    echo json_encode(['success' => false, 'error' => 'A valid 11-digit mobile number starting with 09 is required.']);
+    exit;
+}
 
 // ── Re-calculate totals server-side (never trust client totals) ─
 $subtotal = 0;

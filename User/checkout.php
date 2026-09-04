@@ -51,7 +51,7 @@ $addrStmt->close();
 $savedAddresses = $savedAddresses ?? [];
 
 // Fetch available branches for branch selection
-$branchStmt = $connect->prepare("SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name");
+$branchStmt = $connect->prepare("SELECT id, branch_name, address FROM branches WHERE status = 'active' ORDER BY branch_name");
 $branchStmt->execute();
 $branches = $branchStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $branchStmt->close();
@@ -122,6 +122,7 @@ $branches = $branches ?? [];
                 <li><a href="menu.php">MENU</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
                 <li><a href="status.php">ORDERS</a></li>
+                <li><a href="../store/store.php">STORES</a></li>
             </ul>
         </div>
         <div class="logo">
@@ -171,7 +172,7 @@ $branches = $branches ?? [];
                         <label class="co-label">Full Name</label>
                         <div class="co-input-wrap">
                             <i class="fa-regular fa-user co-icon"></i>
-                            <input type="text"
+                            <input type="tel"
                                    class="co-input"
                                    placeholder="Full Name"
                                    value="<?= $fullName ?>">
@@ -179,7 +180,7 @@ $branches = $branches ?? [];
                     </div>
 
                     <div class="co-field">
-                        <label class="co-label">Contact Number</label>
+                        <label class="co-label" for="phoneInput">Contact Number <span aria-hidden="true">*</span></label>
                         <div class="co-input-wrap">
                             <i class="fa-solid fa-phone co-icon"></i>
                             <input type="text"
@@ -187,6 +188,9 @@ $branches = $branches ?? [];
                                    id="phoneInput"
                                    placeholder="09XXXXXXXXX"
                                    maxlength="11"
+                                   minlength="11"
+                                   pattern="09[0-9]{9}"
+                                   required
                                    value="<?= $phone ?>">
                         </div>
                     </div>
@@ -199,7 +203,7 @@ $branches = $branches ?? [];
                     <select class="co-input co-select" id="branchSelect">
                         <option value="">Select Branch</option>
                         <?php foreach ($branches as $branch): ?>
-                        <option value="<?= $branch['id'] ?>"><?= htmlspecialchars($branch['branch_name']) ?></option>
+                        <option value="<?= $branch['id'] ?>"><?= htmlspecialchars($branch['branch_name'] . ' — ' . $branch['address']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -220,7 +224,7 @@ $branches = $branches ?? [];
                     </div>
 
                     <div style="margin-top:15px;">
-                        <label class="co-label">DELIVER TO</label>
+                            <label class="co-label" for="addressChoice">DELIVER TO <span aria-hidden="true">*</span></label>
                         <div id="addressFieldWrap"><!-- select or plain input, rendered by JS --></div>
                         <button type="button" class="co-add-address-link" id="addAddressBtn" onclick="openAddAddressModal()">
                             <i class="fa-solid fa-plus"></i> Add new address
@@ -400,6 +404,26 @@ $branches = $branches ?? [];
         const SAVED_ADDRESSES = <?= json_encode($savedAddresses, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
         let addresses = Array.isArray(SAVED_ADDRESSES) ? SAVED_ADDRESSES : [];
 
+        function getSelectedStore() {
+            try {
+                return JSON.parse(sessionStorage.getItem('boycold_selected_store') || localStorage.getItem('boycold_selected_store') || 'null');
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function applySelectedStore() {
+            const selectedStore = getSelectedStore();
+            const branchSelect = document.getElementById('branchSelect');
+            if (!selectedStore || !branchSelect) return;
+
+            const option = [...branchSelect.options].find(item => item.value === String(selectedStore.branchId));
+            if (option) {
+                branchSelect.value = option.value;
+                option.textContent = `${selectedStore.branchName} — ${selectedStore.address}`;
+            }
+        }
+
         function formatAddress(a) {
             return [a.street_address, a.barangay, a.city, a.province, a.zip_code]
                 .filter(Boolean).join(', ');
@@ -417,13 +441,13 @@ $branches = $branches ?? [];
                     const labelPart = a.label ? a.label + ' — ' : '';
                     return `<option value="${a.id}">${labelPart}${formatAddress(a)}</option>`;
                 }).join('');
-                wrap.innerHTML = `<select class="co-input co-select" id="addressChoice">${options}</select>`;
+                wrap.innerHTML = `<select class="co-input co-select" id="addressChoice" required>${options}</select>`;
                 const sel = document.getElementById('addressChoice');
                 if (prevSelected && [...sel.options].some(o => o.value === prevSelected)) {
                     sel.value = prevSelected;
                 }
             } else {
-                wrap.innerHTML = `<input type="text" class="co-input" id="addressNewInput" placeholder="Enter delivery address">`;
+                wrap.innerHTML = `<input type="text" class="co-input" id="addressNewInput" placeholder="Enter delivery address" required>`;
             }
         }
 
@@ -578,6 +602,7 @@ $branches = $branches ?? [];
 
         // Render the DELIVER TO field on page load
         renderAddressField();
+        applySelectedStore();
 
         async function loadCart() {
             // ── Direct "buy now" order (came from ordercustom.php) ──
@@ -759,12 +784,12 @@ $branches = $branches ?? [];
                 alert('Please select a store branch.');
                 return;
             }
-            if (!isPickup && !address) {
-                alert('Please select or enter a delivery address.');
+            if (!address) {
+                alert('Please select or enter your address.');
                 return;
             }
-            if (!phone) {
-                alert('Please provide a contact number.');
+            if (!/^09\d{9}$/.test(phone)) {
+                alert('Please provide a valid 11-digit mobile number starting with 09.');
                 return;
             }
             const finalAddress = isPickup ? branchName : address;

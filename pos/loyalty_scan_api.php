@@ -103,7 +103,7 @@ if ($action === 'award') {
     $previousBalance = (int) $user['loyalty_beans'] + ((int) $user['loyalty_stamps'] * 10);
 
     // Award loyalty stamp directly
-    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = loyalty_stamps + 1 WHERE id = ?");
+    $awardStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = LEAST(10, loyalty_stamps + 1) WHERE id = ?");
     $awardStmt->bind_param('i', $user['id']);
     $awardStmt->execute();
     $awardStmt->close();

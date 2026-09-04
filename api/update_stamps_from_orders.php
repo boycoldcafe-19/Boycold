@@ -42,7 +42,7 @@ try {
     $errors = [];
     
     foreach ($usersToUpdate as $user) {
-        $newStamps = (int) $user['completed_orders'];
+        $newStamps = min(10, max(0, (int) $user['completed_orders']));
         $newBeans = 0; // Reset beans to 0 since we're using direct stamp counting
         
         // Calculate previous and new balances

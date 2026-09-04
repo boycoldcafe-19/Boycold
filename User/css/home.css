@@ -351,6 +351,7 @@ section {
     background: #f7f5f3;
     padding: clamp(48px, 7vw, 90px) clamp(24px, 6vw, 80px);
     text-align: center;
+    font-family: 'Afacad', sans-serif;
 }
 
 .customer-reviews-heading h2 {
@@ -369,10 +370,43 @@ section {
 
 .customer-reviews-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 20px;
+    flex: 1;
+    min-width: 0;
+    margin: 32px 0 0;
+    overflow: hidden;
+}
+
+.customer-reviews-track {
+    display: flex;
+    gap: 20px;
+    width: max-content;
+    will-change: transform;
+}
+
+.customer-reviews-carousel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     max-width: 1200px;
-    margin: 32px auto 0;
+    margin: 0 auto;
+}
+
+.customer-reviews-nav {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border: 2px solid #692727;
+    border-radius: 50%;
+    background: #692727;
+    color: #fff;
+    margin-top: 32px;
+}
+
+.customer-reviews-nav:disabled {
+    opacity: .35;
+    cursor: not-allowed;
 }
 
 .customer-review-card {
@@ -387,16 +421,20 @@ section {
     justify-content: flex-start;
     gap: 8px;
     box-shadow: 0 4px 14px rgba(30, 30, 30, 0.08);
+    flex: 0 0 calc((100% - 80px) / 5);
 }
 
 .customer-review-stars {
     color: #692727;
-    letter-spacing: 2px;
-    font-size: 18px;
+    letter-spacing: 1px;
+    font-size: 17px;
+    line-height: 1;
 }
 
 .customer-review-card p {
     color: #333;
+    font-family: 'Afacad', sans-serif;
+    font-size: 16px;
     line-height: 1.4;
     flex: 1;
 }
@@ -407,6 +445,35 @@ section {
 
 .customer-review-card small {
     color: #888;
+}
+
+@media (max-width: 700px) {
+    .customer-reviews-carousel {
+        display: block;
+    }
+
+    .customer-reviews-grid {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 32px 4px 10px;
+        margin: 0;
+        scrollbar-width: thin;
+    }
+
+    .customer-reviews-track {
+        gap: 14px;
+    }
+
+    .customer-reviews-nav {
+        display: none;
+    }
+
+    .customer-review-card {
+        flex: 0 0 min(82vw, 320px);
+        scroll-snap-align: center;
+    }
 }
 
 /* ── ANNOUNCEMENT BOX ── */
