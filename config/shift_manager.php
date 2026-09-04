@@ -28,27 +28,58 @@ function pos_shift_sales(mysqli $connect, int $shiftId): array
 {
     $stmt = $connect->prepare(
         "SELECT
-            COALESCE(SUM(CASE WHEN LOWER(payment_method) IN ('cod', 'cash') THEN total ELSE 0 END), 0) AS cash_sales,
+            COALESCE(SUM(CASE WHEN user_id IS NULL AND LOWER(payment_method) IN ('cod', 'cash') THEN total ELSE 0 END), 0) AS cash_sales,
             COALESCE(SUM(CASE WHEN LOWER(payment_method) IN ('qrph', 'gcash') THEN total ELSE 0 END), 0) AS digital_sales,
-            COALESCE(SUM(CASE WHEN LOWER(payment_method) IN ('cod', 'cash') THEN 1 ELSE 0 END), 0) AS cash_orders,
+            COALESCE(SUM(CASE WHEN user_id IS NULL AND LOWER(payment_method) IN ('cod', 'cash') THEN 1 ELSE 0 END), 0) AS cash_orders,
             COALESCE(SUM(CASE WHEN LOWER(payment_method) IN ('qrph', 'gcash') THEN 1 ELSE 0 END), 0) AS digital_orders,
             COALESCE(SUM(total), 0) AS total_sales,
             COUNT(*) AS total_orders
          FROM orders
-         WHERE shift_id = ? AND (status != 'cancelled' OR status IS NULL)"
+                 WHERE shift_id = ?
+                     AND user_id IS NULL
+                     AND (status != 'cancelled' OR status IS NULL)"
     );
     $stmt->bind_param('i', $shiftId);
     $stmt->execute();
     $sales = $stmt->get_result()->fetch_assoc() ?: [];
     $stmt->close();
 
+    $branchStmt = $connect->prepare('SELECT branch_id FROM shift_logs WHERE id = ? LIMIT 1');
+    $branchStmt->bind_param('i', $shiftId);
+    $branchStmt->execute();
+    $branchId = (int) (($branchStmt->get_result()->fetch_assoc()['branch_id'] ?? 0));
+    $branchStmt->close();
+
+    $salesDate = pos_sales_date();
+    $nextSalesDate = (new DateTimeImmutable($salesDate, new DateTimeZone(POS_BUSINESS_TIMEZONE)))
+        ->modify('+1 day')
+        ->format('Y-m-d');
+
+    $onlineStmt = $connect->prepare(
+        "SELECT
+            COALESCE(SUM(total), 0) AS online_sales,
+            COUNT(*) AS online_orders
+         FROM orders
+         WHERE branch_id = ?
+           AND user_id IS NOT NULL
+           AND status <> 'cancelled'
+           AND created_at >= CONCAT(?, ' 02:00:00')
+           AND created_at < CONCAT(?, ' 02:00:00')"
+    );
+    $onlineStmt->bind_param('iss', $branchId, $salesDate, $nextSalesDate);
+    $onlineStmt->execute();
+    $onlineSales = $onlineStmt->get_result()->fetch_assoc() ?: [];
+    $onlineStmt->close();
+
     return [
         'cash_sales' => (float) ($sales['cash_sales'] ?? 0),
         'digital_sales' => (float) ($sales['digital_sales'] ?? 0),
         'cash_orders' => (int) ($sales['cash_orders'] ?? 0),
         'digital_orders' => (int) ($sales['digital_orders'] ?? 0),
-        'total_sales' => (float) ($sales['total_sales'] ?? 0),
-        'total_orders' => (int) ($sales['total_orders'] ?? 0),
+        'online_sales' => (float) ($onlineSales['online_sales'] ?? 0),
+        'online_orders' => (int) ($onlineSales['online_orders'] ?? 0),
+        'total_sales' => (float) ($sales['total_sales'] ?? 0) + (float) ($onlineSales['online_sales'] ?? 0),
+        'total_orders' => (int) ($sales['total_orders'] ?? 0) + (int) ($onlineSales['online_orders'] ?? 0),
     ];
 }
 

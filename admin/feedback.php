@@ -103,7 +103,7 @@ if ($reportQuery) {
                             <article class="review-card problem-report-card">
                                 <div class="review-card-head"><div><strong><?= htmlspecialchars($report['customer_name']) ?></strong><small><?= htmlspecialchars($report['email']) ?></small></div><span class="report-issue-label"><?= htmlspecialchars($report['issue']) ?></span></div>
                                 <p><?= nl2br(htmlspecialchars($report['details'])) ?></p>
-                                <?php if ($reportPhotos): ?><div class="report-photo-list"><?php foreach ($reportPhotos as $photo): ?><a href="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" target="_blank" rel="noopener"><img src="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" alt="Customer report attachment"></a><?php endforeach; ?></div><?php endif; ?>
+                                <?php if ($reportPhotos): ?><div class="report-photo-list"><?php foreach ($reportPhotos as $photo): ?><button type="button" class="report-photo-button" data-photo="../<?= htmlspecialchars(ltrim($photo, '/')) ?>"><img src="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" alt="Customer report attachment"></button><?php endforeach; ?></div><?php endif; ?>
                                 <footer>Order #<?= (int)$report['order_id'] ?> · <?= htmlspecialchars(date('M d, Y g:i A', strtotime($report['created_at']))) ?></footer>
                             </article>
                         <?php endforeach; ?>
@@ -129,6 +129,23 @@ if ($reportQuery) {
             </section>
         </main>
     </div>
+    <div class="report-photo-modal" id="reportPhotoModal" hidden>
+        <button type="button" class="report-photo-modal-close" id="reportPhotoModalClose" aria-label="Close attachment preview">&times;</button>
+        <img id="reportPhotoModalImage" alt="Customer report attachment preview">
+    </div>
     <script src="admin-js/admin-responsive.js"></script>
+    <script>
+        const reportPhotoModal = document.getElementById('reportPhotoModal');
+        const reportPhotoModalImage = document.getElementById('reportPhotoModalImage');
+        const closeReportPhotoModal = () => { reportPhotoModal.hidden = true; reportPhotoModalImage.removeAttribute('src'); };
+        document.querySelectorAll('.report-photo-button').forEach(button => {
+            button.addEventListener('click', () => {
+                reportPhotoModalImage.src = button.dataset.photo;
+                reportPhotoModal.hidden = false;
+            });
+        });
+        document.getElementById('reportPhotoModalClose').addEventListener('click', closeReportPhotoModal);
+        reportPhotoModal.addEventListener('click', event => { if (event.target === reportPhotoModal) closeReportPhotoModal(); });
+    </script>
 </body>
 </html>

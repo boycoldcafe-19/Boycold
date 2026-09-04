@@ -60,7 +60,12 @@ h1, h2, p { margin: 0; }
 .problem-reports-section { margin-top: 24px; }
 .report-issue-label { color: var(--maroon); font-weight: 700; }
 .report-photo-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.report-photo-list img { width: 90px; height: 90px; border-radius: 8px; object-fit: cover; }
+.report-photo-button { padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.report-photo-list img { display: block; width: 90px; height: 90px; border-radius: 8px; object-fit: cover; }
+.report-photo-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 30px; background: rgba(0, 0, 0, .82); }
+.report-photo-modal[hidden] { display: none; }
+.report-photo-modal img { max-width: min(90vw, 1000px); max-height: 88vh; object-fit: contain; border-radius: 8px; background: #fff; }
+.report-photo-modal-close { position: absolute; top: 20px; right: 28px; border: 0; background: transparent; color: #fff; font-size: 36px; cursor: pointer; }
 .empty-feedback { padding: 54px 20px; text-align: center; color: var(--muted); }
 .empty-feedback i { margin-bottom: 12px; font-size: 36px; color: var(--maroon); }
 .empty-feedback p { font-size: 18px; color: var(--ink); }

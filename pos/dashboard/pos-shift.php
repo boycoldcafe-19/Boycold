@@ -154,6 +154,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $qrphSales = $sales['digital_sales'];
       $cashOrders = $sales['cash_orders'];
       $qrphOrders = $sales['digital_orders'];
+      $onlineSales = $sales['online_sales'];
+      $onlineOrders = $sales['online_orders'];
       $totalSales = $sales['total_sales'];
       $totalOrders = $sales['total_orders'];
 
@@ -170,6 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'qrph_sales' => $qrphSales,
           'cash_orders' => $cashOrders,
           'qrph_orders' => $qrphOrders,
+          'online_sales' => $onlineSales,
+          'online_orders' => $onlineOrders,
           'total_sales' => $totalSales,
           'total_orders' => $totalOrders
         ];
@@ -192,6 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'qrph_sales' => $sales['digital_sales'],
         'cash_orders' => $sales['cash_orders'],
         'qrph_orders' => $sales['digital_orders'],
+        'online_sales' => $sales['online_sales'],
+        'online_orders' => $sales['online_orders'],
         'total_sales' => $sales['total_sales'],
         'total_orders' => $sales['total_orders']
       ];
@@ -495,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="row-divider"></div>
 
               <div class="row">
-                <span class="row-label">Cash in drawer</span>
+                <span class="row-label">Expected Cash in Drawer</span>
                 <span class="row-value" id="cfCashInDrawer">₱0.00</span>
               </div>
 
@@ -519,7 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <p class="hint">Overview of your sales for this shift.</p>
 
               <div class="row">
-                <span class="row-label">Cash Sales</span>
+                <span class="row-label">Walk-in Cash Sales</span>
                 <span>
                   <span class="row-value" id="ssCashSales">₱0.00</span>
                   <span class="row-sub" id="ssCashOrders">0 Orders</span>
@@ -531,6 +537,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span>
                   <span class="row-value" id="ssDigitalSales">₱0.00</span>
                   <span class="row-sub blue" id="ssDigitalOrders">0 Orders</span>
+                </span>
+              </div>
+
+              <div class="row">
+                <span class="row-label">Online Sales</span>
+                <span>
+                  <span class="row-value" id="ssOnlineSales">₱0.00</span>
+                  <span class="row-sub" id="ssOnlineOrders">0 Orders</span>
                 </span>
               </div>
 
@@ -917,6 +931,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const ssCashOrders = document.getElementById('ssCashOrders');
       const ssDigitalSales = document.getElementById('ssDigitalSales');
       const ssDigitalOrders = document.getElementById('ssDigitalOrders');
+      const ssOnlineSales = document.getElementById('ssOnlineSales');
+      const ssOnlineOrders = document.getElementById('ssOnlineOrders');
       const ssTotalSales = document.getElementById('ssTotalSales');
       const ssTotalOrders = document.getElementById('ssTotalOrders');
 
@@ -930,7 +946,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cash: 0,
         cashOrders: 0,
         digital: 0,
-        digitalOrders: 0
+        digitalOrders: 0,
+        online: 0,
+        onlineOrders: 0
       };
 
       function showTab(tabName) {
@@ -973,6 +991,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update opening float display
         cfOpeningFloat.textContent = formatCashFloat(openingFloatAmount);
         cfLessFloat.textContent = '-' + formatCashFloat(openingFloatAmount);
+        countedCash.dataset.autoFilled = 'true';
 
         // Fetch live sales data from database
         fetchLiveSales();
@@ -993,7 +1012,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               liveSales.digital = data.sales.qrph_sales;
               liveSales.cashOrders = data.sales.cash_orders;
               liveSales.digitalOrders = data.sales.qrph_orders;
+              liveSales.online = data.sales.online_sales;
+              liveSales.onlineOrders = data.sales.online_orders;
               renderSalesSummary();
+              renderCashFloat();
             }
           })
           .catch(() => {
@@ -1026,6 +1048,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cfLessFloat.textContent = '-₱0,000.000';
         cfDifference.textContent = '₱0,000.000';
         countedCash.value = '';
+        countedCash.dataset.autoFilled = 'true';
       }
 
       function renderSalesSummary() {
@@ -1035,22 +1058,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ssDigitalSales.textContent = formatPeso(liveSales.digital);
         ssDigitalOrders.textContent = liveSales.digitalOrders + ' Orders';
 
-        const totalSales = liveSales.cash + liveSales.digital;
-        const totalOrders = liveSales.cashOrders + liveSales.digitalOrders;
+        ssOnlineSales.textContent = formatPeso(liveSales.online);
+        ssOnlineOrders.textContent = liveSales.onlineOrders + ' Orders';
+
+        const totalSales = liveSales.cash + liveSales.digital + liveSales.online;
+        const totalOrders = liveSales.cashOrders + liveSales.digitalOrders + liveSales.onlineOrders;
 
         ssTotalSales.textContent = formatPeso(totalSales);
         ssTotalOrders.textContent = totalOrders + ' Orders';
       }
 
       function renderCashFloat() {
-        const hasInput = countedCash.value !== '';
-        const cashInDrawer = hasInput ? parseCashFloat(countedCash.value) : 0;
+        const expectedCashSales = liveSales.cash;
 
         cfOpeningFloat.textContent = formatCashFloat(openingFloatAmount);
-        cfCashInDrawer.textContent = formatCashFloat(cashInDrawer);
         cfLessFloat.textContent = '-' + formatCashFloat(openingFloatAmount);
 
-        const cashDifference = cashInDrawer - openingFloatAmount;
+        if (countedCash.dataset.autoFilled !== 'false') {
+          countedCash.value = expectedCashSales.toLocaleString('en-US', {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+          });
+        }
+
+        const hasInput = countedCash.value !== '';
+        const actualCash = hasInput ? parseCashFloat(countedCash.value) : 0;
+        const expectedCash = openingFloatAmount + actualCash;
+
+        cfCashInDrawer.textContent = formatCashFloat(expectedCash);
+        const cashDifference = actualCash - expectedCashSales;
         cfDifference.textContent = formatCashFloat(cashDifference);
 
         if (!hasInput) {
@@ -1184,7 +1220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           const formData = new FormData();
           formData.append('action', 'close_shift');
-          formData.append('closing_cash', counted);
+          formData.append('closing_cash', counted + openingFloatAmount);
 
           fetch('pos-shift.php', {
               method: 'POST',
@@ -1211,6 +1247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const summary = `Shift closed successfully!\n\n` +
                   `Cash Sales: ₱${data.calculated.cash_sales.toFixed(2)} (${data.calculated.cash_orders} orders)\n` +
                   `QR Ph Sales: ₱${data.calculated.qrph_sales.toFixed(2)} (${data.calculated.qrph_orders} orders)\n` +
+                  `Online Sales: ₱${data.calculated.online_sales.toFixed(2)} (${data.calculated.online_orders} orders)\n` +
                   `Total Sales: ₱${data.calculated.total_sales.toFixed(2)} (${data.calculated.total_orders} orders)`;
                 alert(summary);
               } else {
@@ -1225,7 +1262,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
 
         // Counted cash input
-        countedCash.addEventListener('input', renderCashFloat);
+        countedCash.addEventListener('input', () => {
+          countedCash.dataset.autoFilled = 'false';
+          renderCashFloat();
+        });
         openingCash.addEventListener('blur', () => formatCashInput(openingCash));
         countedCash.addEventListener('blur', () => {
           formatCashInput(countedCash);

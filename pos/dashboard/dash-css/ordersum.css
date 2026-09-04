@@ -817,6 +817,13 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     color: #9E6741;
 }
 
+.payment-option img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .gcash-icon {
     color: #007DFE;
 }

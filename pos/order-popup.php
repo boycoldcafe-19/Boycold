@@ -345,9 +345,11 @@ $isQrphUnpaid = $order
 
             <!-- Actions -->
             <div class="actions">
-                <?php if ($order['status'] === 'pending' && $isQrphUnpaid): ?>
+                <?php if ($order['status'] === 'pending' && $isQrphUnpaid && $isStaff): ?>
                     <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Cancel Order</button>
                     <button type="button" class="btn btn-confirm" id="confirmPaymentBtn" disabled>Confirm Payment</button>
+                <?php elseif ($order['status'] === 'pending' && $isQrphUnpaid): ?>
+                    <button type="button" class="btn btn-confirm btn-single" onclick="goTop('<?= htmlspecialchars($trackUrl, ENT_QUOTES) ?>')">Waiting for Payment</button>
                 <?php elseif ($order['status'] === 'pending'): ?>
                     <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
                     <button type="button" class="btn btn-confirm" id="acceptBtn" onclick="acceptOrder(<?= $orderId ?>)">Confirm Order</button>

@@ -524,6 +524,21 @@ switch ($action) {
             break;
         }
 
+        if (!$isAdmin) {
+            $paymentStmt = $connect->prepare('SELECT payment_method, payment_status FROM orders WHERE id = ? LIMIT 1');
+            $paymentStmt->bind_param('i', $orderId);
+            $paymentStmt->execute();
+            $paymentInfo = $paymentStmt->get_result()->fetch_assoc();
+            $paymentStmt->close();
+
+            if ($paymentInfo
+                && strtolower((string) $paymentInfo['payment_method']) === 'qrph'
+                && strtolower((string) $paymentInfo['payment_status']) !== 'paid') {
+                echo json_encode(['success' => false, 'error' => 'Only POS staff can cancel a pending QRPh order.']);
+                break;
+            }
+        }
+
         if ($isAdmin) {
             $stmt = $connect->prepare(
                 "UPDATE orders

@@ -112,6 +112,23 @@ $tax         = max(0, (float) ($body['tax']          ?? 0));
 $branchId    = isset($body['branch_id']) ? (int) $body['branch_id'] : 1; // Use selected branch, default to Baliuag
 $orderNotes  = trim($body['notes'] ?? '');
 
+$branchStatusStmt = $connect->prepare(
+    "SELECT b.id
+     FROM branches b
+     INNER JOIN shift_logs s ON s.branch_id = b.id AND s.status = 'open'
+     WHERE b.id = ? AND b.status = 'active'
+     LIMIT 1"
+);
+$branchStatusStmt->bind_param('i', $branchId);
+$branchStatusStmt->execute();
+$branchIsOpen = (bool) $branchStatusStmt->get_result()->fetch_assoc();
+$branchStatusStmt->close();
+
+if (!$branchIsOpen) {
+    echo json_encode(['success' => false, 'error' => 'Store is closed as of now. Please come back later.']);
+    exit;
+}
+
 if ($address === '') {
     echo json_encode(['success' => false, 'error' => 'Address is required.']);
     exit;

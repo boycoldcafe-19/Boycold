@@ -143,6 +143,21 @@ function applyFavUIAll() {
     });
 }
 
+async function isStoreOpen(branchId = '') {
+    try {
+        const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+        const response = await fetch(`../api/store_status_api.php${query}`);
+        const data = await response.json();
+        if (data.success && !data.is_open) {
+            alert(data.message || 'Store is closed as of now. Please come back later.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Unable to check store status:', e);
+    }
+    return true;
+}
+
 // ── SINGLE delegated handler for all card interactions ────────
 document.addEventListener('click', async function(e) {
 
@@ -195,6 +210,8 @@ document.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
 
+        if (!await isStoreOpen()) return;
+
         const card  = cartBtn.closest('.product-card');
         const name  = card.dataset.productName || card.querySelector('.card-name')?.textContent.trim() || '';
         if (!name) return;
@@ -222,7 +239,10 @@ document.addEventListener('click', async function(e) {
     // ── ORDER ──────────────────────────────────────────────────
     const orderBtn = e.target.closest('.btn-order');
     if (orderBtn) {
+        e.preventDefault();
         e.stopPropagation();
+        if (!await isStoreOpen()) return;
+
         const card   = orderBtn.closest('.product-card');
         const name   = card.querySelector('.card-name')?.textContent.trim()  || '';
         const price  = card.querySelector('.card-price')?.textContent.replace('₱','').trim() || '';

@@ -33,6 +33,23 @@ foreach ($statements as $statement) {
     }
 }
 
+// Repair older installations where pos_cart was created without its id key.
+if ($success) {
+    $primaryKeyResult = $connect->query("SHOW INDEX FROM pos_cart WHERE Key_name = 'PRIMARY'");
+    $hasPrimaryKey = $primaryKeyResult && $primaryKeyResult->num_rows > 0;
+
+    try {
+        if ($hasPrimaryKey) {
+            $connect->query("ALTER TABLE pos_cart MODIFY COLUMN id int NOT NULL AUTO_INCREMENT");
+        } else {
+            $connect->query("ALTER TABLE pos_cart MODIFY COLUMN id int NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (id)");
+        }
+    } catch (Exception $e) {
+        $errors[] = "Exception repairing pos_cart.id: " . $e->getMessage();
+        $success = false;
+    }
+}
+
 if ($success) {
     echo "<h2>Migration completed successfully!</h2>";
     echo "<p>The following tables were created/updated:</p>";

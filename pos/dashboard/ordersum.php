@@ -92,6 +92,12 @@ if ($shiftResult) {
     <title>BoyCold - Order</title>
 </head>
 <body>
+    <script>
+        document.body.classList.toggle(
+            "dark-theme",
+            (localStorage.getItem("boycold_theme") || "dark") === "dark"
+        );
+    </script>
 
     <div class="app-shell" id="appShell">
 
@@ -672,10 +678,14 @@ if ($shiftResult) {
                     body: JSON.stringify(item)
                 });
                 const data = await response.json();
-                return data.success;
+                if (!response.ok || !data.success) {
+                    console.error('Cart API rejected item:', response.status, data.error || data);
+                    return { success: false, error: data.error || `Request failed (${response.status})` };
+                }
+                return { success: true };
             } catch (e) {
                 console.error('Failed to save cart item:', e);
-                return false;
+                return { success: false, error: 'Unable to reach the cart API.' };
             }
         }
 
@@ -813,7 +823,7 @@ if ($shiftResult) {
             }
 
             const success = await saveCartItem(cartItem);
-            if (success) {
+            if (success.success) {
                 renderSummary();
 
                 // Reset the form for the next customization
@@ -829,7 +839,7 @@ if ($shiftResult) {
                 selectedOrderType = 'Dine In';
                 updateTotal();
             } else {
-                alert('Failed to add item to cart. Please try again.');
+                alert(`Failed to add item to cart: ${success.error}`);
             }
         });
 
@@ -855,11 +865,11 @@ if ($shiftResult) {
             const addOrderButton = e.currentTarget;
             addOrderButton.disabled = true;
             const success = await saveCartItem(cartItem);
-            if (success) {
+            if (success.success) {
                 window.location.href = 'pos-menu.php';
             } else {
                 addOrderButton.disabled = false;
-                alert('Failed to add item to cart. Please try again.');
+                alert(`Failed to add item to cart: ${success.error}`);
             }
         });
 
