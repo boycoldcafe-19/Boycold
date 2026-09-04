@@ -1,3 +1,17 @@
+<?php
+require_once '../config/db_config.php';
+
+$reviews = [];
+$reviewQuery = $connect->query("SELECT r.rating, r.review, r.created_at,
+                                       CONCAT(u.firstname, ' ', u.lastname) AS customer_name
+                                FROM order_reviews r
+                                INNER JOIN users u ON u.id = r.user_id
+                                ORDER BY r.created_at DESC, r.id DESC
+                                LIMIT 12");
+if ($reviewQuery) {
+    while ($row = $reviewQuery->fetch_assoc()) $reviews[] = $row;
+}
+?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -69,6 +83,27 @@
             </div>
         </div>
         
+    </section>
+
+    <section class="customer-reviews" aria-labelledby="customerReviewsTitle">
+        <div class="customer-reviews-heading">
+            <h2 id="customerReviewsTitle">What Our Customers Say</h2>
+            <p>Feedback from completed orders</p>
+        </div>
+        <?php if ($reviews): ?>
+            <div class="customer-reviews-grid">
+                <?php foreach ($reviews as $review): ?>
+                    <article class="customer-review-card">
+                        <div class="customer-review-stars" aria-label="<?= (int)$review['rating'] ?> out of 5 stars"><?= str_repeat('★', (int)$review['rating']) . str_repeat('☆', 5 - (int)$review['rating']) ?></div>
+                        <p><?= $review['review'] !== '' ? nl2br(htmlspecialchars($review['review'])) : '<em>No written comment.</em>' ?></p>
+                        <strong><?= htmlspecialchars($review['customer_name']) ?></strong>
+                        <small><?= htmlspecialchars(date('M d, Y', strtotime($review['created_at']))) ?></small>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p class="customer-reviews-empty">Customer feedback will appear here after completed orders are reviewed.</p>
+        <?php endif; ?>
     </section>
     
     <footer>
