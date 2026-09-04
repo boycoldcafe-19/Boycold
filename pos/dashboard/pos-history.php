@@ -1,4 +1,11 @@
 <?php
+// Pin PHP's date/time functions to Manila local time. Without this, the
+// server's own default timezone (often UTC on shared hosting) is used,
+// which throws off both the displayed order times and the "Today" /
+// "Yesterday" grouping below whenever the server's day boundary doesn't
+// line up with Manila's.
+date_default_timezone_set('Asia/Manila');
+
 require_once '../auth/guard.php';
 pos_start_session();
 require_once '../config/db_config.php';
@@ -110,8 +117,12 @@ $paymentLabels = [
 ];
 
 function orderhis_format_group_label(string $dateStr): string {
-    $orderDate = new DateTime($dateStr);
-    $today = new DateTime('today');
+    // Explicitly pin both dates to Manila so "Today" / "Yesterday" always
+    // matches the Philippine calendar day, regardless of the server's
+    // default PHP timezone.
+    $manila = new DateTimeZone('Asia/Manila');
+    $orderDate = new DateTime($dateStr, $manila);
+    $today = new DateTime('today', $manila);
     $yesterday = (clone $today)->modify('-1 day');
 
     if ($orderDate->format('Y-m-d') === $today->format('Y-m-d')) {
@@ -417,7 +428,9 @@ function orderhis_format_group_label(string $dateStr): string {
                                 $sourceDot   = $isOnline ? 'online' : 'physical';
                                 $prefix      = $isOnline ? 'ONL' : 'POS';
 
-                                $createdAt   = new DateTime($order['created_at']);
+                                // Stored as a naive "Y-m-d H:i:s" string already in Manila
+                                // wall-clock time — pin the timezone explicitly here too.
+                                $createdAt   = new DateTime($order['created_at'], new DateTimeZone('Asia/Manila'));
                                 $orderNo     = sprintf('%s-%s-%s-%05d', $prefix, $typeCode, $createdAt->format('Y'), (int)$order['id']);
 
                                 $payment      = $order['payment_method'] ?: 'cod';

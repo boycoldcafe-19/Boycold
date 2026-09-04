@@ -1,4 +1,10 @@
 <?php
+// Pin PHP's date/time functions to Manila local time. Without this, the
+// server's own default timezone (often UTC on shared hosting) is used,
+// which makes order timestamps below display several hours off from the
+// real Philippine time.
+date_default_timezone_set('Asia/Manila');
+
 require_once '../auth/guard.php';
 pos_start_session();
 require_once '../config/db_config.php';
@@ -382,7 +388,11 @@ if ($branchId > 0) {
                                     <?php
                                         $type       = $order['order_type'] ?: 'delivery';
                                         $typeCode   = $typeCodes[$type] ?? 'GEN';
-                                        $createdAt  = new DateTime($order['created_at']);
+                                        // created_at is stored as a naive "Y-m-d H:i:s" string
+                                        // already in Manila wall-clock time — pin the timezone
+                                        // explicitly so this is correct no matter what the
+                                        // server's default PHP timezone is set to.
+                                        $createdAt  = new DateTime($order['created_at'], new DateTimeZone('Asia/Manila'));
                                         $orderNo    = sprintf('ONL-%s-%s-%05d', $typeCode, $createdAt->format('Y'), (int)$order['id']);
 
                                         $statusFilter = posonline_status_filter($order['status']);

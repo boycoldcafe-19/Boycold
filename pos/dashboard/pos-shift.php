@@ -1,4 +1,9 @@
 <?php
+// Pin PHP's date/time functions to Manila local time. Without this, the
+// server's own default timezone (often UTC on shared hosting) is used,
+// which throws off the shift open/close timestamps below.
+date_default_timezone_set('Asia/Manila');
+
 require_once '../auth/guard.php';
 pos_start_session();
 require_once '../config/db_config.php';
@@ -642,9 +647,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'shiftId'      => (int) $currentShift['id'],
                           ] : null) ?>;
 
+    // PHP sends plain "Y-m-d H:i:s" strings that are already Manila
+    // wall-clock time. If we hand that straight to `new Date(...)`, the
+    // browser parses it using ITS OWN local timezone — so on any device
+    // not set to Asia/Manila the shift start time and duration end up
+    // hours off. Pinning the offset here makes the parsed instant correct
+    // no matter what timezone the POS terminal itself is set to.
+    function parseManilaDateTime(value) {
+      if (!value) return null;
+      const normalized = String(value).trim().replace(' ', 'T');
+      const parsed = new Date(/[+-]\d{2}:?\d{2}$|Z$/.test(normalized) ? normalized : normalized + '+08:00');
+      return isNaN(parsed.getTime()) ? new Date(value) : parsed;
+    }
+
     let shiftState = SERVER_SHIFT ? {
       isOpen: true,
-      openedAt: new Date(SERVER_SHIFT.openedAt),
+      openedAt: parseManilaDateTime(SERVER_SHIFT.openedAt),
       openingFloat: SERVER_SHIFT.openingFloat,
       shiftId: SERVER_SHIFT.shiftId
     } : null; // { isOpen, openedAt, openingFloat, shiftId }
@@ -684,17 +702,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       function tick() {
         const now = new Date();
 
+        // `now` is the correct real-world instant regardless of device
+        // settings. Forcing timeZone: 'Asia/Manila' here is what makes the
+        // *displayed* clock always show Philippine time, even on a POS
+        // terminal whose OS clock is set to a different timezone.
         const dateText = now.toLocaleDateString('en-US', {
+          timeZone: 'Asia/Manila',
           month: 'long',
           day: '2-digit',
           year: 'numeric'
         });
 
         const dayText = now.toLocaleDateString('en-US', {
+          timeZone: 'Asia/Manila',
           weekday: 'long'
         });
 
         const timeText = now.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Manila',
           hour: 'numeric',
           minute: '2-digit',
           hour12: true
@@ -936,6 +961,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Update shift start time
         statShiftStart.textContent = openedAt.toLocaleString('en-US', {
+          timeZone: 'Asia/Manila',
           month: 'long',
           day: '2-digit',
           year: 'numeric',
@@ -1056,12 +1082,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       function formatDateTime(date) {
         const dateText = date.toLocaleDateString('en-US', {
+          timeZone: 'Asia/Manila',
           month: 'long',
           day: '2-digit',
           year: 'numeric'
         });
 
         const timeText = date.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Manila',
           hour: 'numeric',
           minute: '2-digit',
           hour12: true
@@ -1126,7 +1154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               shiftState = {
                 isOpen: true,
                 shiftId: data.shift_id,
-                openedAt: new Date(data.opened_at),
+                openedAt: parseManilaDateTime(data.opened_at),
                 openingFloat: data.opening_cash
               };
               updateUIForOpenShift();

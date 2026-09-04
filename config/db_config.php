@@ -49,7 +49,15 @@ try {
     }
     
     $connect->set_charset('utf8mb4');
-    
+
+    // Pin MySQL's own session timezone to Manila (fixed +08:00, no DST).
+    // Without this, NOW()/CURRENT_TIMESTAMP and every `timestamp` column
+    // default to the DB server's own timezone (commonly UTC on shared
+    // hosting), which is what was making shift/order timestamps come out
+    // hours off across the POS pages even though the PHP-side business
+    // logic (pos_business_now(), pos_sales_date()) was already correct.
+    $connect->query("SET time_zone = '+08:00'");
+
     // Test connection using query instead of deprecated ping()
     $testQuery = $connect->query("SELECT 1");
     if (!$testQuery) {
