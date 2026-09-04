@@ -61,7 +61,7 @@ $stmt->close();
 // 2. FORECAST SALES (next N days)
 // Uses: Linear Regression + Seasonal Adjustment
 // ==========================================
-function computeForecast($historicalSales, $forecastDays) {
+function computeForecast(array $historicalSales, int $forecastDays): array {
     $n = count($historicalSales);
     if ($n < 3) {
         // Not enough data, return simple average
@@ -135,7 +135,7 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 // ==========================================
 $demandQuery = "SELECT 
     oi.product_name,
-    SUM(oi.quantity) as total_quantity,
+    COUNT(DISTINCT oi.order_id) as total_orders,
     SUM(oi.line_total) as total_revenue,
     COUNT(DISTINCT DATE(o.created_at)) as days_sold
 FROM order_items oi
@@ -144,7 +144,7 @@ WHERE o.status NOT IN ('cancelled')
     AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
     $branchCondition
 GROUP BY oi.product_name
-ORDER BY total_quantity DESC
+ORDER BY total_orders DESC
 LIMIT 10";
 
 $stmt = $connect->prepare($demandQuery);
@@ -157,13 +157,13 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $demandItems = [];
-$maxQuantity = 0;
+$maxOrders = 0;
 while ($row = $result->fetch_assoc()) {
-    $qty = intval($row['total_quantity']);
-    if ($qty > $maxQuantity) $maxQuantity = $qty;
+    $orders = intval($row['total_orders']);
+    if ($orders > $maxOrders) $maxOrders = $orders;
     $demandItems[] = [
         'product_name' => $row['product_name'],
-        'total_quantity' => $qty,
+        'total_orders' => $orders,
         'total_revenue' => floatval($row['total_revenue']),
         'days_sold' => intval($row['days_sold'])
     ];
@@ -182,8 +182,8 @@ if ($totalHistoricalSales > 0) {
 
 $demandForecast = [];
 foreach ($demandItems as $item) {
-    $avgDailyQty = $item['days_sold'] > 0 ? $item['total_quantity'] / min($item['days_sold'], $historicalDays) : 0;
-    $forecastedQty = round($avgDailyQty * $forecastDays * $salesGrowthFactor);
+    $avgDailyOrders = $item['days_sold'] > 0 ? $item['total_orders'] / min($item['days_sold'], $historicalDays) : 0;
+    $forecastedOrders = round($avgDailyOrders * $forecastDays * $salesGrowthFactor);
     
     // Determine trend
     $trend = 'stable';
@@ -223,11 +223,12 @@ foreach ($demandItems as $item) {
         }
     }
     
-    $item['forecasted_quantity'] = $forecastedQty;
+    $item['forecasted_orders'] = $forecastedOrders;
+    $item['forecasted_quantity'] = $forecastedOrders;
     $item['trend'] = $trend;
     $item['trend_icon'] = $trendIcon;
     $item['trend_percent'] = $trendPercent;
-    $item['progress'] = $maxQuantity > 0 ? round(($qty / $maxQuantity) * 100) : 0;
+    $item['progress'] = $maxOrders > 0 ? round(($item['total_orders'] / $maxOrders) * 100) : 0;
     
     $demandForecast[] = $item;
 }
@@ -471,7 +472,7 @@ $predictedSales14 = round(array_sum($forecastedSales), 2);
 
 // Highest demand item
 $highestDemandItem = !empty($demandForecast) ? $demandForecast[0]['product_name'] : 'N/A';
-$highestDemandQty = !empty($demandForecast) ? $demandForecast[0]['forecasted_quantity'] : 0;
+$highestDemandQty = !empty($demandForecast) ? $demandForecast[0]['forecasted_orders'] : 0;
 
 // ==========================================
 // BUILD RESPONSE

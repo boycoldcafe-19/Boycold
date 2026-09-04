@@ -57,7 +57,7 @@ $_SESSION['user_email'] = $user['email'];
                 <li><a href="/store/store.php">STORES</a></li>
                 <li class="sidebar-nav-only-not"><a href="/User/status.php">ORDERS</a></li>
                 <li class="sidebar-nav-only"><a href="/User/favorites.php">FAVORITES</a></li>
-                <li><a href="/User/order/cart.php" class="cart-link">
+                <li><a href="/User/cart.php" class="cart-link">
                         <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i> CART
                     </a></li>
             </ul>
@@ -90,7 +90,7 @@ $_SESSION['user_email'] = $user['email'];
             </div>
             <ul class="nav-links">
                 <li><a href="/User/home.php">HOME</a></li>
-                <li><a href="/User/Menu.php">MENU</a></li>
+                <li><a href="/User/menu.php">MENU</a></li>
                 <li><a href="/User/status.php">ORDERS</a></li>
                 <li><a href="/User/favorites.php">FAVORITES</a></li>
             </ul>

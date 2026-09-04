@@ -273,6 +273,40 @@ try {
         }
     }
 
+    if ($trackIngredients) {
+        $deductStmt = $connect->prepare(
+            "UPDATE ingredients
+             SET stock = GREATEST(0, stock - ?)
+             WHERE id = ?"
+        );
+        $movementStmt = $connect->prepare(
+            "INSERT INTO ingredient_stock_movements
+                (ingredient_id, movement_type, quantity, resulting_stock, created_by)
+             SELECT id, 'deduction', ?, stock, ?
+             FROM ingredients
+             WHERE id = ?"
+        );
+        $ingredientTotals = [];
+        $oiLookup = $connect->prepare('SELECT ingredient_id, amount FROM order_ingredients WHERE order_id = ?');
+        $oiLookup->bind_param('i', $orderId);
+        $oiLookup->execute();
+        $oiResult = $oiLookup->get_result();
+        while ($ingredientRow = $oiResult->fetch_assoc()) {
+            $ingredientId = (int) $ingredientRow['ingredient_id'];
+            $ingredientTotals[$ingredientId] = ($ingredientTotals[$ingredientId] ?? 0) + (float) $ingredientRow['amount'];
+        }
+        $oiLookup->close();
+
+        foreach ($ingredientTotals as $ingredientId => $amountUsed) {
+            $deductStmt->bind_param('di', $amountUsed, $ingredientId);
+            $deductStmt->execute();
+            $movementStmt->bind_param('dii', $amountUsed, $cashierId, $ingredientId);
+            $movementStmt->execute();
+        }
+        $deductStmt->close();
+        $movementStmt->close();
+    }
+
     $createdAt = date('Y-m-d H:i:s');
     $createdStmt = $connect->prepare('SELECT created_at FROM orders WHERE id = ?');
     $createdStmt->bind_param('i', $orderId);

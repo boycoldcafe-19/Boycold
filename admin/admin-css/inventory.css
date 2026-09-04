@@ -524,9 +524,22 @@ button {
 .inventory-tabs {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    gap: 16px;
     border-bottom: 2px solid var(--border);
-    overflow: hidden;
+    overflow: visible;
+}
+
+.inventory-tab-group,
+.inventory-tab-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inventory-tab-actions {
+    margin-left: auto;
+    gap: 10px;
 }
 
 .inventory-tab {
@@ -547,6 +560,11 @@ button {
 .inventory-tab.active {
     color: var(--primary);
     border-bottom-color: #59392e;
+}
+
+.inventory-add-stock-btn {
+    padding: 8px 14px;
+    font-size: 14px;
 }
 
 .inventory-panel {
@@ -1033,6 +1051,11 @@ button {
     }
 
     .add-ingredient-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stock-in-actions {
         width: 100%;
         justify-content: center;
     }

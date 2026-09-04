@@ -1,4 +1,4 @@
-<?php require_once __DIR__ . '/admin_guard.php'; ?>
+﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -38,9 +38,10 @@
                             <a href="dashboard.php">
                                 <span class="nav-icon1"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
-                                        <path
+                                        <!-- <path
                                             d="M0.5 5C0.367392 5 0.240215 4.94732 0.146447 4.85355C0.0526785 4.75979 0 4.63261 0 4.5V0.5C0 0.367392 0.0526785 0.240215 0.146447 0.146447C0.240215 0.0526785 0.367392 0 0.5 0H4.5C4.63261 0 4.75979 0.0526785 4.85355 0.146447C4.94732 0.240215 5 0.367392 5 0.5V4.5C5 4.63261 4.94732 4.75979 4.85355 4.85355C4.75979 4.94732 4.63261 5 4.5 5H0.5ZM7.5 5C7.36739 5 7.24021 4.94732 7.14645 4.85355C7.05268 4.75979 7 4.63261 7 4.5V0.5C7 0.367392 7.05268 0.240215 7.14645 0.146447C7.24021 0.0526785 7.36739 0 7.5 0H11.5C11.6326 0 11.7598 0.0526785 11.8536 0.146447C11.9473 0.240215 12 0.367392 12 0.5V4.5C12 4.63261 11.9473 4.75979 11.8536 4.85355C11.7598 4.94732 11.6326 5 11.5 5H7.5ZM0.5 12C0.367392 12 0.240215 11.9473 0.146447 11.8536C0.0526785 11.7598 0 11.6326 0 11.5V7.5C0 7.36739 0.0526785 7.24021 0.146447 7.14645C0.240215 7.05268 0.367392 7 0.5 7H4.5C4.63261 7 4.75979 7.05268 4.85355 7.14645C4.94732 7.24021 5 7.36739 5 7.5V11.5C5 11.6326 4.94732 11.7598 4.85355 11.8536C4.75979 11.9473 4.63261 12 4.5 12H0.5ZM7.5 12C7.36739 12 7.24021 11.9473 7.14645 11.8536C7.05268 11.7598 7 11.6326 7 11.5V7.5C7 7.36739 7.05268 7.24021 7.14645 7.14645C7.24021 7.05268 7.36739 7 7.5 7H11.5C11.6326 7 11.7598 7.05268 11.8536 7.14645C11.9473 7.24021 12 7.36739 12 7.5V11.5C12 11.6326 11.7598 11.8536 11.8536C11.7598 11.9473 11.6326 12 11.5 12H7.5Z"
-                                            fill="currentColor" />
+                                            fill="currentColor" /> -->
+                                        <path d="M0 0h4v4H0zM8 0h4v4H8zM0 8h4v4H0zM8 8h4v4H8z" fill="currentColor" />
                                     </svg></span>
                                 <span class="nav-label">Dashboard</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
@@ -181,181 +182,17 @@
         <div class="main-panel">
 
             <div class="top-header">
-
-                <div class="notif-wrap" style="position: relative;">
-                    <button class="header-action" id="notifBtn" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                        <span>Notification</span>
-                        <span class="header-badge" id="notifBadge">2</span>
-                    </button>
-
-                    <div class="notif-dropdown" id="notifDropdown">
-                        <div class="notif-header">
-                            <span class="notif-title">Notifications</span>
-                            <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
-                        </div>
-
-                        <div class="notif-list" id="notifList">
-                            <div class="notif-item notif-error unread">
-                                <div class="notif-icon notif-icon-error"><i class="fa-solid fa-xmark"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Failed to Update Item</p>
-                                    <p class="notif-item-sub">Failed to update item “Vanilla Syrup”</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item notif-success">
-                                <div class="notif-icon notif-icon-success"><i class="fa-solid fa-bag-shopping"></i>
-                                </div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New Order Completed</p>
-                                    <p class="notif-item-sub">Order #0003 has been completed successfully</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item notif-error unread">
-                                <div class="notif-icon notif-icon-error"><i class="fa-solid fa-xmark"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Failed to Update Item</p>
-                                    <p class="notif-item-sub">Failed to update item “Vanilla Syrup”</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item notif-success">
-                                <div class="notif-icon notif-icon-success"><i class="fa-solid fa-bag-shopping"></i>
-                                </div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New Order Completed</p>
-                                    <p class="notif-item-sub">Order #0003 has been completed successfully</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="notification.html" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="header-divider"></div>
-
-                <div class="alert-wrap">
-                    <button class="header-action" id="alertsBtn" aria-label="Alerts">
-
-                        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M18.8402 4.45947L31.0718 25.6443C31.2583 25.9673 31.3564 26.3338 31.3564 26.7068C31.3565 27.0798 31.2583 27.4462 31.0718 27.7693C30.8853 28.0923 30.617 28.3606 30.294 28.5471C29.9709 28.7336 29.6045 28.8318 29.2315 28.8318H4.7685C4.39549 28.8318 4.02905 28.7336 3.70602 28.5471C3.38299 28.3606 3.11474 28.0923 2.92824 27.7693C2.74174 27.4462 2.64355 27.0798 2.64355 26.7068C2.64356 26.3338 2.74175 25.9673 2.92825 25.6443L15.1598 4.45947C15.9772 3.04281 18.0214 3.04281 18.8402 4.45947ZM17 6.93864L5.99533 25.9985H28.0047L17 6.93864ZM17 21.2498C17.3757 21.2498 17.7361 21.3991 18.0017 21.6647C18.2674 21.9304 18.4167 22.2907 18.4167 22.6665C18.4167 23.0422 18.2674 23.4025 18.0017 23.6682C17.7361 23.9339 17.3757 24.0831 17 24.0831C16.6243 24.0831 16.2639 23.9339 15.9983 23.6682C15.7326 23.4025 15.5833 22.6665 15.5833 22.6665C15.5833 22.2907 15.7326 21.9304 15.9983 21.6647C16.2639 21.3991 16.6243 21.2498 17 21.2498ZM17 11.3331C17.3757 11.3331 17.7361 11.4824 18.0017 11.7481C18.2674 12.0137 18.4167 12.3741 18.4167 12.7498V18.4165C18.4167 18.7922 18.2674 19.1525 18.0017 19.4182C17.7361 19.6839 17.3757 19.8331 17 19.8331C16.6243 19.8331 16.2639 19.6839 15.9983 19.4182C15.7326 19.1525 15.5833 18.7922 15.5833 18.4165V12.7498C15.5833 12.3741 15.7326 12.0137 15.9983 11.7481C16.2639 11.4824 16.6243 11.3331 17 11.3331Z"
-                                fill="black" fill-opacity="0.8" />
-                        </svg>
-                        <span>Alerts</span>
-                        <span class="header-badge">2</span>
-                    </button>
-
-                    <div class="alert-dropdown" id="alertsDropdown">
-                        <div class="notif-header">
-                            <span class="notif-title">Alerts</span>
-                            <a href="#" class="notif-mark-read" id="markAllAlertsRead">Mark all as read</a>
-                        </div>
-
-                        <div class="notif-list alert-list">
-                            <div class="notif-item alert-warning unread">
-                                <div class="notif-icon alert-icon-warning"><i class="fa-solid fa-exclamation"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Low Stock Alert</p>
-                                    <p class="notif-item-sub">Caramel Syrup is running low</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item alert-warning">
-                                <div class="notif-icon alert-icon-warning"><i class="fa-solid fa-exclamation"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Low Stock Alert</p>
-                                    <p class="notif-item-sub">Choco Drizzle is running low</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item alert-error unread">
-                                <div class="notif-icon alert-icon-error"><i class="fa-solid fa-xmark"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Item out of Stock</p>
-                                    <p class="notif-item-sub">Vanilla Syrup is now out of stock</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item alert-error">
-                                <div class="notif-icon alert-icon-error"><i class="fa-solid fa-xmark"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Item out of Stock</p>
-                                    <p class="notif-item-sub">Vanilla Syrup is now out of stock</p>
-                                    <span class="notif-relative-time">2 minutes ago</span>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="alerts.html" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="header-divider"></div>
-
-                <button class="profile-btn">
+                <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z"
-                                fill="black" />
+                            <path d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z" fill="black"/>
                         </svg>
                     </div>
                     <div class="profile-info">
-                        <span class="profile-name">Sta. Barbara Branch</span>
                         <span class="profile-role">Admin</span>
                     </div>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
                 </button>
             </div>
-
-            <!-- INGREDIENTS MAPPING CONTENT -->
             <div class="page-content">
 
                 <div class="page-header">
@@ -472,69 +309,7 @@
             backdrop.addEventListener("click", closeSidebar);
             mq.addEventListener("change", closeSidebar);
         })();
-        const alertsBtn = document.getElementById('alertsBtn');
-        const alertsDropdown = document.getElementById('alertsDropdown');
-        const notifBtn = document.getElementById('notifBtn');
-        const notifDropdown = document.getElementById('notifDropdown');
-        const profileBtn = document.getElementById('profileBtn');
-        const profileDropdown = document.getElementById('profileDropdown');
 
-        function closeHeaderDropdowns(except) {
-            if (notifDropdown && except !== notifDropdown) notifDropdown.classList.remove('open');
-            if (alertsDropdown && except !== alertsDropdown) alertsDropdown.classList.remove('open');
-            if (profileDropdown && except !== profileDropdown) profileDropdown.classList.remove('open');
-        }
-
-        if (notifBtn && notifDropdown) {
-            notifBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const shouldOpen = !notifDropdown.classList.contains('open');
-                closeHeaderDropdowns(notifDropdown);
-                if (shouldOpen) notifDropdown.classList.add('open');
-            });
-        }
-
-        if (alertsBtn && alertsDropdown) {
-            alertsBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const shouldOpen = !alertsDropdown.classList.contains('open');
-                closeHeaderDropdowns(alertsDropdown);
-                if (shouldOpen) alertsDropdown.classList.add('open');
-            });
-        }
-
-
-        window.addEventListener('click', function (e) {
-            if (!e.target.closest('.notif-wrap') &&
-                !e.target.closest('.alert-wrap') &&
-                !e.target.closest('.profile-wrap')) {
-                closeHeaderDropdowns(null);
-            }
-        });
-
-        const markAllRead = document.getElementById('markAllRead');
-        if (markAllRead) {
-            markAllRead.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelectorAll('#notifList .unread').forEach(item => {
-                    item.classList.remove('unread');
-                });
-                const badge = document.getElementById('notifBadge');
-                if (badge) badge.textContent = '0';
-            });
-        }
-
-        const markAllAlertsRead = document.getElementById('markAllAlertsRead');
-        if (markAllAlertsRead) {
-            markAllAlertsRead.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelectorAll('#alertsDropdown .unread').forEach(item => {
-                    item.classList.remove('unread');
-                });
-                const badge = document.querySelector('#alertsBtn .header-badge');
-                if (badge) badge.textContent = '0';
-            });
-        }
         const logoutBtn = document.getElementById("logoutBtn");
         const logoutModal = document.getElementById("logoutModal");
         const logoutNo = document.getElementById("logoutNo");
@@ -655,7 +430,7 @@
             { id: "biscoff-frappe", name: "Biscoff Frappe", price: 139, category: "Frappe Series", img: "Biscoff frappe.png" },
             { id: "nuttela-hazelnut-frappe", name: "Nuttela Hazelnut Frappe", price: 149, category: "Frappe Series", img: "Nuttela Hazelnut Frappe.png" },
 
-            // Snacks — waffles
+            // Snacks â€” waffles
             { id: "waffle-chocolate", name: "Lolly Waffle Chocolate", price: 69, category: "Snacks", img: "Chocolate waffle.png" },
             { id: "waffle-ube", name: "Lolly Waffle Ube", price: 65, category: "Snacks", img: "ube waffle.png" },
             { id: "waffle-matcha", name: "Lolly Waffle Matcha", price: 69, category: "Snacks", img: "Matcha waffle.png" },
@@ -664,7 +439,7 @@
             { id: "waffle-tiramisu", name: "Lolly Waffle Tiramisu", price: 75, category: "Snacks", img: "tiramisu waffle.png" },
             { id: "waffle-biscoff", name: "Lolly Waffle Biscoff", price: 89, category: "Snacks", img: "Biscoff waffle.png" },
 
-            // Snacks — bites & mains
+            // Snacks â€” bites & mains
             { id: "french-fries", name: "French Fries", price: 69, category: "Snacks", img: "Fries.png" },
             { id: "chicken-poppers", name: "Chicken Poppers", price: 79, category: "Snacks", img: "Chicken Poppers.png" },
             { id: "beef-nachos", name: "Beef Natchos", price: 149, category: "Snacks", img: "Beef Natchos.png" },
@@ -698,13 +473,28 @@
                 : MENU_ITEMS[0].id;
         }
 
-        /* Master ingredient list — used to populate the "Add Ingredients" dropdown
+        async function loadIngredients() {
+            const response = await fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Ingredients could not be loaded');
+            }
+
+            INGREDIENT_LIBRARY = (result.ingredients || []).map((ingredient) => ({
+                name: ingredient.name,
+                unit: ingredient.unit,
+                cost: 0
+            }));
+            if (!INGREDIENT_LIBRARY.length) throw new Error('No ingredients found in the database');
+        }
+
+        /* Master ingredient list â€” used to populate the "Add Ingredients" dropdown
         with a known unit + cost per unit, so totals calculate automatically. */
-        const INGREDIENT_LIBRARY = [
+        let INGREDIENT_LIBRARY = [
             { name: "Espresso Shot", unit: "shot", cost: 6 },
-            { name: "Fresh Milk", unit: "ml", cost: 6 },
+            { name: "Fresh Milk", unit: "g", cost: 6 },
             { name: "Condensed Milk", unit: "ml", cost: 6 },
-            { name: "Chocolate Syrup", unit: "ml", cost: 6 },
+            { name: "Chocolate Syrup", unit: "g", cost: 6 },
             { name: "Whipped Cream", unit: "g", cost: 6 },
             { name: "Matcha Powder", unit: "g", cost: 8 },
             { name: "Vanilla Syrup", unit: "ml", cost: 5 },
@@ -778,12 +568,31 @@
                 .join("");
 
             list.querySelectorAll(".menu-item").forEach((btn) => {
-                btn.addEventListener("click", () => {
+                btn.addEventListener("click", async () => {
                     selectedItemId = btn.dataset.id;
                     renderMenuList(document.getElementById("menuSearch").value);
                     renderMapPanel();
+                    const item = MENU_ITEMS.find((menuItem) => menuItem.id === selectedItemId);
+                    if (item) await loadMappingForItem(item.id, item.name);
                 });
             });
+        }
+
+        async function loadMappingForItem(itemId, productName) {
+            const response = await fetch(`admin_data_api.php?action=mapping_get&product_name=${encodeURIComponent(productName)}`, { cache: 'no-store' });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Mapping could not be loaded');
+            }
+
+            mappingStore[itemId] = (result.mapping || []).map((row) => ({
+                ingredient: row.ingredient,
+                unit: row.unit,
+                qty: row.amount,
+                cost: 0,
+                total: 0
+            }));
+            renderMapPanel();
         }
 
         function ingredientOptionsHTML(selectedName) {
@@ -920,18 +729,29 @@
 
             document.getElementById("saveMappingBtn").addEventListener("click", () => {
                 mappingStore[itemId] = rows;
+
+                const incomplete = rows.filter(row => !(Number(row.qty) > 0));
+                if (incomplete.length) {
+                    alert(`Please enter a quantity for: ${incomplete.map(row => row.ingredient).join(", ")}. Rows without a quantity are not saved.`);
+                    return;
+                }
+
                 const btn = document.getElementById("saveMappingBtn");
                 fetch('admin_data_api.php?action=mapping_save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ product_name: productName, rows: rows.map(row => ({ ingredient: row.ingredient, amount: row.qty })) })
-                }).then(response => response.json()).then(result => {
+                }).then(async response => {
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
+                    return result;
+                }).then(result => {
                     if (!result.success) throw new Error(result.error || 'Mapping could not be saved');
                     const original = btn.textContent;
                     btn.textContent = "Saved";
                     btn.disabled = true;
                     setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
-                }).catch(error => alert(error.message));
+                }).catch(error => alert(error.message || 'Request could not be completed'));
             });
         }
 
@@ -948,6 +768,7 @@
         document.addEventListener("DOMContentLoaded", async () => {
             try {
                 await loadProducts();
+                await loadIngredients();
             } catch (error) {
                 console.error('Unable to load products from the database:', error);
                 MENU_ITEMS = FALLBACK_MENU_ITEMS;
@@ -957,20 +778,10 @@
             renderMapPanel();
 
             const selectedMenuItem = MENU_ITEMS.find(item => item.id === selectedItemId);
-            fetch(`admin_data_api.php?action=mapping_get&product_name=${encodeURIComponent(selectedMenuItem.name)}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success && result.mapping.length) {
-                        mappingStore[selectedItemId] = result.mapping.map(row => ({
-                            ingredient: row.ingredient,
-                            unit: row.unit,
-                            qty: row.amount,
-                            cost: 0,
-                            total: 0
-                        }));
-                        renderMapPanel();
-                    }
-                });
+            if (selectedMenuItem) {
+                loadMappingForItem(selectedMenuItem.id, selectedMenuItem.name)
+                    .catch((error) => console.error('Unable to load selected product mapping:', error));
+            }
 
             document.getElementById("menuSearch").addEventListener("input", (e) => {
                 renderMenuList(e.target.value);

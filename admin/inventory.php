@@ -1,4 +1,4 @@
-<?php require_once __DIR__ . '/admin_guard.php'; ?>
+﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -139,78 +139,17 @@
         <div class="main-panel">
 
             <div class="top-header">
-
-                <div class="notif-wrap">
-                    <button class="header-action" id="notifBtn" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                        <span>Notification</span>
-                        <span class="header-badge" id="notifBadge">2</span>
-                    </button>
-
-                    <div class="notif-dropdown" id="notifDropdown">
-                        <div class="notif-header">
-                            <span class="notif-title">Notifications</span>
-                            <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
-                        </div>
-
-                        <div class="notif-list" id="notifList">
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New online order received</p>
-                                    <p class="notif-item-sub">Order #0001</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Payment Confirmed</p>
-                                    <p class="notif-item-sub">Order #0003</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="notification.html" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="header-divider"></div>
-
-                <button class="header-action" id="alertsBtn" aria-label="Alerts">
-                    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18.8402 4.45947L31.0718 25.6443C31.2583 25.9673 31.3564 26.3338 31.3564 26.7068C31.3565 27.0798 31.2583 27.4462 31.0718 27.7693C30.8853 28.0923 30.617 28.3606 30.294 28.5471C29.9709 28.7336 29.6045 28.8318 29.2315 28.8318H4.7685C4.39549 28.8318 4.02905 28.7336 3.70602 28.5471C3.38299 28.3606 3.11474 28.0923 2.92824 27.7693C2.74174 27.4462 2.64355 27.0798 2.64355 26.7068C2.64356 26.3338 2.74175 25.9673 2.92825 25.6443L15.1598 4.45947C15.9772 3.04281 18.0214 3.04281 18.8402 4.45947ZM17 6.93864L5.99533 25.9985H28.0047L17 6.93864ZM17 21.2498C17.3757 21.2498 17.7361 21.3991 18.0017 21.6647C18.2674 21.9304 18.4167 22.2907 18.4167 22.6665C18.4167 23.0422 18.2674 23.4025 18.0017 23.6682C17.7361 23.9339 17.3757 24.0831 17 24.0831C16.6243 24.0831 16.2639 23.9339 15.9983 23.6682C15.7326 23.4025 15.5833 23.0422 15.5833 22.6665C15.5833 22.2907 15.7326 21.9304 15.9983 21.6647C16.2639 21.3991 16.6243 21.2498 17 21.2498ZM17 11.3331C17.3757 11.3331 17.7361 11.4824 18.0017 11.7481C18.2674 12.0137 18.4167 12.3741 18.4167 12.7498V18.4165C18.4167 18.7922 18.2674 19.1525 18.0017 19.4182C17.7361 19.6839 17.3757 19.8331 17 19.8331C16.6243 19.8331 16.2639 19.6839 15.9983 19.4182C15.7326 19.1525 15.5833 18.7922 15.5833 18.4165V12.7498C15.5833 12.3741 15.7326 12.0137 15.9983 11.7481C16.2639 11.4824 16.6243 11.3331 17 11.3331Z" fill="black" fill-opacity="0.8"/>
-                    </svg>
-                    <span>Alerts</span>
-                    <span class="header-badge">2</span>
-                </button>
-
-                <div class="header-divider"></div>
-
-                <button class="profile-btn">
+                <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z" fill="black"/>
                         </svg>
                     </div>
                     <div class="profile-info">
-                        <span class="profile-name">Sta. Barbara Branch</span>
                         <span class="profile-role">Admin</span>
                     </div>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
                 </button>
             </div>
-
             <div class="inventory-content">
 
                 <div class="inventory-header">
@@ -218,16 +157,25 @@
                         <h1 class="inventory-title">Ingredients</h1>
                         <p class="inventory-subtitle">Manage all ingredients used in the cafe.</p>
                     </div>
-                    <button class="add-ingredient-btn" id="addIngredientBtn">
-                        <i class="fa-solid fa-plus"></i>
-                        Add Ingredients
-                    </button>
                 </div>
 
                 <div class="inventory-tabs" role="tablist">
-                    <button type="button" class="inventory-tab active" data-tab="ingredients" role="tab" aria-selected="true">Ingredients</button>
-                    <button type="button" class="inventory-tab" data-tab="stock-in" role="tab" aria-selected="false">Stock In</button>
-                    <button type="button" class="inventory-tab" data-tab="stock-history" role="tab" aria-selected="false">Stock History</button>
+                    <div class="inventory-tab-group">
+                        <button type="button" class="inventory-tab active" data-tab="ingredients" role="tab" aria-selected="true">Ingredients</button>
+                        <button type="button" class="inventory-tab" data-tab="stock-in" role="tab" aria-selected="false">Stock In</button>
+                        <button type="button" class="inventory-tab" data-tab="stock-history" role="tab" aria-selected="false">Stock History</button>
+                    </div>
+                    <div class="inventory-tab-actions">
+                        <button type="button" class="add-ingredient-btn" id="addIngredientBtn">
+                            <i class="fa-solid fa-plus"></i>
+                            Add Ingredients
+                        </button>
+                        <div class="stock-in-actions" id="stockInActions" style="display:none;">
+                            <p class="stock-in-status" id="stockInStatus" role="status" hidden>Stock In recorded.</p>
+                            <button type="button" class="cancel-btn" id="cancelStockInBtn">Cancel</button>
+                            <button type="button" class="save-btn" id="saveStockInBtn">Save Stock In</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="inventory-panel" id="ingredients" data-panel="ingredients">
@@ -395,57 +343,16 @@
                                 </tr>
                             </thead>
                             <tbody id="stockInTableBody">
-                                <tr data-category="Coffee" data-unit="g">
-                                    <td class="ing-name">Coffee Beans</td>
-                                    <td><input type="number" class="stock-input" value="1000" min="0" step="1" aria-label="Coffee Beans stock quantity"></td>
-                                    <td class="stock-category">Coffee</td>
-                                    <td class="stock-unit">g</td>
-                                    <td class="stock-total">1,000 g</td>
-                                    <td class="ing-actions">
-                                        <button class="icon-btn delete-btn" aria-label="Remove Coffee Beans row"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr data-category="Dairy" data-unit="L">
-                                    <td class="ing-name">Fresh Milk</td>
-                                    <td><input type="number" class="stock-input" value="10" min="0" step="1" aria-label="Fresh Milk stock quantity"></td>
-                                    <td class="stock-category">Dairy</td>
-                                    <td class="stock-unit">L</td>
-                                    <td class="stock-total">10 L</td>
-                                    <td class="ing-actions">
-                                        <button class="icon-btn delete-btn" aria-label="Remove Fresh Milk row"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr data-category="Powder" data-unit="g">
-                                    <td class="ing-name">Matcha Powder</td>
-                                    <td><input type="number" class="stock-input" value="1000" min="0" step="1" aria-label="Matcha Powder stock quantity"></td>
-                                    <td class="stock-category">Powder</td>
-                                    <td class="stock-unit">g</td>
-                                    <td class="stock-total">1,000 g</td>
-                                    <td class="ing-actions">
-                                        <button class="icon-btn delete-btn" aria-label="Remove Matcha Powder row"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                         <p class="table-empty" id="stockInEmpty" hidden>No ingredients match your search.</p>
                     </div>
 
                     <div class="stock-in-footer">
-                        <button type="button" class="add-stock-row-btn" id="addStockRowBtn">
-                            <i class="fa-solid fa-plus"></i>
-                            Add Ingredient Stock
-                        </button>
-
                         <div class="stock-summary">
-                            <span class="stock-summary-item">Total Items: <strong id="stockTotalItems">3</strong></span>
-                            <span class="stock-summary-item">Grand Total: <strong id="stockGrandTotal">2,010</strong> <em>(Total Units)</em></span>
+                            <span class="stock-summary-item">Total Items: <strong id="stockTotalItems">0</strong></span>
+                            <span class="stock-summary-item">Grand Total: <strong id="stockGrandTotal">0</strong> <em>(Total Units)</em></span>
                         </div>
-                    </div>
-
-                    <div class="stock-in-actions">
-                        <p class="stock-in-status" id="stockInStatus" role="status" hidden>Stock In recorded.</p>
-                        <button type="button" class="cancel-btn" id="cancelStockInBtn">Cancel</button>
-                        <button type="button" class="save-btn" id="saveStockInBtn">Save Stock In</button>
                     </div>
                 </div>
                 <div class="inventory-panel" id="stockHistory" data-panel="stock-history" hidden>
@@ -475,27 +382,6 @@
                                 </tr>
                             </thead>
                             <tbody id="stockHistoryTableBody">
-                                <tr data-ingredient="Coffee Beans" data-type="stock-in">
-                                    <td class="ing-name">Coffee Beans</td>
-                                    <td><span class="transaction-pill stock-in"><i class="fa-solid fa-arrow-up"></i> Stock In</span></td>
-                                    <td class="qty-positive">+1 kg</td>
-                                    <td>5,000 g</td>
-                                    <td class="stock-history-date">Jul 13, 2026<br><span>9:10 am</span></td>
-                                </tr>
-                                <tr data-ingredient="Coffee Beans" data-type="deduction">
-                                    <td class="ing-name">Coffee Beans</td>
-                                    <td><span class="transaction-pill deduction"><i class="fa-solid fa-arrow-down"></i> Order Deduction</span></td>
-                                    <td class="qty-negative">-18 g</td>
-                                    <td>10 ml</td>
-                                    <td class="stock-history-date">Jul 13, 2026<br><span>9:10 am</span></td>
-                                </tr>
-                                <tr data-ingredient="Fresh Milk" data-type="deduction">
-                                    <td class="ing-name">Fresh Milk</td>
-                                    <td><span class="transaction-pill deduction"><i class="fa-solid fa-arrow-down"></i> Order Deduction</span></td>
-                                    <td class="qty-negative">180 L</td>
-                                    <td>820 L</td>
-                                    <td class="stock-history-date">Jul 13, 2026<br><span>9:10 am</span></td>
-                                </tr>
                             </tbody>
                         </table>
                         <p class="table-empty" id="stockHistoryEmpty" hidden>No transactions match your search.</p>
@@ -526,12 +412,12 @@
 
                         <div class="modal-field">
                             <label for="newIngredientUnit">Units</label>
-                            <input type="text" id="newIngredientUnit" placeholder="e.g. g, L, pcs">
+                            <input type="text" id="newIngredientUnit" placeholder="e.g. g, ml, pcs, shot">
                         </div>
 
                         <div class="modal-field">
                             <label for="newIngredientMinStock">Minimum Stocks</label>
-                            <input type="number" id="newIngredientMinStock" placeholder="Enter the minimum stocks" min="0">
+                            <input type="number" id="newIngredientMinStock" value="5" min="5">
                         </div>
 
                         <div class="modal-field">
@@ -622,39 +508,16 @@
             backdrop.addEventListener("click", closeSidebar);
             mq.addEventListener("change", closeSidebar);
         })();
-        const notifBtn = document.getElementById("notifBtn");
-        const notifDropdown = document.getElementById("notifDropdown");
-        const markAllRead = document.getElementById("markAllRead");
-        const notifBadge = document.getElementById("notifBadge");
-        const notifList = document.getElementById("notifList");
-
-        notifBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifDropdown.classList.toggle("open");
-        });
-        document.addEventListener("click", (e) => {
-            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-                notifDropdown.classList.remove("open");
-            }
-        });
-        markAllRead.addEventListener("click", (e) => {
-            e.preventDefault();
-            notifList.querySelectorAll(".notif-item.unread").forEach(item => item.classList.remove("unread"));
-            if (notifBadge) notifBadge.style.display = "none";
-        });
-
-        /* ---------------------------------------------------------
-           Ingredients page: tab switching + live search filter
-           --------------------------------------------------------- */
         (function () {
             const tabs = document.querySelectorAll(".inventory-tab");
             const panels = document.querySelectorAll(".inventory-panel");
             const addIngredientBtn = document.getElementById("addIngredientBtn");
+            const stockInActions = document.getElementById("stockInActions");
             const searchInput = document.getElementById("ingredientSearch");
             const rows = document.querySelectorAll("#ingredientsTableBody tr");
             const emptyState = document.getElementById("ingredientsEmpty");
 
-            // ADD THIS BLOCK — it's missing entirely right now
+            // ADD THIS BLOCK â€” it's missing entirely right now
             tabs.forEach((tab) => {
                 tab.addEventListener("click", () => {
                     tabs.forEach((t) => {
@@ -670,6 +533,7 @@
                     });
 
                     addIngredientBtn.style.display = target === "ingredients" ? "":"none";
+                    stockInActions.style.display = target === "stock-in" ? "flex" : "none";
                 });
             });
             const addIngredientOverlay = document.getElementById("addIngredientModalOverlay");
@@ -704,7 +568,6 @@
                         <td>${minStock.toLocaleString()}</td>
                         <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                         <td class="ing-actions">
-                            <button class="icon-btn edit-btn" aria-label="Edit ${name}"><i class="fa-solid fa-pen"></i></button>
                             <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     `;
@@ -811,38 +674,11 @@
         })();
         
         (function () {
-            const INGREDIENT_CATALOG = [
-                { name: "Espresso", category: "Coffee", unit: "kg" },
-                { name: "Milk", category: "Dairy", unit: "L" },
-                { name: "Biscoff", category: "Powder", unit: "kg" },
-                { name: "Caramel Drizzle", category: "Syrup", unit: "L" },
-                { name: "Cheesecake powder", category: "Powder", unit: "kg" },
-                { name: "Full Cream Milk", category: "Dairy", unit: "L" },
-                { name: "Brown Sugar", category: "Powder", unit: "kg" },
-                { name: "Chocolate Syrup", category: "Syrup", unit: "L" },
-                { name: "Whipped Cream", category: "Dairy", unit: "kg" },
-                { name: "Condensed Milk", category: "Dairy", unit: "kg" },
-                { name: "Vanilla Syrup", category: "Syrup", unit: "L" },
-                { name: "Cinnamon", category: "Powder", unit: "kg" },
-                { name: "Chestnut", category: "Powder", unit: "kg" },
-                { name: "Blue Syrup", category: "Syrup", unit: "L" },
-                { name: "Salted Caramel Syrup", category: "Syrup", unit: "L" },
-                { name: "Sea Salt", category: "Powder", unit: "kg" },
-                { name: "Coffee Beans", category: "Coffee", unit: "g" },
-                { name: "Fresh Milk", category: "Dairy", unit: "L" },
-                { name: "Matcha Powder", category: "Powder", unit: "g" },
-                { name: "Whole Milk", category: "Dairy", unit: "L" },
-                { name: "Clear Cup (22 oz)", category: "Packaging", unit: "pcs" },
-                { name: "Clear Cup (16 oz)", category: "Packaging", unit: "pcs" },
-                { name: "Chocolate Chips", category: "Syrup", unit: "L" },
-                { name: "Caramel Syrup", category: "Syrup", unit: "L" },
-                { name: "Waffle Batter", category: "Mixes", unit: "g" }
-            ];
+            let INGREDIENT_CATALOG = [];
 
             const tbody = document.getElementById("stockInTableBody");
             const searchInput = document.getElementById("stockInSearch");
             const emptyState = document.getElementById("stockInEmpty");
-            const addRowBtn = document.getElementById("addStockRowBtn");
             const totalItemsEl = document.getElementById("stockTotalItems");
             const grandTotalEl = document.getElementById("stockGrandTotal");
             const cancelBtn = document.getElementById("cancelStockInBtn");
@@ -857,10 +693,13 @@
             const addStockUnitInput = document.getElementById("addStockUnit");
             const addStockQuantityInput = document.getElementById("addStockQuantity");
 
-            const initialRowsHTML = tbody.innerHTML;
+            let initialRowsHTML = "";
 
             function formatNumber(n) {
-                return Number(n || 0).toLocaleString();
+                return Number(n || 0).toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                });
             }
 
             function rowStockValue(row) {
@@ -909,23 +748,66 @@
                 });
             }
 
-            // --- Populate Add Stock modal dropdown ---
-            INGREDIENT_CATALOG.forEach((item) => {
-                const opt = document.createElement("option");
-                opt.value = item.name;
-                opt.textContent = item.name;
-                addStockIngredientSelect.appendChild(opt);
-            });
+            function renderStockRows(items) {
+                INGREDIENT_CATALOG = items.map((item) => ({
+                    id: Number(item.id),
+                    name: item.name,
+                    category: item.category || "Uncategorized",
+                    unit: item.unit || "pcs",
+                    stock: Number(item.stock || 0)
+                }));
+                tbody.innerHTML = "";
+                INGREDIENT_CATALOG.forEach((item) => {
+                    const row = document.createElement("tr");
+                    row.dataset.id = item.id;
+                    row.dataset.currentStock = Number(item.stock || 0);
+                    row.dataset.category = item.category;
+                    row.dataset.unit = item.unit;
+                    const currentStock = Number(item.stock || 0);
+                    row.innerHTML = `
+                        <td class="ing-name">${item.name}</td>
+                        <td><input type="number" class="stock-input" value="${currentStock}" min="0" step="0.001" aria-label="${item.name} stock quantity"></td>
+                        <td class="stock-category">${item.category}</td>
+                        <td class="stock-unit">${item.unit}</td>
+                        <td class="stock-total">${formatNumber(currentStock)} ${item.unit}</td>
+                        <td class="ing-actions">
+                            <button class="icon-btn delete-btn" aria-label="Remove ${item.name} row"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    attachRowHandlers(row);
+                });
+                initialRowsHTML = tbody.innerHTML;
+                recalcSummary();
+                applyFilter();
+            }
 
+            function loadStockIngredients() {
+                fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' })
+                    .then((response) => response.json())
+                    .then((result) => {
+                        if (!result.success) throw new Error(result.error || 'Ingredients could not be loaded');
+                        renderStockRows(result.ingredients || []);
+                        addStockIngredientSelect.innerHTML = '<option value="">Select ingredient</option>';
+                        INGREDIENT_CATALOG.forEach((item) => {
+                            const opt = document.createElement("option");
+                            opt.value = item.id;
+                            opt.textContent = item.name;
+                            addStockIngredientSelect.appendChild(opt);
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('Unable to load Stock In ingredients:', error);
+                        emptyState.hidden = false;
+                        emptyState.textContent = 'Unable to load ingredients from the database.';
+                    });
+            }
+
+            // --- Populate Add Stock modal dropdown ---
             addStockIngredientSelect.addEventListener("change", () => {
-                const chosen = INGREDIENT_CATALOG.find((item) => item.name === addStockIngredientSelect.value);
+                const chosen = INGREDIENT_CATALOG.find((item) => String(item.id) === addStockIngredientSelect.value);
                 addStockCategoryInput.value = chosen ? chosen.category : "";
                 addStockUnitInput.value = chosen ? chosen.unit : "";
-            });
-
-            // --- Open Add Stock modal (this is the ONLY handler on this button now) ---
-            addRowBtn.addEventListener("click", () => {
-                addStockOverlay.hidden = false;
             });
 
             cancelAddStockBtn.addEventListener("click", () => {
@@ -937,7 +819,7 @@
             });
 
             saveAddStockBtn.addEventListener("click", () => {
-                const chosen = INGREDIENT_CATALOG.find((item) => item.name === addStockIngredientSelect.value);
+                const chosen = INGREDIENT_CATALOG.find((item) => String(item.id) === addStockIngredientSelect.value);
                 if (!chosen) {
                     alert("Please select an ingredient.");
                     return;
@@ -945,6 +827,8 @@
                 const quantity = Number(addStockQuantityInput.value) || 0;
 
                 const row = document.createElement("tr");
+                row.dataset.id = chosen.id;
+                row.dataset.currentStock = 0;
                 row.dataset.category = chosen.category;
                 row.dataset.unit = chosen.unit;
                 row.innerHTML = `
@@ -970,26 +854,33 @@
             });
 
             cancelBtn.addEventListener("click", () => {
-                tbody.innerHTML = initialRowsHTML;
-                tbody.querySelectorAll("tr").forEach(attachRowHandlers);
                 searchInput.value = "";
-                applyFilter();
-                recalcSummary();
+                loadStockIngredients();
                 statusEl.hidden = true;
             });
 
             saveBtn.addEventListener("click", () => {
                 const items = Array.from(tbody.querySelectorAll('tr')).map(row => ({
+                    id: Number(row.dataset.id) || 0,
                     name: row.querySelector('.ing-name')?.textContent.trim(),
-                    quantity: rowStockValue(row)
+                    quantity: Math.max(0, rowStockValue(row) - Number(row.dataset.currentStock || 0))
                 })).filter(item => item.name && item.quantity > 0);
+
+                if (!items.length) {
+                    statusEl.textContent = 'No stock changes to save.';
+                    statusEl.hidden = false;
+                    return;
+                }
+
                 fetch('admin_data_api.php?action=stock_in', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ items })
                 }).then(response => response.json()).then(result => {
                     if (!result.success) throw new Error(result.error || 'Stock could not be saved');
+                    statusEl.textContent = 'Stock In recorded.';
                     statusEl.hidden = false;
+                    loadStockIngredients();
                     clearTimeout(saveBtn._statusTimer);
                     saveBtn._statusTimer = setTimeout(() => { statusEl.hidden = true; }, 2500);
                 }).catch(error => alert(error.message));
@@ -997,21 +888,47 @@
 
             searchInput.addEventListener("input", applyFilter);
 
-            tbody.querySelectorAll("tr").forEach(attachRowHandlers);
-            recalcSummary();
+            loadStockIngredients();
         })();
         (function () {
             const searchInput = document.getElementById("stockHistorySearch");
             const filterSelect = document.getElementById("stockHistoryFilter");
-            const rows = document.querySelectorAll("#stockHistoryTableBody tr");
+            const tableBody = document.getElementById("stockHistoryTableBody");
             const emptyState = document.getElementById("stockHistoryEmpty");
+
+            function renderHistory(history) {
+                tableBody.innerHTML = (history || []).map((item) => {
+                    const isStockIn = item.movement_type === 'stock_in';
+                    const label = isStockIn ? 'Stock In' : 'Order Deduction';
+                    const icon = isStockIn ? 'fa-arrow-up' : 'fa-arrow-down';
+                    const sign = isStockIn ? '+' : '-';
+                    const quantity = Number(item.quantity || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+                    const created = new Date(String(item.created_at).replace(' ', 'T'));
+                    const date = Number.isNaN(created.getTime()) ? item.created_at : created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const time = Number.isNaN(created.getTime()) ? '' : created.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    return `<tr data-ingredient="${item.name}" data-type="${item.movement_type}">
+                        <td class="ing-name">${item.name}</td>
+                        <td><span class="transaction-pill ${isStockIn ? 'stock-in' : 'deduction'}"><i class="fa-solid ${icon}"></i> ${label}</span></td>
+                        <td class="${isStockIn ? 'qty-positive' : 'qty-negative'}">${sign}${quantity} ${item.unit}</td>
+                        <td>${Number(item.resulting_stock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${item.unit || ''}</td>
+                        <td class="stock-history-date">${date}<br><span>${time}</span></td>
+                    </tr>`;
+                }).join('');
+
+                const names = [...new Set((history || []).map((item) => item.name))].sort();
+                filterSelect.innerHTML = '<option value="">All Ingredients</option>';
+                names.forEach((name) => {
+                    filterSelect.insertAdjacentHTML('beforeend', `<option value="${name}">${name}</option>`);
+                });
+                applyFilter();
+            }
 
             function applyFilter() {
                 const query = searchInput.value.trim().toLowerCase();
                 const ingredientFilter = filterSelect.value;
                 let visibleCount = 0;
 
-                rows.forEach((row) => {
+                tableBody.querySelectorAll("tr").forEach((row) => {
                     const ingredientName = row.querySelector(".ing-name").textContent.trim().toLowerCase();
                     const type = row.querySelector(".transaction-pill").textContent.trim().toLowerCase();
                     const ingredient = row.dataset.ingredient;
@@ -1026,6 +943,18 @@
 
                 emptyState.hidden = visibleCount !== 0;
             }
+
+            fetch('admin_data_api.php?action=stock_history', { cache: 'no-store' })
+                .then((response) => response.json())
+                .then((result) => {
+                    if (!result.success) throw new Error(result.error || 'Stock history could not be loaded');
+                    renderHistory(result.history);
+                })
+                .catch((error) => {
+                    console.error('Unable to load stock history:', error);
+                    emptyState.hidden = false;
+                    emptyState.textContent = 'Unable to load stock history from the database.';
+                });
 
             searchInput.addEventListener("input", applyFilter);
             filterSelect.addEventListener("change", applyFilter);

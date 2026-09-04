@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
@@ -355,65 +355,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
         <div class="main-panel">
 
             <div class="top-header">
-
-                <div class="notif-wrap">
-                    <button class="header-action" id="notifBtn" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                        <span>Notification</span>
-                        <span class="header-badge" id="notifBadge">2</span>
-                    </button>
-
-                    <div class="notif-dropdown" id="notifDropdown">
-                        <div class="notif-header">
-                            <span class="notif-title">Notifications</span>
-                            <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
-                        </div>
-
-                        <div class="notif-list" id="notifList">
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New online order received</p>
-                                    <p class="notif-item-sub">Order #0001</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Payment Confirmed</p>
-                                    <p class="notif-item-sub">Order #0003</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="notification.html" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="header-divider"></div>
-
-                <button class="header-action" id="alertsBtn" aria-label="Alerts">
-                    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18.8402 4.45947L31.0718 25.6443C31.2583 25.9673 31.3564 26.3338 31.3564 26.7068C31.3565 27.0798 31.2583 27.4462 31.0718 27.7693C30.8853 28.0923 30.617 28.3606 30.294 28.5471C29.9709 28.7336 29.6045 28.8318 29.2315 28.8318H4.7685C4.39549 28.8318 4.02905 28.7336 3.70602 28.5471C3.38299 28.3606 3.11474 28.0923 2.92824 27.7693C2.74174 27.4462 2.64355 27.0798 2.64355 26.7068C2.64356 26.3338 2.74175 25.9673 2.92825 25.6443L15.1598 4.45947C15.9772 3.04281 18.0214 3.04281 18.8402 4.45947ZM17 6.93864L5.99533 25.9985H28.0047L17 6.93864ZM17 21.2498C17.3757 21.2498 17.7361 21.3991 18.0017 21.6647C18.2674 21.9304 18.4167 22.2907 18.4167 22.6665C18.4167 23.0422 18.2674 23.4025 18.0017 23.6682C17.7361 23.9339 17.3757 24.0831 17 24.0831C16.6243 24.0831 16.2639 23.9339 15.9983 23.6682C15.7326 23.4025 15.5833 23.0422 15.5833 22.6665C15.5833 22.2907 15.7326 21.9304 15.9983 21.6647C16.2639 21.3991 16.6243 21.2498 17 21.2498ZM17 11.3331C17.3757 11.3331 17.7361 11.4824 18.0017 11.7481C18.2674 12.0137 18.4167 12.3741 18.4167 12.7498V18.4165C18.4167 18.7922 18.2674 19.1525 18.0017 19.4182C17.7361 19.6839 17.3757 19.8331 17 19.8331C16.6243 19.8331 16.2639 19.6839 15.9983 19.4182C15.7326 19.1525 15.5833 18.7922 15.5833 18.4165V12.7498C15.5833 12.3741 15.7326 12.0137 15.9983 11.7481C16.2639 11.4824 16.6243 11.3331 17 11.3331Z" fill="black" fill-opacity="0.8"/>
-                    </svg>
-                    <span>Alerts</span>
-                    <span class="header-badge">2</span>
-                </button>
-
-                <div class="header-divider"></div>
-
-                <button class="profile-btn">
+                <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z" fill="black"/>
@@ -424,8 +366,6 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                     </div>
                 </button>
             </div>
-
-            <!-- PAGE CONTENT -->
             <div class="page-content">
 
                 <div class="page-heading">
@@ -574,6 +514,8 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             // Image filename mapping for products with different names than their files
                             $imageMapping = [
                                 'French Vanilla' => 'Franch Vanilla.png',
+                                'Black Forrest' => 'blackforest.png',
+                                'Black Forest' => 'blackforest.png',
                                 'Messy Tuna Spinach' => 'Messy Tuna Spinach.png',
                                 'Chicken Quesadilla' => 'Chicken Quesadilla.png',
                                 'Beef Quesadilla' => 'Beef Quesadilla.png',
@@ -875,26 +817,6 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
             backdrop.addEventListener("click", closeSidebar);
             mq.addEventListener("change", closeSidebar);
         })();
-        const notifBtn = document.getElementById("notifBtn");
-        const notifDropdown = document.getElementById("notifDropdown");
-        const markAllRead = document.getElementById("markAllRead");
-        const notifBadge = document.getElementById("notifBadge");
-        const notifList = document.getElementById("notifList");
-
-        notifBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifDropdown.classList.toggle("open");
-        });
-        document.addEventListener("click", (e) => {
-            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-                notifDropdown.classList.remove("open");
-            }
-        });
-        markAllRead.addEventListener("click", (e) => {
-            e.preventDefault();
-            notifList.querySelectorAll(".notif-item.unread").forEach(item => item.classList.remove("unread"));
-            if (notifBadge) notifBadge.style.display = "none";
-        });
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('salesOverviewChart');
             if (!canvas || typeof Chart === 'undefined') return;
@@ -1266,3 +1188,4 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
 </body>
 
 </html>
+

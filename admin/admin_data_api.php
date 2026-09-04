@@ -36,6 +36,24 @@ function currentAdmin(mysqli $connect): ?array
     return $stmt->get_result()->fetch_assoc() ?: null;
 }
 
+function ensureProductIngredientsTable(mysqli $connect): void
+{
+    $sql = "CREATE TABLE IF NOT EXISTS product_ingredients (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        product_name VARCHAR(150) NOT NULL,
+        ingredient_id INT UNSIGNED NOT NULL,
+        amount DECIMAL(10,3) NOT NULL DEFAULT 0.000,
+        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_product_name (product_name),
+        KEY idx_ingredient_id (ingredient_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if (!$connect->query($sql)) {
+        throw new RuntimeException('Could not prepare the product mapping table: ' . $connect->error);
+    }
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $data = input();
 
@@ -213,7 +231,7 @@ try {
             $category = requireValue($data, 'category');
             $unit = requireValue($data, 'unit');
             $stock = (float)($data['stock'] ?? 0);
-            $minStock = (float)($data['min_stock'] ?? 0);
+            $minStock = 5.0;
             $stmt = $connect->prepare('INSERT INTO ingredients (name, category, unit, stock, min_stock, branch_id) VALUES (?, ?, ?, ?, ?, ?)');
             $branch = isset($data['branch_id']) && $data['branch_id'] !== '' ? (int)$data['branch_id'] : null;
             $stmt->bind_param('sssddi', $name, $category, $unit, $stock, $minStock, $branch);
@@ -264,7 +282,7 @@ try {
             response(['success' => true]);
 
         case 'stock_history':
-            $result = $connect->query("SELECT m.id, i.name, m.movement_type, m.quantity, m.resulting_stock, m.created_at
+            $result = $connect->query("SELECT m.id, i.name, i.unit, m.movement_type, m.quantity, m.resulting_stock, m.created_at
                                        FROM ingredient_stock_movements m JOIN ingredients i ON i.id = m.ingredient_id
                                        ORDER BY m.created_at DESC LIMIT 200");
             $history = [];
@@ -272,6 +290,7 @@ try {
             response(['success' => true, 'history' => $history]);
 
         case 'mapping_get':
+            ensureProductIngredientsTable($connect);
             $product = requireValue($_GET, 'product_name');
             $stmt = $connect->prepare('SELECT pi.ingredient_id, i.name AS ingredient, i.unit, pi.amount FROM product_ingredients pi JOIN ingredients i ON i.id = pi.ingredient_id WHERE pi.product_name = ? ORDER BY pi.id');
             $stmt->bind_param('s', $product);
@@ -282,29 +301,51 @@ try {
             response(['success' => true, 'mapping' => $rows]);
 
         case 'mapping_save':
+            ensureProductIngredientsTable($connect);
             $product = requireValue($data, 'product_name');
             $rows = $data['rows'] ?? [];
             if (!is_array($rows)) response(['success' => false, 'error' => 'Invalid mapping rows'], 422);
             $connect->begin_transaction();
             $delete = $connect->prepare('DELETE FROM product_ingredients WHERE product_name = ?');
+            if (!$delete) {
+                throw new RuntimeException('Could not prepare mapping deletion: ' . $connect->error);
+            }
             $delete->bind_param('s', $product);
-            $delete->execute();
+            if (!$delete->execute()) {
+                throw new RuntimeException('Could not delete the existing mapping: ' . $delete->error);
+            }
+
+            $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? LIMIT 1');
+            if (!$lookup) {
+                throw new RuntimeException('Could not prepare ingredient lookup: ' . $connect->error);
+            }
+
             $insert = $connect->prepare('INSERT INTO product_ingredients (product_name, ingredient_id, amount) VALUES (?, ?, ?)');
+            if (!$insert) {
+                throw new RuntimeException('Could not prepare mapping insert: ' . $connect->error);
+            }
+
+            $savedRows = 0;
             foreach ($rows as $row) {
                 $ingredientId = (int)($row['ingredient_id'] ?? 0);
                 if ($ingredientId < 1 && !empty($row['ingredient'])) {
-                    $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? LIMIT 1');
-                    $lookup->bind_param('s', $row['ingredient']);
+                    $ingredientName = trim((string)$row['ingredient']);
+                    $lookup->bind_param('s', $ingredientName);
                     $lookup->execute();
                     $ingredientId = (int)($lookup->get_result()->fetch_assoc()['id'] ?? 0);
                 }
                 $amount = (float)($row['amount'] ?? 0);
-                if ($ingredientId < 1 || $amount <= 0) continue;
+                if ($ingredientId < 1 || $amount <= 0) {
+                    throw new RuntimeException('Each mapping must have a valid ingredient and quantity greater than zero.');
+                }
                 $insert->bind_param('sid', $product, $ingredientId, $amount);
-                $insert->execute();
+                if (!$insert->execute()) {
+                    throw new RuntimeException('Could not save the ingredient mapping: ' . $insert->error);
+                }
+                $savedRows++;
             }
             $connect->commit();
-            response(['success' => true]);
+            response(['success' => true, 'saved_rows' => $savedRows]);
 
         default:
             response(['success' => false, 'error' => 'Invalid action'], 400);

@@ -143,7 +143,20 @@ function applyFavUIAll() {
     });
 }
 
-async function isStoreOpen(branchId = '') {
+function getSelectedBranchId() {
+    try {
+        const selectedStore = JSON.parse(
+            sessionStorage.getItem('boycold_selected_store')
+            || localStorage.getItem('boycold_selected_store')
+            || 'null'
+        );
+        return selectedStore?.branchId || 1;
+    } catch (e) {
+        return 1;
+    }
+}
+
+async function isStoreOpen(branchId = getSelectedBranchId()) {
     try {
         const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
         const response = await fetch(`../api/store_status_api.php${query}`);

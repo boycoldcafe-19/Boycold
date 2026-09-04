@@ -5,7 +5,7 @@ require_once '../config/db_config.php';
 header('Content-Type: application/json');
 
 try {
-    $branchId = (int) ($_GET['branch_id'] ?? 0);
+    $branchId = (int) ($_GET['branch_id'] ?? 1);
 
     if ($branchId > 0) {
         $stmt = $connect->prepare(

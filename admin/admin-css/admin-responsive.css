@@ -133,6 +133,14 @@
         display: none;
     }
 
+    /* The dashboard header no longer exposes notification or alert controls. */
+    .main-panel > .top-header > .notif-wrap,
+    .main-panel > .top-header > .alert-wrap,
+    .main-panel > .top-header > .header-action#alertsBtn,
+    .main-panel > .top-header > .header-divider {
+        display: none !important;
+    }
+
     .notif-dropdown {
         position: fixed !important;
         top: 66px !important;
