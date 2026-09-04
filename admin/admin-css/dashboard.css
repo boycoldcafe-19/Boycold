@@ -58,7 +58,7 @@ button {
     align-self: flex-start;
     display:flex;
     flex-direction:column;
-    background:#322B2B;
+    background:#000;
     border-right:1px solid #C4C1C1;
     overflow:hidden;
     transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
@@ -78,7 +78,7 @@ button {
 }
 
 .brand-mark {
-    width: 75px;
+    width: 74px;
     height: 70px;
     display: flex;
     justify-content: center;
@@ -101,7 +101,7 @@ button {
 
 .brand-name {
     font-weight: 700;
-    font-size: 30px;
+    font-size: 26px;
     letter-spacing: 0.4px;
     white-space: nowrap;
     font-family: 'Gaegu', cursive;
@@ -109,7 +109,7 @@ button {
 }
 
 .brand-sub {
-    font-size: 17px;
+    font-size: 16px;
     color: #fff;
     font-family: 'Gaegu', cursive;
     letter-spacing: 0.3px;
@@ -148,7 +148,7 @@ button {
     display:flex;
     align-items:center;
     gap:12px;
-    padding:14px 20px;
+    padding:13px 20px;
     font-size:18px;
     font-weight:600;
     color:#fff;
@@ -157,7 +157,7 @@ button {
 }
 
 .sidebar-nav ul li a.active{
-    background:#9E6741;
+    background:#692727;
 }
 
 .nav-icon,
@@ -1493,17 +1493,17 @@ button {
 
 @media (max-width: 1024px){
     .sidebar {
-        width: 240px;
+        width: 300px;
     }
 
     .sidebar-brand {
-        height: 90px;
-        padding: 16px;
+        height: 110px;
+        padding: 18px 20px;
     }
 
     .brand-mark {
-        width: 50px;
-        height: 50px;
+        width: 74px;
+        height: 70px;
     }
     
     .logo{
@@ -1513,15 +1513,15 @@ button {
     }
 
     .brand-name {
-        font-size: 24px;
+        font-size: 26px;
     }
 
     .brand-sub {
-        font-size: 14px;
+        font-size: 16px;
     }
 
     .sidebar-nav{
-        padding: 14px 10px;
+        padding: 5px 10px;
     }
 
     .sidebar-nav ul{
@@ -1529,8 +1529,8 @@ button {
     }
 
     .sidebar-nav ul li a {
-        padding: 14px 12px;
-        font-size: 16px;
+        padding: 13px 20px;
+        font-size: 18px;
     }
 
     .logout-link {

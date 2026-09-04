@@ -120,7 +120,7 @@ $statusMap = [
     'ready'     => ['label' => 'Ready',          'class' => 'badge-ready',     'icon' => 'fa-bell',               'msg' => 'The order is ready'],
     'delivered' => ['label' => 'Delivered',      'class' => 'badge-delivered', 'icon' => 'fa-truck',              'msg' => 'The order has been delivered'],
     'completed' => ['label' => 'Completed',      'class' => 'badge-completed', 'icon' => 'fa-circle-check',       'msg' => 'The order is complete. Enjoy!'],
-    'cancelled' => ['label' => 'Cancelled',      'class' => 'badge-cancelled', 'icon' => 'fa-circle-xmark',       'msg' => 'This order was cancelled'],
+    'cancelled' => ['label' => 'Order Cancelled',      'class' => 'badge-cancelled', 'icon' => 'fa-circle-xmark',       'msg' => 'This order was cancelled'],
 ];
 
 $orderTypeLabels = [

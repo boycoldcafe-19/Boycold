@@ -1,17 +1,21 @@
-<?php require_once __DIR__ . '/admin_guard.php'; ?>
+<?php
+require_once __DIR__ . '/admin_guard.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="admin-css/mapping.css">
+    <link rel="stylesheet" href="admin-css/adminsettings.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
-    <title>BoyCold - Ingredients Mapping</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <title>BoyCold - Admin Settings</title>
 </head>
 
 <body>
@@ -22,7 +26,7 @@
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="/public/assets/icons/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">B<span class="special-letter">o</span><span
@@ -98,7 +102,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="mapping.php" class="active">
+                            <a href="mapping.php">
                                 <span class="nav-icon"><svg width="27" height="27" viewBox="0 0 27 27" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path fill-rule="evenodd" clip-rule="evenodd"
@@ -142,20 +146,13 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li>
-                            <a href="feedback.php">
-                                <span class="nav-icon"><i class="fa-solid fa-star"></i></span>
-                                <span class="nav-label">Feedback &amp; Reviews</span>
-                                <i class="fa-solid fa-chevron-right nav-chevron"></i>
-                            </a>
-                        </li>
                     </ul>
 
                     <div class="sidebar-divider"></div>
 
                     <ul>
                         <li>
-                            <a href="adminsettings.php">
+                            <a href="adminsettings.php" class="active">
                                 <span class="nav-icon">
                                     <i class="fa-solid fa-gear"></i>
                                 </span>
@@ -339,63 +336,132 @@
 
                 <div class="header-divider"></div>
 
-                <button class="profile-btn">
-                    <div class="profile-avatar">
-                        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z"
-                                fill="black" />
-                        </svg>
-                    </div>
-                    <div class="profile-info">
-                        <span class="profile-name">Sta. Barbara Branch</span>
-                        <span class="profile-role">Admin</span>
-                    </div>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
-                </button>
-            </div>
 
-            <!-- INGREDIENTS MAPPING CONTENT -->
-            <div class="page-content">
-
-                <div class="page-header">
-                    <h1 class="page-title">Ingredients Mapping</h1>
-                    <p class="page-subtitle">Assign ingredients to each menu item and set the required quantity for
-                        automatic inventory deduction</p>
+                <div class="profile-wrap" style="position: relative;">
+                    <button class="profile-btn" id="profileBtn">
+                        <div class="profile-avatar">
+                            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z"
+                                    fill="black" />
+                            </svg>
+                        </div>
+                        <div class="profile-info">
+                            <span class="profile-name">Sta. Barbara Branch</span>
+                            <span class="profile-role">Admin</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down profile-caret"></i>
+                    </button>
+                    <div class="notif-dropdown" id="profileDropdown" style="width: 200px; right: 0;">
+                        <a href="#" class="notif-item" style="padding: 12px 16px; font-weight: 600;"><i
+                                class="fa-regular fa-user" style="margin-right: 8px;"></i> Profile</a>
+                        <a href="adminsettings.php" class="notif-item" style="padding: 12px 16px; font-weight: 600;"><i
+                                class="fa-solid fa-gear" style="margin-right: 8px;"></i> Settings</a>
+                        <a href="adminlogin.php" class="notif-item"
+                            style="padding: 12px 16px; font-weight: 600; color: #e53935;"><i
+                                class="fa-solid fa-right-from-bracket" style="margin-right: 8px;"></i> Log Out</a>
+                    </div>
                 </div>
 
-                <div class="mapping-grid">
+            </div>
 
-                    <!-- LEFT: Select Menu Item -->
-                    <section class="panel">
-                        <div class="panel-header">
-                            <span class="panel-title">Select Menu Item</span>
-                        </div>
-                        <div class="menu-search">
-                            <input type="text" id="menuSearch" placeholder="Search menu item...">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <div class="menu-list" id="menuList"></div>
-                        <button type="button" class="add-menu-item-btn" id="addMenuItemBtn">
-                            <i class="fa-solid fa-plus"></i> Add New Menu Item
-                        </button>
-                    </section>
+            <!-- SETTINGS CONTENT -->
+            <div class="settings-content-wrapper">
+                <div class="settings-header">
+                    <h1>Settings</h1>
+                    <p>Manage your account and system preference</p>
+                </div>
 
-                    <!-- RIGHT: Map Ingredients -->
-                    <section class="panel">
-                        <div class="panel-header">
-                            <span class="panel-title">Map Ingredients</span>
-                            <label class="toggle-field">
-                                Show inactive orders
-                                <span class="switch">
-                                    <input type="checkbox" id="showInactiveToggle">
-                                    <span class="switch-slider"></span>
-                                </span>
-                            </label>
+                <!-- 1. ADMIN PROFILE CARD -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title">
+                            <h2>Admin Profile</h2>
+                            <p>Update your account information</p>
                         </div>
-                        <div class="map-panel-body" id="mapPanel"></div>
-                    </section>
+                        <button class="btn-outline-maroon" id="editProfileBtn">Edit Profile</button>
+                    </div>
 
+                    <div class="profile-section-body">
+                        <!-- Upload Image Box -->
+                        <div class="upload-box">
+                            <img id="profileImagePreview" class="preview-img" alt="Profile Preview">
+                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                            <span class="upload-title">Upload Image</span>
+                            <span class="upload-sub">PNG, JPG, WEBP up to 5mb</span>
+                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp"
+                                style="display: none;">
+                            <button class="choose-btn" onclick="document.getElementById('imageInput').click()">
+                                <i class="fa-regular fa-image"></i> Choose Image
+                            </button>
+                        </div>
+
+                        <!-- Info Fields -->
+                        <div class="profile-info-fields">
+                            <div class="info-group">
+                                <label>Full Name</label>
+                                <span class="info-value-text" id="nameText"><?= htmlspecialchars($adminAccount['employee_name'] ?: 'Admin', ENT_QUOTES, 'UTF-8') ?></span>
+                                <input type="text" class="edit-field" id="nameInput" value="<?= htmlspecialchars($adminAccount['employee_name'] ?: 'Admin', ENT_QUOTES, 'UTF-8') ?>">
+                            </div>
+                            <div class="info-group">
+                                <label>Email Address</label>
+                                <span class="info-value-text" id="emailText"><?= htmlspecialchars($adminAccount['email'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <input type="email" class="edit-field" id="emailInput" value="<?= htmlspecialchars($adminAccount['email'], ENT_QUOTES, 'UTF-8') ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CHANGE PASSWORD CARD -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="settings-card-title">
+                            <h2>Change Password</h2>
+                            <p>Update your password regularly to keep your account secure.</p>
+                        </div>
+                        <button class="btn-outline-maroon" id="changePasswordBtn">Change Password</button>
+                    </div>
+
+                    <div class="password-grid">
+                        <div class="field-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input type="password" id="currentPassword" placeholder="Enter current password">
+                        </div>
+                        <div class="field-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Enter new password">
+                        </div>
+                        <div class="field-group">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirm new password">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. SYSTEM INFORMATION CARD -->
+                <div class="settings-card">
+                    <div class="settings-card-header" style="margin-bottom: 20px;">
+                        <div class="settings-card-title">
+                            <h2>System Information</h2>
+                            <p>Configure general system preferences.</p>
+                        </div>
+                    </div>
+
+                    <div class="system-info-grid">
+                        <div class="info-group">
+                            <label>Date Format</label>
+                            <span class="info-value-text">May 31, 2025 (MMMM DD, YYYY)</span>
+                        </div>
+                        <div class="info-group">
+                            <label>System Name</label>
+                            <span class="info-value-text">Boycold Cafe Ordering System</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Version</label>
+                            <span class="info-value-text">V1.0.0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="logout-modal" id="logoutModal">
@@ -407,7 +473,7 @@
                     </button>
 
                     <div class="logout-logo">
-                        <img src="../img/LOGO.png" alt="BoyCold Cafe">
+                        <img src="/public/assets/icons/LOGO.png" alt="BoyCold Cafe">
                     </div>
 
                     <h2>
@@ -430,52 +496,17 @@
                 </div>
 
             </div>
+
         </div>
     </div>
+
+    <!-- SCRIPT FOR DROPDOWNS AND INTERACTIVE FORM ACTIONS -->
     <script>
-        document.querySelectorAll('.sidebar-nav a').forEach(link => {
-            link.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                if (href === '#') e.preventDefault();
-                document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-        (function () {
-            const sidebar = document.getElementById("sidebar");
-            const backdrop = document.getElementById("sidebarBackdrop");
-            const mq = window.matchMedia("(max-width: 860px)");
-
-            function openSidebar() {
-                if (!mq.matches) return;
-                sidebar.classList.add("expanded");
-                backdrop.classList.add("show");
-            }
-
-            function closeSidebar() {
-                sidebar.classList.remove("expanded");
-                backdrop.classList.remove("show");
-            }
-
-            sidebar.addEventListener("click", () => {
-                if (mq.matches && !sidebar.classList.contains("expanded")) {
-                    openSidebar();
-                }
-            });
-
-            sidebar.querySelectorAll(".sidebar-nav a").forEach((link) => {
-                link.addEventListener("click", () => {
-                    if (mq.matches) closeSidebar();
-                });
-            });
-
-            backdrop.addEventListener("click", closeSidebar);
-            mq.addEventListener("change", closeSidebar);
-        })();
-        const alertsBtn = document.getElementById('alertsBtn');
-        const alertsDropdown = document.getElementById('alertsDropdown');
+        // Header Dropdown functionality
         const notifBtn = document.getElementById('notifBtn');
         const notifDropdown = document.getElementById('notifDropdown');
+        const alertsBtn = document.getElementById('alertsBtn');
+        const alertsDropdown = document.getElementById('alertsDropdown');
         const profileBtn = document.getElementById('profileBtn');
         const profileDropdown = document.getElementById('profileDropdown');
 
@@ -503,6 +534,14 @@
             });
         }
 
+        if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const shouldOpen = !profileDropdown.classList.contains('open');
+                closeHeaderDropdowns(profileDropdown);
+                if (shouldOpen) profileDropdown.classList.add('open');
+            });
+        }
 
         window.addEventListener('click', function (e) {
             if (!e.target.closest('.notif-wrap') &&
@@ -535,6 +574,7 @@
                 if (badge) badge.textContent = '0';
             });
         }
+
         const logoutBtn = document.getElementById("logoutBtn");
         const logoutModal = document.getElementById("logoutModal");
         const logoutNo = document.getElementById("logoutNo");
@@ -589,404 +629,124 @@
                 }
             });
         }
-        let MENU_ITEMS = [];
-        const FALLBACK_MENU_ITEMS = [
-            // Coffee
-            { id: "americano", name: "Americano", price: 69, category: "Coffee", img: "Americano.png" },
-            { id: "cafe-latte", name: "Cafe Latte", price: 85, category: "Coffee", img: "Cafe Latte.png" },
-            { id: "spanish-latte", name: "Spanish Latte", price: 95, category: "Coffee", img: "Spanish Latte.png" },
-            { id: "dirty-matcha", name: "Dirty Matcha", price: 119, category: "Coffee", img: "Dirty Matcha.png" },
-            { id: "dark-mocha", name: "Dark Mocha", price: 139, category: "Coffee", img: "Dark Mocha.png" },
-            { id: "white-mocha", name: "White Mocha", price: 129, category: "Coffee", img: "White Mocha.png" },
-            { id: "french-vanilla", name: "French Vanilla", price: 135, category: "Coffee", img: "Franch Vanilla.png" },
-            { id: "hazelnut-latte", name: "Hazelnut Latte", price: 135, category: "Coffee", img: "Hazelnut Latte.png" },
 
-            // Non-Coffee
-            { id: "strawberry-milk", name: "Strawberry Milk", price: 79, category: "Non-Coffee", img: "Strawberry Milk.png" },
-            { id: "blueberry-milk", name: "Blueberry Milk", price: 79, category: "Non-Coffee", img: "Blueberry Milk.png" },
-            { id: "milky-oreo", name: "Milky Oreo", price: 85, category: "Non-Coffee", img: "Milky Oreo.png" },
-            { id: "white-cocoa", name: "White cocoa", price: 95, category: "Non-Coffee", img: "White cocoa.png" },
-            { id: "choco-berry", name: "Choco Berry", price: 109, category: "Non-Coffee", img: "Choco Berry.png" },
-            { id: "choco-vanilla-cookie", name: "Choco Vanilla Cookie", price: 129, category: "Non-Coffee", img: "Choco Vanilla Cookie.png" },
-            { id: "choco-banana-pudding", name: "Choco Banana Pudding", price: 179, category: "Non-Coffee", img: "Choco Banna Pudding.png" },
+        // Image Preview Handler
+        const imageInput = document.getElementById('imageInput');
+        const profileImagePreview = document.getElementById('profileImagePreview');
 
-            // Special Coffee
-            { id: "sea-salt-latte", name: "Sea Salt Latte", price: 115, category: "Special Coffee", img: "Sea salt Latte.png" },
-            { id: "salted-mango-dream", name: "Salted Mango Dream", price: 139, category: "Special Coffee", img: "Salted Mango Dream.png" },
-            { id: "berry-caramel-bliss", name: "Berry Caramel Bliss", price: 139, category: "Special Coffee", img: "Berry Caramel Bliss.png" },
-            { id: "caramel-macchiato", name: "Caramel Macchiato", price: 139, category: "Special Coffee", img: "Caramel Macchiato.png" },
-            { id: "butterscotch-latte", name: "Butter Scotch Latte", price: 139, category: "Special Coffee", img: "Butter scotch latte.png" },
-            { id: "salted-caramel", name: "Salted Caramel", price: 139, category: "Special Coffee", img: "Salted Caramel.png" },
-            { id: "salted-macadamia", name: "Salted Macadamia", price: 139, category: "Special Coffee", img: "Salted Macadamia.png" },
-            { id: "cheesecake-latte", name: "Cheesecake Latte", price: 149, category: "Special Coffee", img: "Cheesecake Latte.png" },
-            { id: "einspanner-latte", name: "Einspanner Latte", price: 149, category: "Special Coffee", img: "Einspanner Latte.png" },
-            { id: "biscoff-creamy-latte", name: "Biscoff Creamy Latte", price: 159, category: "Special Coffee", img: "Biscoff Creamy Latte.png" },
-            { id: "nutella-hazelnut-latte", name: "Nutella Hazelnut Latte", price: 169, category: "Special Coffee", img: "Nutella Hazelnut latte.png" },
-            { id: "tiramisu-latte", name: "Tiramisu Latte", price: 179, category: "Special Coffee", img: "Tiramisu Latte.png" },
-
-            // Matcha Fusion
-            { id: "pure-matcha", name: "Pure Matcha", price: 80, category: "Matcha Fusion", img: "Pure matcha.png" },
-            { id: "matcha-latte", name: "Matcha Latte", price: 85, category: "Matcha Fusion", img: "Matcha Latte.png" },
-            { id: "mango-matcha", name: "Mango Matcha", price: 89, category: "Matcha Fusion", img: "Mango matcha.png" },
-            { id: "sea-salt-matcha", name: "Sea Salt Matcha", price: 95, category: "Matcha Fusion", img: "Seasalt Matcha.png" },
-            { id: "matcha-freddo", name: "Matcha Freddo", price: 99, category: "Matcha Fusion", img: "Matcha Freddo.png" },
-            { id: "choco-matcha", name: "Choco Matcha", price: 109, category: "Matcha Fusion", img: "Choco Matcha.png" },
-            { id: "strawberry-matcha", name: "Strawberry Matcha", price: 115, category: "Matcha Fusion", img: "Strawberry Matcha.png" },
-            { id: "cheesecake-matcha", name: "Cheesecake Matcha", price: 119, category: "Matcha Fusion", img: "Cheesecake Matcha.png" },
-            { id: "lavender-matcha", name: "Lavander Matcha", price: 119, category: "Matcha Fusion", img: "Lavander Matcha.png" },
-            { id: "matcha-banana-pudding", name: "Matcha Banana Pudding", price: 179, category: "Matcha Fusion", img: "Matcha banana Pudding.png" },
-
-            // Fruit Shake
-            { id: "mango-graham", name: "Mango Graham", price: 65, category: "Fruit Shake", img: "Mango graham.png" },
-            { id: "strawberry-shake", name: "Strawberry Shake", price: 65, category: "Fruit Shake", img: "Strawberry shake.png" },
-            { id: "blueberry-shake", name: "Blueberry Shake", price: 65, category: "Fruit Shake", img: "BLUEBERRY SHAKE 1.png" },
-            { id: "mango-oreo", name: "Mango Oreo", price: 79, category: "Fruit Shake", img: "mango oreo.png" },
-            { id: "berry-oreo", name: "Berry Oreo", price: 79, category: "Fruit Shake", img: "Berry Oreo.png" },
-            { id: "berry-mango", name: "Berry Mango", price: 79, category: "Fruit Shake", img: "Berry mango.png" },
-
-            // Frappe Series
-            { id: "hershey-delight", name: "Hershey Delight", price: 95, category: "Frappe Series", img: "hershey delight.png" },
-            { id: "oreo-frappe", name: "Oreo Frappe", price: 105, category: "Frappe Series", img: "Oreo Frappe.png" },
-            { id: "matcha-frappe", name: "Matcha Frappe", price: 105, category: "Frappe Series", img: "Matcha Frappe.png" },
-            { id: "java-chips", name: "Java Chips", price: 199, category: "Frappe Series", img: "Java Chips.png" },
-            { id: "cheesecake-frappe", name: "Cheesecake Frappe", price: 129, category: "Frappe Series", img: "Cheesecake Frappe.png" },
-            { id: "white-smore-frappe", name: "White Smore Frappe", price: 129, category: "Frappe Series", img: "white smores.png" },
-            { id: "caramel-frappe", name: "Caramel Frappe", price: 139, category: "Frappe Series", img: "Caramel Frappe.png" },
-            { id: "biscoff-frappe", name: "Biscoff Frappe", price: 139, category: "Frappe Series", img: "Biscoff frappe.png" },
-            { id: "nuttela-hazelnut-frappe", name: "Nuttela Hazelnut Frappe", price: 149, category: "Frappe Series", img: "Nuttela Hazelnut Frappe.png" },
-
-            // Snacks — waffles
-            { id: "waffle-chocolate", name: "Lolly Waffle Chocolate", price: 69, category: "Snacks", img: "Chocolate waffle.png" },
-            { id: "waffle-ube", name: "Lolly Waffle Ube", price: 65, category: "Snacks", img: "ube waffle.png" },
-            { id: "waffle-matcha", name: "Lolly Waffle Matcha", price: 69, category: "Snacks", img: "Matcha waffle.png" },
-            { id: "waffle-strawberry", name: "Lolly Waffle Strawberry", price: 69, category: "Snacks", img: "Strawberry waffle.png" },
-            { id: "waffle-oreo", name: "Lolly Waffle Oreo", price: 65, category: "Snacks", img: "Oreo waffle.png" },
-            { id: "waffle-tiramisu", name: "Lolly Waffle Tiramisu", price: 75, category: "Snacks", img: "tiramisu waffle.png" },
-            { id: "waffle-biscoff", name: "Lolly Waffle Biscoff", price: 89, category: "Snacks", img: "Biscoff waffle.png" },
-
-            // Snacks — bites & mains
-            { id: "french-fries", name: "French Fries", price: 69, category: "Snacks", img: "Fries.png" },
-            { id: "chicken-poppers", name: "Chicken Poppers", price: 79, category: "Snacks", img: "Chicken Poppers.png" },
-            { id: "beef-nachos", name: "Beef Natchos", price: 149, category: "Snacks", img: "Beef Natchos.png" },
-            { id: "fries-poppers", name: "Fries and Chicken Poppers", price: 99, category: "Snacks", img: "Chicken poppers and fries.png" },
-            { id: "beef-quesadilla", name: "Beef Quesadilla", price: 149, category: "Snacks", img: "Beef Quesadilla.png" },
-            { id: "chicken-quesadilla", name: "Chicken Quesadilla", price: 159, category: "Snacks", img: "Chicken Quesadilla.png" },
-            { id: "messy-tuna-spinach", name: "Messy Tuna Spinach", price: 179, category: "Snacks", img: "Messy Tuna Spinach.png" },
-        ];
-
-        const IMG_BASE = "../picture/";
-
-        async function loadProducts() {
-            const response = await fetch('admin_data_api.php?action=products', { cache: 'no-store' });
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Products could not be loaded');
-            }
-
-            MENU_ITEMS = (result.products || []).map((product) => ({
-                id: String(product.id),
-                name: product.product_name,
-                price: Number(product.price) || 0,
-                category: product.category || 'Uncategorized',
-                img: String(product.image || '').replace(/^\/picture\//, ''),
-                available: Number(product.is_available) !== 0
-            }));
-
-            if (!MENU_ITEMS.length) throw new Error('No products found in the database');
-            selectedItemId = MENU_ITEMS.some((item) => item.name.toLowerCase() === 'hershey delight')
-                ? MENU_ITEMS.find((item) => item.name.toLowerCase() === 'hershey delight').id
-                : MENU_ITEMS[0].id;
-        }
-
-        /* Master ingredient list — used to populate the "Add Ingredients" dropdown
-        with a known unit + cost per unit, so totals calculate automatically. */
-        const INGREDIENT_LIBRARY = [
-            { name: "Espresso Shot", unit: "shot", cost: 6 },
-            { name: "Fresh Milk", unit: "ml", cost: 6 },
-            { name: "Condensed Milk", unit: "ml", cost: 6 },
-            { name: "Chocolate Syrup", unit: "ml", cost: 6 },
-            { name: "Whipped Cream", unit: "g", cost: 6 },
-            { name: "Matcha Powder", unit: "g", cost: 8 },
-            { name: "Vanilla Syrup", unit: "ml", cost: 5 },
-            { name: "Caramel Syrup", unit: "ml", cost: 5 },
-            { name: "Hazelnut Syrup", unit: "ml", cost: 5 },
-            { name: "Biscoff Spread", unit: "g", cost: 9 },
-            { name: "Oreo Cookie", unit: "pcs", cost: 4 },
-            { name: "Cheesecake Cream", unit: "g", cost: 7 },
-            { name: "Tiramisu Powder", unit: "g", cost: 7 },
-            { name: "Nutella", unit: "g", cost: 9 },
-            { name: "Lavender Syrup", unit: "ml", cost: 6 },
-            { name: "Graham Crackers", unit: "g", cost: 3 },
-            { name: "Mango Puree", unit: "ml", cost: 5 },
-            { name: "Strawberry Puree", unit: "ml", cost: 5 },
-            { name: "Blueberry Puree", unit: "ml", cost: 5 },
-            { name: "Sea Salt Cream", unit: "g", cost: 6 },
-            { name: "Brown Sugar Syrup", unit: "ml", cost: 5 },
-            { name: "Ice", unit: "g", cost: 1 },
-            { name: "Cup 16oz", unit: "pcs", cost: 3 },
-            { name: "Cup 22oz", unit: "pcs", cost: 4 },
-            { name: "Straw", unit: "pcs", cost: 1 },
-            { name: "Waffle Batter", unit: "g", cost: 5 },
-            { name: "French Fries (frozen)", unit: "g", cost: 3 },
-            { name: "Chicken Popper (frozen)", unit: "g", cost: 4 },
-            { name: "Tortilla Wrap", unit: "pcs", cost: 6 },
-            { name: "Beef Filling", unit: "g", cost: 8 },
-            { name: "Chicken Filling", unit: "g", cost: 7 },
-            { name: "Nacho Chips", unit: "g", cost: 4 },
-            { name: "Tuna Filling", unit: "g", cost: 7 },
-            { name: "Spinach", unit: "g", cost: 3 },
-        ];
-
-        /* In-memory mapping store: { menuItemId: [ {ingredient, unit, qty, cost} ] }
-        Pre-seeded for Hershey Delight to mirror the current saved mapping. */
-        const mappingStore = {
-            "hershey-delight": [
-                { ingredient: "Espresso Shot", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Fresh Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Condensed Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Chocolate Syrup", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Whipped Cream", unit: "", qty: "", cost: 6, total: 12 },
-            ],
-        };
-
-        let selectedItemId = "hershey-delight";
-        let showInactiveOnly = false;
-
-        const peso = (n) => `₱ ${Number(n).toFixed(2)}`;
-
-        function renderMenuList(filterText = "") {
-            const list = document.getElementById("menuList");
-            const term = filterText.trim().toLowerCase();
-            const items = MENU_ITEMS.filter((m) => m.name.toLowerCase().includes(term));
-
-            if (!items.length) {
-                list.innerHTML = `<div class="menu-empty">No menu items match "${filterText}"</div>`;
-                return;
-            }
-
-            list.innerHTML = items
-                .map(
-                    (m) => `
-                <button type="button" class="menu-item ${m.id === selectedItemId ? "selected" : ""}" data-id="${m.id}">
-                    <span class="menu-item-thumb"><img src="${IMG_BASE}${m.img}" alt="${m.name}" loading="lazy"></span>
-                    <span class="menu-item-info">
-                        <span class="menu-item-name">${m.name}</span>
-                        <span class="menu-item-price">${peso(m.price)}</span>
-                    </span>
-                </button>`
-                )
-                .join("");
-
-            list.querySelectorAll(".menu-item").forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    selectedItemId = btn.dataset.id;
-                    renderMenuList(document.getElementById("menuSearch").value);
-                    renderMapPanel();
-                });
-            });
-        }
-
-        function ingredientOptionsHTML(selectedName) {
-            return INGREDIENT_LIBRARY.map(
-                (ing) => `<option value="${ing.name}" ${ing.name === selectedName ? "selected" : ""}>${ing.name}</option>`
-            ).join("");
-        }
-
-        function renderMapPanel() {
-            const item = MENU_ITEMS.find((m) => m.id === selectedItemId);
-            const panel = document.getElementById("mapPanel");
-            if (!item) {
-                panel.innerHTML = `<div class="map-empty">Select a menu item on the left to map its ingredients.</div>`;
-                return;
-            }
-
-            const rows = mappingStore[item.id] || [];
-
-            panel.innerHTML = `
-                <div class="item-info-bar">
-                    <div class="item-info-left">
-                        <span class="item-info-thumb"><img src="${IMG_BASE}${item.img}" alt="${item.name}"></span>
-                        <span class="item-info-text">
-                            <span class="item-info-name">${item.name}</span>
-                            <span class="item-info-sub">Category: ${item.category}</span>
-                        </span>
-                    </div>
-                    <div class="item-info-right">
-                        <span class="item-info-price-label">Selling Price</span>
-                        <span class="item-info-price">${peso(item.price)}</span>
-                    </div>
-                    <span class="status-badge active">Active</span>
-                </div>
-
-                <div class="ingredient-table">
-                    <div class="ingredient-row ingredient-head">
-                        <span>Ingredient</span>
-                        <span>Unit</span>
-                        <span>Qty Per Serving</span>
-                        <span>Cost Per Unit</span>
-                        <span>Total Cost</span>
-                        <span></span>
-                    </div>
-                    <div id="ingredientRows">
-                        ${rows.length
-                    ? rows
-                        .map(
-                            (row, i) => `
-                            <div class="ingredient-row" data-index="${i}">
-                                <select class="ing-select">${ingredientOptionsHTML(row.ingredient)}</select>
-                                <input class="ing-unit" type="text" value="${row.unit}" placeholder="e.g. ml">
-                                <input class="ing-qty" type="number" min="0" step="any" value="${row.qty}" placeholder="0">
-                                <span class="ing-cost">${peso(row.cost)}</span>
-                                <span class="ing-total">${peso(row.total)}</span>
-                                <button type="button" class="ing-delete" aria-label="Remove ingredient" data-index="${i}">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>`
-                        )
-                        .join("")
-                    : `<div class="ingredient-empty">No ingredients mapped yet. Click "Add Ingredients" below to start.</div>`
+        imageInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size exceeds 5MB limit.');
+                    return;
                 }
-                    </div>
-                </div>
-
-                <button type="button" class="add-ingredients-btn" id="addIngredientBtn">
-                    <i class="fa-solid fa-plus"></i> Add Ingredients
-                </button>
-
-                <div class="map-footer">
-                    <div class="estimated-cost">
-                        <span class="estimated-cost-label">Estimated Cost per serving</span>
-                        <span class="estimated-cost-value" id="estimatedCost">${peso(estimateTotal(rows))}</span>
-                    </div>
-                    <button type="button" class="save-mapping-btn" id="saveMappingBtn">Save Mapping</button>
-                </div>
-            `;
-
-            wireMapPanelEvents(item.id, item.name);
-        }
-
-        function estimateTotal(rows) {
-            return rows.reduce((sum, r) => sum + (Number(r.total) || 0), 0);
-        }
-
-        function wireMapPanelEvents(itemId, productName) {
-            const rows = mappingStore[itemId] || [];
-
-            document.querySelectorAll("#ingredientRows .ingredient-row").forEach((rowEl) => {
-                const idx = Number(rowEl.dataset.index);
-
-                const select = rowEl.querySelector(".ing-select");
-                const unitInput = rowEl.querySelector(".ing-unit");
-                const qtyInput = rowEl.querySelector(".ing-qty");
-                const costEl = rowEl.querySelector(".ing-cost");
-                const totalEl = rowEl.querySelector(".ing-total");
-                const delBtn = rowEl.querySelector(".ing-delete");
-
-                select.addEventListener("change", () => {
-                    const lib = INGREDIENT_LIBRARY.find((i) => i.name === select.value);
-                    rows[idx].ingredient = select.value;
-                    if (lib) {
-                        rows[idx].cost = lib.cost;
-                        if (!unitInput.value) {
-                            rows[idx].unit = lib.unit;
-                            unitInput.value = lib.unit;
-                        }
-                        costEl.textContent = peso(lib.cost);
-                        recalcRow(idx, rows, qtyInput, totalEl);
-                    }
-                });
-
-                unitInput.addEventListener("input", () => {
-                    rows[idx].unit = unitInput.value;
-                });
-
-                qtyInput.addEventListener("input", () => {
-                    rows[idx].qty = qtyInput.value;
-                    recalcRow(idx, rows, qtyInput, totalEl);
-                });
-
-                delBtn.addEventListener("click", () => {
-                    rows.splice(idx, 1);
-                    renderMapPanel();
-                });
-            });
-
-            document.getElementById("addIngredientBtn").addEventListener("click", () => {
-                const defaultIng = INGREDIENT_LIBRARY[0];
-                rows.push({ ingredient: defaultIng.name, unit: defaultIng.unit, qty: "", cost: defaultIng.cost, total: 0 });
-                mappingStore[itemId] = rows;
-                renderMapPanel();
-            });
-
-            document.getElementById("saveMappingBtn").addEventListener("click", () => {
-                mappingStore[itemId] = rows;
-                const btn = document.getElementById("saveMappingBtn");
-                fetch('admin_data_api.php?action=mapping_save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_name: productName, rows: rows.map(row => ({ ingredient: row.ingredient, amount: row.qty })) })
-                }).then(response => response.json()).then(result => {
-                    if (!result.success) throw new Error(result.error || 'Mapping could not be saved');
-                    const original = btn.textContent;
-                    btn.textContent = "Saved";
-                    btn.disabled = true;
-                    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
-                }).catch(error => alert(error.message));
-            });
-        }
-
-        function recalcRow(idx, rows, qtyInput, totalEl) {
-            const qty = Number(qtyInput.value) || 0;
-            const cost = Number(rows[idx].cost) || 0;
-            const total = qty > 0 ? qty * cost : rows[idx].total;
-            rows[idx].total = qty > 0 ? total : rows[idx].total;
-            totalEl.textContent = peso(rows[idx].total);
-            const estimatedEl = document.getElementById("estimatedCost");
-            if (estimatedEl) estimatedEl.textContent = peso(estimateTotal(rows));
-        }
-
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                await loadProducts();
-            } catch (error) {
-                console.error('Unable to load products from the database:', error);
-                MENU_ITEMS = FALLBACK_MENU_ITEMS;
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    profileImagePreview.src = event.target.result;
+                    profileImagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
             }
-
-            renderMenuList();
-            renderMapPanel();
-
-            const selectedMenuItem = MENU_ITEMS.find(item => item.id === selectedItemId);
-            fetch(`admin_data_api.php?action=mapping_get&product_name=${encodeURIComponent(selectedMenuItem.name)}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success && result.mapping.length) {
-                        mappingStore[selectedItemId] = result.mapping.map(row => ({
-                            ingredient: row.ingredient,
-                            unit: row.unit,
-                            qty: row.amount,
-                            cost: 0,
-                            total: 0
-                        }));
-                        renderMapPanel();
-                    }
-                });
-
-            document.getElementById("menuSearch").addEventListener("input", (e) => {
-                renderMenuList(e.target.value);
-            });
-
-            document.getElementById("addMenuItemBtn").addEventListener("click", () => {
-                alert("Open the Menu Management page to add a new menu item, then come back here to map its ingredients.");
-            });
-
-            const toggle = document.getElementById("showInactiveToggle");
-            toggle.addEventListener("change", () => {
-                showInactiveOnly = toggle.checked;
-                document.getElementById("mapPanel").classList.toggle("show-inactive", showInactiveOnly);
-            });
         });
 
+        // Toggle Edit/Save Admin Profile
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        const nameText = document.getElementById('nameText');
+        const emailText = document.getElementById('emailText');
+        const nameInput = document.getElementById('nameInput');
+        const emailInput = document.getElementById('emailInput');
+        let isEditingProfile = false;
+
+        fetch('admin_data_api.php?action=settings_get')
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) return;
+                nameText.innerText = result.settings.full_name;
+                emailText.innerText = result.settings.email;
+                nameInput.value = result.settings.full_name;
+                emailInput.value = result.settings.email;
+                if (result.settings.avatar) profileImagePreview.src = result.settings.avatar;
+            });
+
+        editProfileBtn.addEventListener('click', function () {
+            isEditingProfile = !isEditingProfile;
+            if (isEditingProfile) {
+                editProfileBtn.innerText = 'Save Profile';
+                nameText.style.display = 'none';
+                emailText.style.display = 'none';
+                nameInput.style.display = 'block';
+                emailInput.style.display = 'block';
+            } else {
+                if (!nameInput.value.trim() || !emailInput.value.trim()) {
+                    alert('Fields cannot be left blank.');
+                    isEditingProfile = true;
+                    return;
+                }
+                fetch('admin_data_api.php?action=settings_profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ full_name: nameInput.value, email: emailInput.value })
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (!result.success) throw new Error(result.error || 'Profile update failed');
+                        nameText.innerText = nameInput.value;
+                        emailText.innerText = emailInput.value;
+                        alert('Profile details updated successfully!');
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                        isEditingProfile = true;
+                    });
+
+                nameText.style.display = 'block';
+                emailText.style.display = 'block';
+                nameInput.style.display = 'none';
+                emailInput.style.display = 'none';
+                editProfileBtn.innerText = 'Edit Profile';
+            }
+        });
+
+        // Change Password Handler
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        const currentPassword = document.getElementById('currentPassword');
+        const newPassword = document.getElementById('newPassword');
+        const confirmPassword = document.getElementById('confirmPassword');
+
+        changePasswordBtn.addEventListener('click', function () {
+            const currVal = currentPassword.value.trim();
+            const newVal = newPassword.value.trim();
+            const confirmVal = confirmPassword.value.trim();
+
+            if (!currVal || !newVal || !confirmVal) {
+                alert('Please fill out all password fields.');
+                return;
+            }
+
+            if (newVal !== confirmVal) {
+                alert('New passwords do not match!');
+                return;
+            }
+
+            fetch('admin_data_api.php?action=settings_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currVal,
+                    new_password: newVal
+                })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (!result.success) throw new Error(result.error || 'Password update failed');
+                    alert('Password changed successfully!');
+                    currentPassword.value = '';
+                    newPassword.value = '';
+                    confirmPassword.value = '';
+                })
+                .catch(error => alert(error.message));
+        });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
 </body>

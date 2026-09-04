@@ -75,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
 
     $stmt = $connect->prepare(
         "UPDATE orders
-         SET status = 'cancelled'
+         SET status = 'cancelled',
+             payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
          WHERE id = ? AND user_id = ?
            AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
     );
@@ -423,6 +424,21 @@ function step_class(bool $reached)
                 <?php endif; ?>
             </div>
 
+            <?php if ($latestOrder && $latestOrder['status'] === 'completed'): ?>
+                <div class="feedback-section">
+                    <div class="section-label">Rate Your Order</div>
+                    <p class="feedback-subtitle">How was your order?</p>
+                    <div class="rating-stars" id="ratingStars" role="radiogroup" aria-label="Order rating">
+                        <?php for ($rating = 1; $rating <= 5; $rating++): ?>
+                            <button type="button" class="rating-star" data-rating="<?= $rating ?>" aria-label="<?= $rating ?> stars">&#9733;</button>
+                        <?php endfor; ?>
+                    </div>
+                    <textarea id="orderReview" maxlength="1000" placeholder="Tell us about your experience..."></textarea>
+                    <button type="button" class="feedback-submit" id="submitReview">Submit Review</button>
+                    <p class="feedback-message" id="feedbackMessage" role="status"></p>
+                </div>
+            <?php endif; ?>
+
             <!-- Need Help -->
             <div class="need-help">
                 <div class="section-label">Need Help?</div>
@@ -641,6 +657,24 @@ function step_class(bool $reached)
                 } catch (error) {}
             }, 4000);
         })();
+
+        const ratingStars = document.querySelectorAll('.rating-star');
+        let selectedRating = 0;
+        ratingStars.forEach(star => star.addEventListener('click', () => {
+            selectedRating = Number(star.dataset.rating);
+            ratingStars.forEach(item => item.classList.toggle('selected', Number(item.dataset.rating) <= selectedRating));
+        }));
+        document.getElementById('submitReview')?.addEventListener('click', async () => {
+            const message = document.getElementById('feedbackMessage');
+            if (!selectedRating) { message.textContent = 'Please select a rating.'; return; }
+            const response = await fetch('../api/orders_api.php', {
+                method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'review', order_id: <?= json_encode((int)($latestOrder['id'] ?? 0)) ?>, rating: selectedRating, review: document.getElementById('orderReview').value })
+            });
+            const result = await response.json();
+            message.textContent = result.success ? result.message : (result.error || 'Unable to save review.');
+            if (result.success) document.getElementById('submitReview').disabled = true;
+        });
         // ... (existing JavaScript unchanged) ...
 
         // ── Cancel Order functions ──────────────────────────────

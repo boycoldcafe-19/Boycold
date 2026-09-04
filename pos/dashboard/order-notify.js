@@ -347,6 +347,10 @@
                     addNotification(order);
                 });
             }
+
+            // Keep the open POS list in sync when a customer cancels QRPh
+            // from the user checkout page.
+            await refreshOnlineOrdersTable();
         } catch (err) {
             console.error('Online order poll failed', err);
         }

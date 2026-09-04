@@ -149,9 +149,12 @@ function boycold_apply_qrph_result(mysqli $connect, string $paymentIntentId, int
         } elseif (in_array($resultStatus, ['failed', 'expired'], true)) {
             if (strtolower((string) $order['payment_status']) !== 'paid') {
                 $upd = $connect->prepare(
-                    "UPDATE orders SET payment_status = ? WHERE id = ? AND payment_status <> 'paid'"
+                    "UPDATE orders
+                     SET payment_status = ?,
+                         status = IF(? = 'expired' AND status = 'pending', 'cancelled', status)
+                     WHERE id = ? AND payment_status <> 'paid'"
                 );
-                $upd->bind_param('si', $resultStatus, $orderId);
+                $upd->bind_param('ssi', $resultStatus, $resultStatus, $orderId);
                 $upd->execute();
                 $upd->close();
             }

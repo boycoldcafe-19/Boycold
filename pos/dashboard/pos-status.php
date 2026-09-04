@@ -119,8 +119,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         );
         $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
     } else {
-        $stmt = $connect->prepare("UPDATE orders SET status = ? WHERE id = ? AND branch_id = ?");
-        $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
+        $stmt = $connect->prepare("UPDATE orders
+                                   SET status = ?,
+                                       payment_status = IF(? = 'cancelled' AND payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
+                                   WHERE id = ? AND branch_id = ?");
+        $stmt->bind_param("ssii", $newStatus, $newStatus, $orderId, $branchId);
     }
 
     if ($stmt->execute()) {
@@ -193,7 +196,7 @@ $statusLabels = [
     'ready'     => 'Out for Delivery',
     'delivered' => 'Delivered',
     'completed' => 'Completed',
-    'cancelled' => 'Cancelled',
+    'cancelled' => 'Order Cancelled',
 ];
 
 $statusMessages = [

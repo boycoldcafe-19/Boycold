@@ -29,7 +29,6 @@ define('DB_USER', getenv('DB_USER') ?: $_ENV['DB_USER'] ?? 'u627631172_boycold')
 define('DB_PASS', getenv('DB_PASS') ?: $_ENV['DB_PASS'] ?? 'Boycold2026');
 define('DB_NAME', getenv('DB_NAME') ?: $_ENV['DB_NAME'] ?? 'u627631172_boycold_db');
 define('DB_PORT', getenv('DB_PORT') ?: $_ENV['DB_PORT'] ?? 3306);
-
 // Create database connection with error handling
 try {
     $connect = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, (int)DB_PORT);
@@ -50,7 +49,15 @@ try {
     }
     
     $connect->set_charset('utf8mb4');
-    
+
+    // Pin MySQL's own session timezone to Manila (fixed +08:00, no DST).
+    // Without this, NOW()/CURRENT_TIMESTAMP and every `timestamp` column
+    // default to the DB server's own timezone (commonly UTC on shared
+    // hosting), which is what was making shift/order timestamps come out
+    // hours off across the POS pages even though the PHP-side business
+    // logic (pos_business_now(), pos_sales_date()) was already correct.
+    $connect->query("SET time_zone = '+08:00'");
+
     // Test connection using query instead of deprecated ping()
     $testQuery = $connect->query("SELECT 1");
     if (!$testQuery) {

@@ -5,13 +5,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="admin-css/mapping.css">
+    <link rel="stylesheet" href="admin-css/loyalty-card.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
-    <title>BoyCold - Ingredients Mapping</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <title>BoyCold - Loyalty Card</title>
 </head>
 
 <body>
@@ -36,7 +38,7 @@
                     <ul>
                         <li>
                             <a href="dashboard.php">
-                                <span class="nav-icon1"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                                <span class="nav-icon1"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><svg width="12" height="12" viewBox="0 0 12 12" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path
                                             d="M0.5 5C0.367392 5 0.240215 4.94732 0.146447 4.85355C0.0526785 4.75979 0 4.63261 0 4.5V0.5C0 0.367392 0.0526785 0.240215 0.146447 0.146447C0.240215 0.0526785 0.367392 0 0.5 0H4.5C4.63261 0 4.75979 0.0526785 4.85355 0.146447C4.94732 0.240215 5 0.367392 5 0.5V4.5C5 4.63261 4.94732 4.75979 4.85355 4.85355C4.75979 4.94732 4.63261 5 4.5 5H0.5ZM7.5 5C7.36739 5 7.24021 4.94732 7.14645 4.85355C7.05268 4.75979 7 4.63261 7 4.5V0.5C7 0.367392 7.05268 0.240215 7.14645 0.146447C7.24021 0.0526785 7.36739 0 7.5 0H11.5C11.6326 0 11.7598 0.0526785 11.8536 0.146447C11.9473 0.240215 12 0.367392 12 0.5V4.5C12 4.63261 11.9473 4.75979 11.8536 4.85355C11.7598 4.94732 11.6326 5 11.5 5H7.5ZM0.5 12C0.367392 12 0.240215 11.9473 0.146447 11.8536C0.0526785 11.7598 0 11.6326 0 11.5V7.5C0 7.36739 0.0526785 7.24021 0.146447 7.14645C0.240215 7.05268 0.367392 7 0.5 7H4.5C4.63261 7 4.75979 7.05268 4.85355 7.14645C4.94732 7.24021 5 7.36739 5 7.5V11.5C5 11.6326 4.94732 11.7598 4.85355 11.8536C4.75979 11.9473 4.63261 12 4.5 12H0.5ZM7.5 12C7.36739 12 7.24021 11.9473 7.14645 11.8536C7.05268 11.7598 7 11.6326 7 11.5V7.5C7 7.36739 7.05268 7.24021 7.14645 7.14645C7.24021 7.05268 7.36739 7 7.5 7H11.5C11.6326 7 11.7598 7.05268 11.8536 7.14645C11.9473 7.24021 12 7.36739 12 7.5V11.5C12 11.6326 11.7598 11.8536 11.8536C11.7598 11.9473 11.6326 12 11.5 12H7.5Z"
@@ -98,7 +100,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="mapping.php" class="active">
+                            <a href="mapping.php">
                                 <span class="nav-icon"><svg width="27" height="27" viewBox="0 0 27 27" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path fill-rule="evenodd" clip-rule="evenodd"
@@ -129,7 +131,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="loyalty-card.php">
+                            <a href="loyalty-card.php" class="active">
                                 <span class="nav-icon"><svg width="22" height="18" viewBox="0 0 22 18" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path
@@ -339,63 +341,202 @@
 
                 <div class="header-divider"></div>
 
-                <button class="profile-btn">
-                    <div class="profile-avatar">
-                        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z"
-                                fill="black" />
-                        </svg>
+                <div class="profile-wrap" style="position: relative;">
+                    <button class="profile-btn" id="profileBtn">
+                        <div class="profile-avatar">
+                            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z"
+                                    fill="black" />
+                            </svg>
+                        </div>
+                        <div class="profile-info">
+                            <span class="profile-name">Sta. Barbara Branch</span>
+                            <span class="profile-role">Admin</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down profile-caret"></i>
+                    </button>
+                    <div class="notif-dropdown" id="profileDropdown" style="width: 200px; right: 0;">
+                        <a href="#" class="notif-item" style="padding: 12px 16px; font-weight: 600;"><i
+                                class="fa-regular fa-user" style="margin-right: 8px;"></i> Profile</a>
+                        <a href="#" class="notif-item" style="padding: 12px 16px; font-weight: 600;"><i
+                                class="fa-solid fa-gear" style="margin-right: 8px;"></i> Settings</a>
+                        <a href="adminlogin.html" class="notif-item"
+                            style="padding: 12px 16px; font-weight: 600; color: #e53935;"><i
+                                class="fa-solid fa-right-from-bracket" style="margin-right: 8px;"></i> Log Out</a>
                     </div>
-                    <div class="profile-info">
-                        <span class="profile-name">Sta. Barbara Branch</span>
-                        <span class="profile-role">Admin</span>
-                    </div>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
-                </button>
+                </div>
             </div>
 
-            <!-- INGREDIENTS MAPPING CONTENT -->
-            <div class="page-content">
+            <!-- CONTENT BODY -->
+            <div style="padding: 32px; display: flex; flex-direction: column; flex: 1;">
 
                 <div class="page-header">
-                    <h1 class="page-title">Ingredients Mapping</h1>
-                    <p class="page-subtitle">Assign ingredients to each menu item and set the required quantity for
-                        automatic inventory deduction</p>
+                    <div class="page-title">
+                        <h1>Loyalty Cards</h1>
+                        <p>Manage and monitor all physical and virtual loyalty cards.</p>
+                    </div>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" placeholder="Search orders, customer or customer ID..">
+                    </div>
                 </div>
 
-                <div class="mapping-grid">
+                <div class="filters-row">
+                    <!-- Status Filter Dropdown -->
+                    <div class="custom-select-wrap" style="position: relative;">
+                        <select id="statusFilter" class="custom-select"
+                            style="appearance: none; -webkit-appearance: none; padding-right: 30px;">
+                            <option value="All">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                    </div>
 
-                    <!-- LEFT: Select Menu Item -->
-                    <section class="panel">
-                        <div class="panel-header">
-                            <span class="panel-title">Select Menu Item</span>
-                        </div>
-                        <div class="menu-search">
-                            <input type="text" id="menuSearch" placeholder="Search menu item...">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <div class="menu-list" id="menuList"></div>
-                        <button type="button" class="add-menu-item-btn" id="addMenuItemBtn">
-                            <i class="fa-solid fa-plus"></i> Add New Menu Item
-                        </button>
-                    </section>
+                    <div class="calendar-range" aria-label="Filter loyalty card activation date">
+                        <label for="dateFrom">From</label>
+                        <input type="date" id="dateFrom">
+                        <label for="dateTo">To</label>
+                        <input type="date" id="dateTo">
+                        <button type="button" id="clearDateFilter">Clear</button>
+                    </div>
 
-                    <!-- RIGHT: Map Ingredients -->
-                    <section class="panel">
-                        <div class="panel-header">
-                            <span class="panel-title">Map Ingredients</span>
-                            <label class="toggle-field">
-                                Show inactive orders
-                                <span class="switch">
-                                    <input type="checkbox" id="showInactiveToggle">
-                                    <span class="switch-slider"></span>
-                                </span>
-                            </label>
-                        </div>
-                        <div class="map-panel-body" id="mapPanel"></div>
-                    </section>
+                    <button class="export-btn" id="exportBtn">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export List</span>
+                    </button>
+                </div>
 
+                <!-- MAIN TABLE CONTAINER -->
+                <div class="content-container">
+                    <div class="table-section" id="tableSection">
+                        <table class="loyalty-table-card">
+                            <thead>
+                                <tr>
+                                    <th>Card ID</th>
+                                    <th>Customer</th>
+                                    <th>Progress</th>
+                                    <th>Reward</th>
+                                    <th>Status</th>
+                                    <th style="text-align: center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loyaltyTableBody">
+                                <!-- Dynamic rows rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <section class="reviews-section" aria-labelledby="reviewsTitle">
+                    <div class="reviews-section-header">
+                        <div>
+                            <h2 id="reviewsTitle">Customer Feedback</h2>
+                            <p>Ratings and reviews from completed orders.</p>
+                        </div>
+                        <span class="reviews-average" id="reviewsAverage">No ratings yet</span>
+                    </div>
+                    <div class="reviews-list" id="reviewsList">
+                        <p class="reviews-empty">Loading feedback...</p>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- OVERLAY BACKDROP -->
+            <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+            <!-- FULL HEIGHT SLIDE-IN DRAWER -->
+            <div class="side-drawer" id="sideDrawer">
+                <div class="drawer-header">
+                    <div>
+                        <h2>Card Details</h2>
+                        <p>Loyalty card information and activity</p>
+                    </div>
+                    <button class="close-drawer-btn" id="closeDrawerBtn">&times;</button>
+                </div>
+
+                <div class="drawer-card">
+                    <div class="drawer-user-info">
+                        <div class="drawer-user-left">
+                            <div class="avatar-circle" id="drawerAvatar">AD</div>
+                            <div>
+                                <strong id="drawerCustomerName" style="font-size: 16px; display: block;">Alyssa
+                                    Dionisio</strong>
+                                <span id="drawerCustomerPhone" style="font-size: 13px; color: var(--text-light);">0912
+                                    345 6789</span>
+                            </div>
+                        </div>
+                        <div id="drawerStatusBadge"></div>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Card ID</span>
+                        <span class="info-value" id="drawerCardId">BC-100002</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date Issued</span>
+                        <span class="info-value" id="drawerDateIssued">April 12, 2026</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Current Progress</span>
+                        <span class="info-value" id="drawerProgressText">5/10 stamps</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Reward</span>
+                        <span class="info-value" id="drawerRewardText"
+                            style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-gift" style="color: var(--primary);"></i> Free Drink
+                        </span>
+                    </div>
+                </div>
+
+                <div class="drawer-card">
+                    <strong style="display: block; margin-bottom: 12px; font-size: 15px;">Stamp Progress</strong>
+                    <div class="beans-row" id="drawerBeansRow" style="margin-bottom: 8px;">
+                        <!-- Beans rendered here -->
+                    </div>
+                    <span id="drawerBeansSubText" style="font-size: 12px; color: var(--text-light);">5/10 stamps</span>
+                </div>
+
+                <div class="drawer-card" style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 14px; font-size: 15px;">Activity History</strong>
+                    <div class="history-list">
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Stamp added</span>
+                            <span class="history-by">by Cashier (POS)</span>
+                        </div>
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Stamp added</span>
+                            <span class="history-by">by Cashier (POS)</span>
+                        </div>
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Stamp added</span>
+                            <span class="history-by">by Cashier (POS)</span>
+                        </div>
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Stamp added</span>
+                            <span class="history-by">by Cashier (POS)</span>
+                        </div>
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Stamp added</span>
+                            <span class="history-by">by Cashier (POS)</span>
+                        </div>
+                        <div class="history-item">
+                            <span class="history-date">April 12, 2026 &nbsp; 2:35 PM</span>
+                            <span class="history-action-text">Card Created</span>
+                            <span class="history-by">by System</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="logout-modal" id="logoutModal">
@@ -430,48 +571,11 @@
                 </div>
 
             </div>
+
         </div>
     </div>
+
     <script>
-        document.querySelectorAll('.sidebar-nav a').forEach(link => {
-            link.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                if (href === '#') e.preventDefault();
-                document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-        (function () {
-            const sidebar = document.getElementById("sidebar");
-            const backdrop = document.getElementById("sidebarBackdrop");
-            const mq = window.matchMedia("(max-width: 860px)");
-
-            function openSidebar() {
-                if (!mq.matches) return;
-                sidebar.classList.add("expanded");
-                backdrop.classList.add("show");
-            }
-
-            function closeSidebar() {
-                sidebar.classList.remove("expanded");
-                backdrop.classList.remove("show");
-            }
-
-            sidebar.addEventListener("click", () => {
-                if (mq.matches && !sidebar.classList.contains("expanded")) {
-                    openSidebar();
-                }
-            });
-
-            sidebar.querySelectorAll(".sidebar-nav a").forEach((link) => {
-                link.addEventListener("click", () => {
-                    if (mq.matches) closeSidebar();
-                });
-            });
-
-            backdrop.addEventListener("click", closeSidebar);
-            mq.addEventListener("change", closeSidebar);
-        })();
         const alertsBtn = document.getElementById('alertsBtn');
         const alertsDropdown = document.getElementById('alertsDropdown');
         const notifBtn = document.getElementById('notifBtn');
@@ -535,6 +639,7 @@
                 if (badge) badge.textContent = '0';
             });
         }
+
         const logoutBtn = document.getElementById("logoutBtn");
         const logoutModal = document.getElementById("logoutModal");
         const logoutNo = document.getElementById("logoutNo");
@@ -589,404 +694,302 @@
                 }
             });
         }
-        let MENU_ITEMS = [];
-        const FALLBACK_MENU_ITEMS = [
-            // Coffee
-            { id: "americano", name: "Americano", price: 69, category: "Coffee", img: "Americano.png" },
-            { id: "cafe-latte", name: "Cafe Latte", price: 85, category: "Coffee", img: "Cafe Latte.png" },
-            { id: "spanish-latte", name: "Spanish Latte", price: 95, category: "Coffee", img: "Spanish Latte.png" },
-            { id: "dirty-matcha", name: "Dirty Matcha", price: 119, category: "Coffee", img: "Dirty Matcha.png" },
-            { id: "dark-mocha", name: "Dark Mocha", price: 139, category: "Coffee", img: "Dark Mocha.png" },
-            { id: "white-mocha", name: "White Mocha", price: 129, category: "Coffee", img: "White Mocha.png" },
-            { id: "french-vanilla", name: "French Vanilla", price: 135, category: "Coffee", img: "Franch Vanilla.png" },
-            { id: "hazelnut-latte", name: "Hazelnut Latte", price: 135, category: "Coffee", img: "Hazelnut Latte.png" },
 
-            // Non-Coffee
-            { id: "strawberry-milk", name: "Strawberry Milk", price: 79, category: "Non-Coffee", img: "Strawberry Milk.png" },
-            { id: "blueberry-milk", name: "Blueberry Milk", price: 79, category: "Non-Coffee", img: "Blueberry Milk.png" },
-            { id: "milky-oreo", name: "Milky Oreo", price: 85, category: "Non-Coffee", img: "Milky Oreo.png" },
-            { id: "white-cocoa", name: "White cocoa", price: 95, category: "Non-Coffee", img: "White cocoa.png" },
-            { id: "choco-berry", name: "Choco Berry", price: 109, category: "Non-Coffee", img: "Choco Berry.png" },
-            { id: "choco-vanilla-cookie", name: "Choco Vanilla Cookie", price: 129, category: "Non-Coffee", img: "Choco Vanilla Cookie.png" },
-            { id: "choco-banana-pudding", name: "Choco Banana Pudding", price: 179, category: "Non-Coffee", img: "Choco Banna Pudding.png" },
+        let cardsData = [];
 
-            // Special Coffee
-            { id: "sea-salt-latte", name: "Sea Salt Latte", price: 115, category: "Special Coffee", img: "Sea salt Latte.png" },
-            { id: "salted-mango-dream", name: "Salted Mango Dream", price: 139, category: "Special Coffee", img: "Salted Mango Dream.png" },
-            { id: "berry-caramel-bliss", name: "Berry Caramel Bliss", price: 139, category: "Special Coffee", img: "Berry Caramel Bliss.png" },
-            { id: "caramel-macchiato", name: "Caramel Macchiato", price: 139, category: "Special Coffee", img: "Caramel Macchiato.png" },
-            { id: "butterscotch-latte", name: "Butter Scotch Latte", price: 139, category: "Special Coffee", img: "Butter scotch latte.png" },
-            { id: "salted-caramel", name: "Salted Caramel", price: 139, category: "Special Coffee", img: "Salted Caramel.png" },
-            { id: "salted-macadamia", name: "Salted Macadamia", price: 139, category: "Special Coffee", img: "Salted Macadamia.png" },
-            { id: "cheesecake-latte", name: "Cheesecake Latte", price: 149, category: "Special Coffee", img: "Cheesecake Latte.png" },
-            { id: "einspanner-latte", name: "Einspanner Latte", price: 149, category: "Special Coffee", img: "Einspanner Latte.png" },
-            { id: "biscoff-creamy-latte", name: "Biscoff Creamy Latte", price: 159, category: "Special Coffee", img: "Biscoff Creamy Latte.png" },
-            { id: "nutella-hazelnut-latte", name: "Nutella Hazelnut Latte", price: 169, category: "Special Coffee", img: "Nutella Hazelnut latte.png" },
-            { id: "tiramisu-latte", name: "Tiramisu Latte", price: 179, category: "Special Coffee", img: "Tiramisu Latte.png" },
-
-            // Matcha Fusion
-            { id: "pure-matcha", name: "Pure Matcha", price: 80, category: "Matcha Fusion", img: "Pure matcha.png" },
-            { id: "matcha-latte", name: "Matcha Latte", price: 85, category: "Matcha Fusion", img: "Matcha Latte.png" },
-            { id: "mango-matcha", name: "Mango Matcha", price: 89, category: "Matcha Fusion", img: "Mango matcha.png" },
-            { id: "sea-salt-matcha", name: "Sea Salt Matcha", price: 95, category: "Matcha Fusion", img: "Seasalt Matcha.png" },
-            { id: "matcha-freddo", name: "Matcha Freddo", price: 99, category: "Matcha Fusion", img: "Matcha Freddo.png" },
-            { id: "choco-matcha", name: "Choco Matcha", price: 109, category: "Matcha Fusion", img: "Choco Matcha.png" },
-            { id: "strawberry-matcha", name: "Strawberry Matcha", price: 115, category: "Matcha Fusion", img: "Strawberry Matcha.png" },
-            { id: "cheesecake-matcha", name: "Cheesecake Matcha", price: 119, category: "Matcha Fusion", img: "Cheesecake Matcha.png" },
-            { id: "lavender-matcha", name: "Lavander Matcha", price: 119, category: "Matcha Fusion", img: "Lavander Matcha.png" },
-            { id: "matcha-banana-pudding", name: "Matcha Banana Pudding", price: 179, category: "Matcha Fusion", img: "Matcha banana Pudding.png" },
-
-            // Fruit Shake
-            { id: "mango-graham", name: "Mango Graham", price: 65, category: "Fruit Shake", img: "Mango graham.png" },
-            { id: "strawberry-shake", name: "Strawberry Shake", price: 65, category: "Fruit Shake", img: "Strawberry shake.png" },
-            { id: "blueberry-shake", name: "Blueberry Shake", price: 65, category: "Fruit Shake", img: "BLUEBERRY SHAKE 1.png" },
-            { id: "mango-oreo", name: "Mango Oreo", price: 79, category: "Fruit Shake", img: "mango oreo.png" },
-            { id: "berry-oreo", name: "Berry Oreo", price: 79, category: "Fruit Shake", img: "Berry Oreo.png" },
-            { id: "berry-mango", name: "Berry Mango", price: 79, category: "Fruit Shake", img: "Berry mango.png" },
-
-            // Frappe Series
-            { id: "hershey-delight", name: "Hershey Delight", price: 95, category: "Frappe Series", img: "hershey delight.png" },
-            { id: "oreo-frappe", name: "Oreo Frappe", price: 105, category: "Frappe Series", img: "Oreo Frappe.png" },
-            { id: "matcha-frappe", name: "Matcha Frappe", price: 105, category: "Frappe Series", img: "Matcha Frappe.png" },
-            { id: "java-chips", name: "Java Chips", price: 199, category: "Frappe Series", img: "Java Chips.png" },
-            { id: "cheesecake-frappe", name: "Cheesecake Frappe", price: 129, category: "Frappe Series", img: "Cheesecake Frappe.png" },
-            { id: "white-smore-frappe", name: "White Smore Frappe", price: 129, category: "Frappe Series", img: "white smores.png" },
-            { id: "caramel-frappe", name: "Caramel Frappe", price: 139, category: "Frappe Series", img: "Caramel Frappe.png" },
-            { id: "biscoff-frappe", name: "Biscoff Frappe", price: 139, category: "Frappe Series", img: "Biscoff frappe.png" },
-            { id: "nuttela-hazelnut-frappe", name: "Nuttela Hazelnut Frappe", price: 149, category: "Frappe Series", img: "Nuttela Hazelnut Frappe.png" },
-
-            // Snacks — waffles
-            { id: "waffle-chocolate", name: "Lolly Waffle Chocolate", price: 69, category: "Snacks", img: "Chocolate waffle.png" },
-            { id: "waffle-ube", name: "Lolly Waffle Ube", price: 65, category: "Snacks", img: "ube waffle.png" },
-            { id: "waffle-matcha", name: "Lolly Waffle Matcha", price: 69, category: "Snacks", img: "Matcha waffle.png" },
-            { id: "waffle-strawberry", name: "Lolly Waffle Strawberry", price: 69, category: "Snacks", img: "Strawberry waffle.png" },
-            { id: "waffle-oreo", name: "Lolly Waffle Oreo", price: 65, category: "Snacks", img: "Oreo waffle.png" },
-            { id: "waffle-tiramisu", name: "Lolly Waffle Tiramisu", price: 75, category: "Snacks", img: "tiramisu waffle.png" },
-            { id: "waffle-biscoff", name: "Lolly Waffle Biscoff", price: 89, category: "Snacks", img: "Biscoff waffle.png" },
-
-            // Snacks — bites & mains
-            { id: "french-fries", name: "French Fries", price: 69, category: "Snacks", img: "Fries.png" },
-            { id: "chicken-poppers", name: "Chicken Poppers", price: 79, category: "Snacks", img: "Chicken Poppers.png" },
-            { id: "beef-nachos", name: "Beef Natchos", price: 149, category: "Snacks", img: "Beef Natchos.png" },
-            { id: "fries-poppers", name: "Fries and Chicken Poppers", price: 99, category: "Snacks", img: "Chicken poppers and fries.png" },
-            { id: "beef-quesadilla", name: "Beef Quesadilla", price: 149, category: "Snacks", img: "Beef Quesadilla.png" },
-            { id: "chicken-quesadilla", name: "Chicken Quesadilla", price: 159, category: "Snacks", img: "Chicken Quesadilla.png" },
-            { id: "messy-tuna-spinach", name: "Messy Tuna Spinach", price: 179, category: "Snacks", img: "Messy Tuna Spinach.png" },
-        ];
-
-        const IMG_BASE = "../picture/";
-
-        async function loadProducts() {
-            const response = await fetch('admin_data_api.php?action=products', { cache: 'no-store' });
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Products could not be loaded');
+        // Generate Coffee Beans SVG Stamps
+        function generateBeansHTML(count) {
+            let beans = '';
+            for (let i = 0; i < 7; i++) {
+                const isFilled = i < count;
+                beans += `
+                    <span class="bean-svg-wrapper ${isFilled ? 'filled' : 'empty'}">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8.89345 18.2631C6.70206 18.5566 4.71702 17.9675 3.37499 16.6255C2.03297 15.2835 1.4439 13.2984 1.73737 11.107C2.03085 8.91564 3.18282 6.69743 4.93988 4.94037C6.69694 3.18331 8.91515 2.03134 11.1065 1.73786C13.2979 1.44439 15.283 2.03346 16.625 3.37548C17.967 4.71751 18.5561 6.70255 18.2626 8.89394C17.9691 11.0853 16.8172 13.3035 15.0601 15.0606C13.303 16.8176 11.0848 17.9696 8.89345 18.2631Z" fill="#692727" fill-opacity="0.78" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M16.5001 3.5C16.6668 11.6667 3.33342 8.33333 3.50008 16.5" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                `;
             }
-
-            MENU_ITEMS = (result.products || []).map((product) => ({
-                id: String(product.id),
-                name: product.product_name,
-                price: Number(product.price) || 0,
-                category: product.category || 'Uncategorized',
-                img: String(product.image || '').replace(/^\/picture\//, ''),
-                available: Number(product.is_available) !== 0
-            }));
-
-            if (!MENU_ITEMS.length) throw new Error('No products found in the database');
-            selectedItemId = MENU_ITEMS.some((item) => item.name.toLowerCase() === 'hershey delight')
-                ? MENU_ITEMS.find((item) => item.name.toLowerCase() === 'hershey delight').id
-                : MENU_ITEMS[0].id;
+            return beans;
         }
 
-        /* Master ingredient list — used to populate the "Add Ingredients" dropdown
-        with a known unit + cost per unit, so totals calculate automatically. */
-        const INGREDIENT_LIBRARY = [
-            { name: "Espresso Shot", unit: "shot", cost: 6 },
-            { name: "Fresh Milk", unit: "ml", cost: 6 },
-            { name: "Condensed Milk", unit: "ml", cost: 6 },
-            { name: "Chocolate Syrup", unit: "ml", cost: 6 },
-            { name: "Whipped Cream", unit: "g", cost: 6 },
-            { name: "Matcha Powder", unit: "g", cost: 8 },
-            { name: "Vanilla Syrup", unit: "ml", cost: 5 },
-            { name: "Caramel Syrup", unit: "ml", cost: 5 },
-            { name: "Hazelnut Syrup", unit: "ml", cost: 5 },
-            { name: "Biscoff Spread", unit: "g", cost: 9 },
-            { name: "Oreo Cookie", unit: "pcs", cost: 4 },
-            { name: "Cheesecake Cream", unit: "g", cost: 7 },
-            { name: "Tiramisu Powder", unit: "g", cost: 7 },
-            { name: "Nutella", unit: "g", cost: 9 },
-            { name: "Lavender Syrup", unit: "ml", cost: 6 },
-            { name: "Graham Crackers", unit: "g", cost: 3 },
-            { name: "Mango Puree", unit: "ml", cost: 5 },
-            { name: "Strawberry Puree", unit: "ml", cost: 5 },
-            { name: "Blueberry Puree", unit: "ml", cost: 5 },
-            { name: "Sea Salt Cream", unit: "g", cost: 6 },
-            { name: "Brown Sugar Syrup", unit: "ml", cost: 5 },
-            { name: "Ice", unit: "g", cost: 1 },
-            { name: "Cup 16oz", unit: "pcs", cost: 3 },
-            { name: "Cup 22oz", unit: "pcs", cost: 4 },
-            { name: "Straw", unit: "pcs", cost: 1 },
-            { name: "Waffle Batter", unit: "g", cost: 5 },
-            { name: "French Fries (frozen)", unit: "g", cost: 3 },
-            { name: "Chicken Popper (frozen)", unit: "g", cost: 4 },
-            { name: "Tortilla Wrap", unit: "pcs", cost: 6 },
-            { name: "Beef Filling", unit: "g", cost: 8 },
-            { name: "Chicken Filling", unit: "g", cost: 7 },
-            { name: "Nacho Chips", unit: "g", cost: 4 },
-            { name: "Tuna Filling", unit: "g", cost: 7 },
-            { name: "Spinach", unit: "g", cost: 3 },
-        ];
+        // Filter and Render Logic
+        function renderFilteredTable() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
+            const selectedStatus = document.getElementById('statusFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
 
-        /* In-memory mapping store: { menuItemId: [ {ingredient, unit, qty, cost} ] }
-        Pre-seeded for Hershey Delight to mirror the current saved mapping. */
-        const mappingStore = {
-            "hershey-delight": [
-                { ingredient: "Espresso Shot", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Fresh Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Condensed Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Chocolate Syrup", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Whipped Cream", unit: "", qty: "", cost: 6, total: 12 },
-            ],
-        };
+            const filteredData = cardsData.filter(item => {
+                const matchesSearch = item.id.toLowerCase().includes(searchValue) ||
+                    item.customer.toLowerCase().includes(searchValue) ||
+                    item.phone.toLowerCase().includes(searchValue);
 
-        let selectedItemId = "hershey-delight";
-        let showInactiveOnly = false;
+                const matchesStatus = (selectedStatus === 'All') || (item.status === selectedStatus);
 
-        const peso = (n) => `₱ ${Number(n).toFixed(2)}`;
+                const matchesDate = (!dateFrom || item.activationDate >= dateFrom) &&
+                    (!dateTo || item.activationDate <= dateTo);
 
-        function renderMenuList(filterText = "") {
-            const list = document.getElementById("menuList");
-            const term = filterText.trim().toLowerCase();
-            const items = MENU_ITEMS.filter((m) => m.name.toLowerCase().includes(term));
+                return matchesSearch && matchesStatus && matchesDate;
+            });
 
-            if (!items.length) {
-                list.innerHTML = `<div class="menu-empty">No menu items match "${filterText}"</div>`;
-                return;
-            }
+            const tbody = document.getElementById('loyaltyTableBody');
+            tbody.innerHTML = '';
 
-            list.innerHTML = items
-                .map(
-                    (m) => `
-                <button type="button" class="menu-item ${m.id === selectedItemId ? "selected" : ""}" data-id="${m.id}">
-                    <span class="menu-item-thumb"><img src="${IMG_BASE}${m.img}" alt="${m.name}" loading="lazy"></span>
-                    <span class="menu-item-info">
-                        <span class="menu-item-name">${m.name}</span>
-                        <span class="menu-item-price">${peso(m.price)}</span>
-                    </span>
-                </button>`
-                )
-                .join("");
+            filteredData.forEach((item) => {
+                const originalIndex = cardsData.findIndex(card => card.id === item.id);
+                const tr = document.createElement('tr');
+                tr.onclick = (e) => {
+                    if (e.target.closest('.action-cell')) return;
+                    openDrawer(item);
+                };
 
-            list.querySelectorAll(".menu-item").forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    selectedItemId = btn.dataset.id;
-                    renderMenuList(document.getElementById("menuSearch").value);
-                    renderMapPanel();
-                });
+                const needsReactivation = item.status === 'Inactive' || item.status === 'Completed' || item.stamps >= 10;
+
+                tr.innerHTML = `
+                    <td>
+                        <strong>${item.id}</strong><br>
+                        <span style="font-size: 12px; color: var(--text-light);">Issued: ${item.issued}</span>
+                    </td>
+                    <td>
+                        <div class="customer-cell">
+                            <div class="avatar-circle">${item.initials}</div>
+                            <div class="customer-info-text">
+                                <strong>${item.customer}</strong>
+                                <span>${item.phone}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="beans-row">${generateBeansHTML(item.stamps)}</div>
+                        <span class="stamps-text">${item.stamps}/10 stamps</span>
+                    </td>
+                    <td>
+                        <div class="reward-cell">
+                            <div class="reward-box-icon ${item.redeemed ? 'completed' : ''}">
+                                <i class="fa-solid fa-gift"></i>
+                            </div>
+                            <div class="reward-info">
+                                <strong>${item.reward}</strong>
+                                ${item.redeemed
+                        ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
+                        : `<span>Not Redeemed</span>`}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-pill ${item.status.toLowerCase()}">
+                            <span class="dot"></span> ${item.status}
+                        </span>
+                    </td>
+                    <td class="action-cell">
+                        <button class="three-dots-btn" onclick="toggleActionMenu(event, ${originalIndex})">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <div class="action-menu" id="actionMenu-${originalIndex}">
+                            ${needsReactivation ? `
+                                <div class="action-menu-item reactivate" onclick="reactivateCard(event, ${originalIndex})">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="8" cy="8" r="7" stroke="#13A101" stroke-width="1.5"/>
+                                        <path d="M5 8L7 10L11 6" stroke="#13A101" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg> Reactivate Card
+                                </div>
+                            ` : `
+                                <div class="action-menu-item deactivate" onclick="deactivateCard(event, ${originalIndex})">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 14.25C11.4518 14.25 14.25 11.4518 14.25 8C14.25 4.54822 11.4518 1.75 8 1.75C4.54822 1.75 1.75 4.54822 1.75 8C1.75 11.4518 4.54822 14.25 8 14.25Z" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M4.75 8H11.25" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg> Deactivate Card
+                                </div>
+                            `}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        function ingredientOptionsHTML(selectedName) {
-            return INGREDIENT_LIBRARY.map(
-                (ing) => `<option value="${ing.name}" ${ing.name === selectedName ? "selected" : ""}>${ing.name}</option>`
-            ).join("");
+        // Action Menu Toggle
+        function toggleActionMenu(event, index) {
+            event.stopPropagation();
+            document.querySelectorAll('.action-menu').forEach((menu) => {
+                if (menu.id !== `actionMenu-${index}`) menu.classList.remove('show');
+            });
+            const targetMenu = document.getElementById(`actionMenu-${index}`);
+            if (targetMenu) targetMenu.classList.toggle('show');
         }
 
-        function renderMapPanel() {
-            const item = MENU_ITEMS.find((m) => m.id === selectedItemId);
-            const panel = document.getElementById("mapPanel");
-            if (!item) {
-                panel.innerHTML = `<div class="map-empty">Select a menu item on the left to map its ingredients.</div>`;
-                return;
-            }
+        // Reactivate Action
+        function reactivateCard(event, index) {
+            event.stopPropagation();
+            cardsData[index].stamps = 0;
+            cardsData[index].status = 'Active';
+            cardsData[index].redeemed = false;
+            cardsData[index].dateRedeemed = '';
+            renderFilteredTable();
+        }
 
-            const rows = mappingStore[item.id] || [];
+        // Deactivate Action
+        function deactivateCard(event, index) {
+            event.stopPropagation();
+            cardsData[index].status = 'Inactive';
+            renderFilteredTable();
+        }
 
-            panel.innerHTML = `
-                <div class="item-info-bar">
-                    <div class="item-info-left">
-                        <span class="item-info-thumb"><img src="${IMG_BASE}${item.img}" alt="${item.name}"></span>
-                        <span class="item-info-text">
-                            <span class="item-info-name">${item.name}</span>
-                            <span class="item-info-sub">Category: ${item.category}</span>
-                        </span>
-                    </div>
-                    <div class="item-info-right">
-                        <span class="item-info-price-label">Selling Price</span>
-                        <span class="item-info-price">${peso(item.price)}</span>
-                    </div>
-                    <span class="status-badge active">Active</span>
-                </div>
+        // Drawer Control Functions
+        function closeDrawer() {
+            document.getElementById('sideDrawer').classList.remove('open');
+            document.getElementById('drawerBackdrop').classList.remove('show');
+        }
 
-                <div class="ingredient-table">
-                    <div class="ingredient-row ingredient-head">
-                        <span>Ingredient</span>
-                        <span>Unit</span>
-                        <span>Qty Per Serving</span>
-                        <span>Cost Per Unit</span>
-                        <span>Total Cost</span>
-                        <span></span>
-                    </div>
-                    <div id="ingredientRows">
-                        ${rows.length
-                    ? rows
-                        .map(
-                            (row, i) => `
-                            <div class="ingredient-row" data-index="${i}">
-                                <select class="ing-select">${ingredientOptionsHTML(row.ingredient)}</select>
-                                <input class="ing-unit" type="text" value="${row.unit}" placeholder="e.g. ml">
-                                <input class="ing-qty" type="number" min="0" step="any" value="${row.qty}" placeholder="0">
-                                <span class="ing-cost">${peso(row.cost)}</span>
-                                <span class="ing-total">${peso(row.total)}</span>
-                                <button type="button" class="ing-delete" aria-label="Remove ingredient" data-index="${i}">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>`
-                        )
-                        .join("")
-                    : `<div class="ingredient-empty">No ingredients mapped yet. Click "Add Ingredients" below to start.</div>`
-                }
-                    </div>
-                </div>
+        function openDrawer(item) {
+            document.getElementById('drawerAvatar').innerText = item.initials;
+            document.getElementById('drawerCustomerName').innerText = item.customer;
+            document.getElementById('drawerCustomerPhone').innerText = item.phone;
+            document.getElementById('drawerCardId').innerText = item.id;
+            document.getElementById('drawerDateIssued').innerText = item.issued;
+            document.getElementById('drawerProgressText').innerText = `${item.stamps}/10 stamps`;
+            document.getElementById('drawerBeansSubText').innerText = `${item.stamps}/10 stamps`;
 
-                <button type="button" class="add-ingredients-btn" id="addIngredientBtn">
-                    <i class="fa-solid fa-plus"></i> Add Ingredients
-                </button>
-
-                <div class="map-footer">
-                    <div class="estimated-cost">
-                        <span class="estimated-cost-label">Estimated Cost per serving</span>
-                        <span class="estimated-cost-value" id="estimatedCost">${peso(estimateTotal(rows))}</span>
-                    </div>
-                    <button type="button" class="save-mapping-btn" id="saveMappingBtn">Save Mapping</button>
-                </div>
+            document.getElementById('drawerStatusBadge').innerHTML = `
+                <span class="status-pill ${item.status.toLowerCase()}">
+                    <span class="dot"></span> ${item.status}
+                </span>
             `;
 
-            wireMapPanelEvents(item.id, item.name);
+            document.getElementById('drawerBeansRow').innerHTML = generateBeansHTML(item.stamps);
+            document.getElementById('sideDrawer').classList.add('open');
+            document.getElementById('drawerBackdrop').classList.add('show');
         }
 
-        function estimateTotal(rows) {
-            return rows.reduce((sum, r) => sum + (Number(r.total) || 0), 0);
-        }
+        // Header Dropdowns Handlers
 
-        function wireMapPanelEvents(itemId, productName) {
-            const rows = mappingStore[itemId] || [];
 
-            document.querySelectorAll("#ingredientRows .ingredient-row").forEach((rowEl) => {
-                const idx = Number(rowEl.dataset.index);
+        // Export PDF Handler
+        document.getElementById('exportBtn').onclick = function () {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
 
-                const select = rowEl.querySelector(".ing-select");
-                const unitInput = rowEl.querySelector(".ing-unit");
-                const qtyInput = rowEl.querySelector(".ing-qty");
-                const costEl = rowEl.querySelector(".ing-cost");
-                const totalEl = rowEl.querySelector(".ing-total");
-                const delBtn = rowEl.querySelector(".ing-delete");
+            doc.setFontSize(18);
+            doc.text('BoyCold Cafe - Loyalty Cards List', 14, 20);
 
-                select.addEventListener("change", () => {
-                    const lib = INGREDIENT_LIBRARY.find((i) => i.name === select.value);
-                    rows[idx].ingredient = select.value;
-                    if (lib) {
-                        rows[idx].cost = lib.cost;
-                        if (!unitInput.value) {
-                            rows[idx].unit = lib.unit;
-                            unitInput.value = lib.unit;
-                        }
-                        costEl.textContent = peso(lib.cost);
-                        recalcRow(idx, rows, qtyInput, totalEl);
-                    }
-                });
+            const tableRows = cardsData.map(c => [
+                c.id,
+                c.customer,
+                c.phone,
+                `${c.stamps}/10`,
+                c.reward,
+                c.status
+            ]);
 
-                unitInput.addEventListener("input", () => {
-                    rows[idx].unit = unitInput.value;
-                });
-
-                qtyInput.addEventListener("input", () => {
-                    rows[idx].qty = qtyInput.value;
-                    recalcRow(idx, rows, qtyInput, totalEl);
-                });
-
-                delBtn.addEventListener("click", () => {
-                    rows.splice(idx, 1);
-                    renderMapPanel();
-                });
+            doc.autoTable({
+                startY: 30,
+                head: [['Card ID', 'Customer', 'Phone', 'Progress', 'Reward', 'Status']],
+                body: tableRows,
+                headStyles: { fillColor: [105, 39, 39] }
             });
 
-            document.getElementById("addIngredientBtn").addEventListener("click", () => {
-                const defaultIng = INGREDIENT_LIBRARY[0];
-                rows.push({ ingredient: defaultIng.name, unit: defaultIng.unit, qty: "", cost: defaultIng.cost, total: 0 });
-                mappingStore[itemId] = rows;
-                renderMapPanel();
-            });
+            doc.save('loyalty-cards-export.pdf');
+        };
 
-            document.getElementById("saveMappingBtn").addEventListener("click", () => {
-                mappingStore[itemId] = rows;
-                const btn = document.getElementById("saveMappingBtn");
-                fetch('admin_data_api.php?action=mapping_save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_name: productName, rows: rows.map(row => ({ ingredient: row.ingredient, amount: row.qty })) })
-                }).then(response => response.json()).then(result => {
-                    if (!result.success) throw new Error(result.error || 'Mapping could not be saved');
-                    const original = btn.textContent;
-                    btn.textContent = "Saved";
-                    btn.disabled = true;
-                    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
-                }).catch(error => alert(error.message));
-            });
-        }
-
-        function recalcRow(idx, rows, qtyInput, totalEl) {
-            const qty = Number(qtyInput.value) || 0;
-            const cost = Number(rows[idx].cost) || 0;
-            const total = qty > 0 ? qty * cost : rows[idx].total;
-            rows[idx].total = qty > 0 ? total : rows[idx].total;
-            totalEl.textContent = peso(rows[idx].total);
-            const estimatedEl = document.getElementById("estimatedCost");
-            if (estimatedEl) estimatedEl.textContent = peso(estimateTotal(rows));
-        }
-
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                await loadProducts();
-            } catch (error) {
-                console.error('Unable to load products from the database:', error);
-                MENU_ITEMS = FALLBACK_MENU_ITEMS;
-            }
-
-            renderMenuList();
-            renderMapPanel();
-
-            const selectedMenuItem = MENU_ITEMS.find(item => item.id === selectedItemId);
-            fetch(`admin_data_api.php?action=mapping_get&product_name=${encodeURIComponent(selectedMenuItem.name)}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success && result.mapping.length) {
-                        mappingStore[selectedItemId] = result.mapping.map(row => ({
-                            ingredient: row.ingredient,
-                            unit: row.unit,
-                            qty: row.amount,
-                            cost: 0,
-                            total: 0
-                        }));
-                        renderMapPanel();
-                    }
-                });
-
-            document.getElementById("menuSearch").addEventListener("input", (e) => {
-                renderMenuList(e.target.value);
-            });
-
-            document.getElementById("addMenuItemBtn").addEventListener("click", () => {
-                alert("Open the Menu Management page to add a new menu item, then come back here to map its ingredients.");
-            });
-
-            const toggle = document.getElementById("showInactiveToggle");
-            toggle.addEventListener("change", () => {
-                showInactiveOnly = toggle.checked;
-                document.getElementById("mapPanel").classList.toggle("show-inactive", showInactiveOnly);
-            });
+        // Event Listeners for Filters
+        document.getElementById('searchInput').addEventListener('input', renderFilteredTable);
+        document.getElementById('statusFilter').addEventListener('change', renderFilteredTable);
+        document.getElementById('dateFrom').addEventListener('change', renderFilteredTable);
+        document.getElementById('dateTo').addEventListener('change', renderFilteredTable);
+        document.getElementById('clearDateFilter').addEventListener('click', () => {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            renderFilteredTable();
         });
 
+        document.getElementById('closeDrawerBtn').onclick = closeDrawer;
+        document.getElementById('drawerBackdrop').onclick = closeDrawer;
+
+        window.onclick = function (e) {
+            if (!e.target.closest('.action-cell')) {
+                document.querySelectorAll('.action-menu').forEach(menu => menu.classList.remove('show'));
+            }
+            if (!e.target.closest('.notif-wrap')) {
+                notifDropdown.classList.remove('open');
+            }
+            if (!e.target.closest('.profile-wrap')) {
+                profileDropdown.classList.remove('open');
+            }
+        };
+
+        // Initial Table Load
+        renderFilteredTable();
+
+        fetch('admin_data_api.php?action=reviews')
+            .then(response => response.json())
+            .then(result => {
+                const list = document.getElementById('reviewsList');
+                const average = document.getElementById('reviewsAverage');
+                if (!result.success || !result.reviews.length) {
+                    list.innerHTML = '<p class="reviews-empty">No customer feedback yet.</p>';
+                    return;
+                }
+                const total = result.reviews.reduce((sum, item) => sum + Number(item.rating), 0);
+                average.textContent = `${(total / result.reviews.length).toFixed(1)} / 5 (${result.reviews.length})`;
+                list.innerHTML = result.reviews.map(item => `
+                    <article class="review-item">
+                        <div class="review-item-top"><strong>${item.customer_name}</strong><span class="review-rating">${'★'.repeat(Number(item.rating))}${'☆'.repeat(5 - Number(item.rating))}</span></div>
+                        <p>${item.review ? item.review.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])) : 'No written comment.'}</p>
+                        <small>Order #${item.order_id} · ${new Date(item.created_at).toLocaleDateString()}</small>
+                    </article>`).join('');
+            })
+            .catch(() => { document.getElementById('reviewsList').innerHTML = '<p class="reviews-empty">Feedback is unavailable.</p>'; });
+
+        async function loadLoyaltyCards() {
+            try {
+                const response = await fetch('admin_data_api.php?action=loyalty', { cache: 'no-store' });
+                const result = await response.json();
+                if (!result.success) return;
+                cardsData = result.cards
+                    .filter(card => Number(card.order_count || 0) > 0)
+                    .map(card => ({
+                        id: card.card_no,
+                        userId: Number(card.id),
+                        issued: new Date(card.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                        customer: `${card.firstname} ${card.lastname}`,
+                        phone: card.phone || 'No phone number',
+                        initials: `${card.firstname[0] || ''}${card.lastname[0] || ''}`.toUpperCase(),
+                        stamps: Number(card.loyalty_stamps || 0),
+                        reward: 'Free Drink',
+                        redeemed: card.loyalty_card_status === 'completed',
+                        dateRedeemed: '',
+                        activationDate: String(card.activation_date || card.created_at).slice(0, 10),
+                        status: card.loyalty_card_status.charAt(0).toUpperCase() + card.loyalty_card_status.slice(1)
+                    }));
+                renderFilteredTable();
+            } catch (error) {
+                console.error('Unable to refresh loyalty cards', error);
+            }
+        }
+
+        loadLoyaltyCards();
+        setInterval(loadLoyaltyCards, 10000);
+
+        const originalReactivateCard = reactivateCard;
+        const originalDeactivateCard = deactivateCard;
+        reactivateCard = function (event, index) {
+            originalReactivateCard(event, index);
+            const card = cardsData[index];
+            fetch('admin_data_api.php?action=loyalty_status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: card.userId, status: 'active' })
+            });
+        };
+        deactivateCard = function (event, index) {
+            originalDeactivateCard(event, index);
+            const card = cardsData[index];
+            fetch('admin_data_api.php?action=loyalty_status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: card.userId, status: 'inactive' })
+            });
+        };
     </script>
     <script src="admin-js/admin-responsive.js"></script>
 </body>

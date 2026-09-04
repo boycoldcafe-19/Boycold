@@ -3183,3 +3183,67 @@ footer {
 
 
 @media (max-width: 480px) {}
+
+.feedback-section {
+    margin-top: 24px;
+    padding: 22px;
+    background: #fff;
+    border: 1px solid #e2d8d0;
+    border-radius: 10px;
+}
+
+.feedback-subtitle {
+    margin: 4px 0 12px;
+    color: #777;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.rating-star {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: #c9c1bc;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.rating-star.selected {
+    color: #692727;
+}
+
+#orderReview {
+    display: block;
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    border: 1px solid #c4c1c1;
+    border-radius: 6px;
+    padding: 10px;
+    font: inherit;
+}
+
+.feedback-submit {
+    margin-top: 12px;
+    border: 0;
+    border-radius: 6px;
+    padding: 10px 18px;
+    background: #692727;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.feedback-submit:disabled {
+    opacity: .65;
+    cursor: default;
+}
+
+.feedback-message {
+    margin-top: 10px;
+    color: #692727;
+}

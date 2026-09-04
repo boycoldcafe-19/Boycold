@@ -81,10 +81,9 @@ $onlineTypeCondition = "(o.order_type IN ($placeholders) OR (o.order_type = 'tak
 
 // Brand new ("pending") orders are shown too, tagged "New" — they only
 // surface under the "All" tab since posonline_status_filter() maps
-// 'pending' to no specific status tab. Cancelled orders are still left
-// off entirely - not just hidden from a tab, but excluded from the query
-// outright.
-$visibleStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed'];
+// 'pending' to no specific status tab. Cancelled orders stay visible so
+// staff can see when a customer exits or cancels QRPh payment.
+$visibleStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed', 'cancelled'];
 $statusPlaceholders = implode(',', array_fill(0, count($visibleStatuses), '?'));
 
 // If branch_id is 0 (legacy account or super admin), show all branches
@@ -127,15 +126,15 @@ $typeCodes = [
 // The DB tracks a finer-grained lifecycle than the 4 tabs shown to staff.
 // "ready" (packed, waiting for the rider) and "delivered" (handed to the
 // customer) both fall under the "Out for Delivery" tab; "completed"
-// (order closed out / settled) is its own final tab. "pending" and
-// "cancelled" never reach this function since they're excluded from the
-// query above, but the branches are kept here as a safety net.
+// remains under All, and cancelled has its own tab.
+// "completed" is the final settled state, while cancelled has its own tab.
 function posonline_status_filter(string $status): ?string {
     return match ($status) {
         'confirmed' => 'confirmed',
         'preparing' => 'preparing',
         'ready', 'delivered' => 'delivery',
         'completed' => 'completed',
+        'cancelled' => 'cancelled',
         default => null,
     };
 }
@@ -148,7 +147,7 @@ function posonline_status_label(string $status): string {
         'ready'     => 'Out for Delivery',
         'delivered' => 'Out for Delivery',
         'completed' => 'Completed',
-        'cancelled' => 'Cancelled',
+        'cancelled' => 'Order Cancelled',
     ];
     return $map[$status] ?? ucfirst($status);
 }
@@ -374,6 +373,7 @@ if ($branchId > 0) {
                         <a href="#" data-filter="preparing">Preparing <i class="fa-solid fa-circle-question" aria-hidden="true"></i></a>
                         <a href="#" data-filter="delivery">Out for Delivery <i class="fa-solid fa-circle-question" aria-hidden="true"></i></a>
                         <a href="#" data-filter="completed">Completed <i class="fa-solid fa-circle-question" aria-hidden="true"></i></a>
+                        <a href="#" data-filter="cancelled">Order Cancelled <i class="fa-solid fa-circle-question" aria-hidden="true"></i></a>
                     </nav>
 
                     <div class="orders-table-shell">
@@ -453,6 +453,8 @@ if ($branchId > 0) {
                 emptyFilterRow.style.display = rows.length > 0 && visibleCount === 0 ? '' : 'none';
             }
         }
+
+        window.applyStatusFilter = applyStatusFilter;
 
         document.querySelectorAll('.order-tabs a').forEach(tab => {
             tab.addEventListener('click', event => {

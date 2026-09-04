@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Email must contain "admin" to create admin account.';
     } else {
         // Check if email already exists
-        $chk = $connect->prepare("SELECT id FROM users WHERE email = ?");
+        $chk = $connect->prepare("SELECT id FROM employees WHERE email = ?");
         $chk->bind_param("s", $email);
         $chk->execute();
         
@@ -54,10 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Hash password
             $hashedPass = password_hash($password, PASSWORD_BCRYPT);
             
-            // Insert admin user (verified=1 so no OTP needed)
+            // Store admin credentials in the employee table used by admin login.
             $stmt = $connect->prepare(
-                "INSERT INTO users (firstname, lastname, email, password, is_verified, phone, address, avatar)
-                 VALUES (?, ?, ?, ?, 1, NULL, NULL, NULL)"
+                "INSERT INTO employees (firstname, lastname, email, password, role, is_active)
+                 VALUES (?, ?, ?, ?, 'admin', 1)"
             );
             
             if (!$stmt) {

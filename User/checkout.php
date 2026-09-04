@@ -392,6 +392,7 @@ $branches = $branches ?? [];
             <img id="qrphImage" alt="Scan this QRPh code to pay">
             <p class="qrph-amount" id="qrphAmount">Amount Due: ₱0.00</p>
             <p class="qrph-wait" id="qrphWait">Waiting for payment...</p>
+            <button type="button" id="cancelQrphPayment">Cancel / Exit Payment</button>
         </div>
     </div>
 
@@ -791,6 +792,23 @@ $branches = $branches ?? [];
                 img.hidden = true;
             }
             overlay.hidden = false;
+
+            document.getElementById('cancelQrphPayment').onclick = async () => {
+                if (!confirm('Cancel this QRPh payment and order?')) return;
+                const response = await fetch(ORDER_API, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'cancel', order_id: orderId })
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    alert(result.error || 'Unable to cancel the order.');
+                    return;
+                }
+                overlay.hidden = true;
+                window.location.href = 'status.php?order_id=' + encodeURIComponent(orderId);
+            };
 
             const poll = async () => {
                 try {

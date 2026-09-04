@@ -1,9 +1,11 @@
+<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/inventory.css">
+    <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="/public/assets/icons/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +40,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#">
+                            <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8882 1H3.31469C2.03632 1 1 2.03632 1 3.31469V18.3602C1 19.6386 2.03632 20.6749 3.31469 20.6749H14.8882C16.1665 20.6749 17.2029 19.6386 17.2029 18.3602V3.31469C17.2029 2.03632 16.1665 1 14.8882 1Z" stroke="currentColor" stroke-width="2"/><path d="M5.62939 6.78662H12.5735M5.62939 11.416H12.5735M5.62939 16.0454H10.2588" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
                                 <span class="nav-label">Orders</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
@@ -78,23 +80,30 @@
 
                     <ul>
                         <li>
-                            <a href="#">
+                            <a href="menu-management.php">
                                 <span class="nav-icon"><i class="fa-solid fa-bars"></i></span>
                                 <span class="nav-label">Menu Management</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
                         <li>
-                            <a href="#">
+                            <a href="customers.php">
                                 <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
                                 <span class="nav-label">Customers</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
                         <li>
-                            <a href="#">
+                            <a href="loyalty-card.php">
                                 <span class="nav-icon"><svg width="22" height="18" viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.75 8.75C0.75 4.979 0.75 3.093 1.922 1.922C3.094 0.751 4.979 0.75 8.75 0.75H12.75C16.521 0.75 18.407 0.75 19.578 1.922C20.749 3.094 20.75 4.979 20.75 8.75C20.75 12.521 20.75 14.407 19.578 15.578C18.406 16.749 16.521 16.75 12.75 16.75H8.75C4.979 16.75 3.093 16.75 1.922 15.578C0.751 14.406 0.75 12.521 0.75 8.75Z" stroke="currentColor" stroke-width="1.5"/><path d="M8.75 12.75H4.75M12.75 12.75H11.25M0.75 6.75H20.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
                                 <span class="nav-label">Loyalty Card</span>
+                                <i class="fa-solid fa-chevron-right nav-chevron"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="feedback.php">
+                                <span class="nav-icon"><i class="fa-solid fa-star"></i></span>
+                                <span class="nav-label">Feedback &amp; Reviews</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
@@ -104,7 +113,7 @@
 
                     <ul>
                         <li>
-                            <a href="#">
+                            <a href="adminsettings.php">
                                 <span class="nav-icon">
                                     <i class="fa-solid fa-gear"></i>
                                 </span>
@@ -257,7 +266,7 @@
                                     <td class="ing-name">Fresh Milk</td>
                                     <td>Dairy</td>
                                     <td>10,000</td>
-                                    <td>ml</td>
+                                    <td>L</td>
                                     <td>3,000</td>
                                     <td><span class="status-pill in-stock">In Stock</span></td>
                                     <td class="ing-actions">
@@ -275,18 +284,6 @@
                                     <td class="ing-actions">
                                         <button class="icon-btn edit-btn" aria-label="Edit Matcha Powder"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Matcha Powder"><i class="fa-solid fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="ing-name">Oat Milk</td>
-                                    <td>Dairy</td>
-                                    <td>5,000</td>
-                                    <td>g</td>
-                                    <td>1,000</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
-                                    <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Oat Milk"><i class="fa-solid fa-pen"></i></button>
-                                        <button class="icon-btn delete-btn" aria-label="Delete Oat Milk"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
                                 <tr>
@@ -408,12 +405,12 @@
                                         <button class="icon-btn delete-btn" aria-label="Remove Coffee Beans row"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
-                                <tr data-category="Dairy" data-unit="ml">
+                                <tr data-category="Dairy" data-unit="L">
                                     <td class="ing-name">Fresh Milk</td>
                                     <td><input type="number" class="stock-input" value="10" min="0" step="1" aria-label="Fresh Milk stock quantity"></td>
                                     <td class="stock-category">Dairy</td>
-                                    <td class="stock-unit">ml</td>
-                                    <td class="stock-total">10 ml</td>
+                                    <td class="stock-unit">L</td>
+                                    <td class="stock-total">10 L</td>
                                     <td class="ing-actions">
                                         <button class="icon-btn delete-btn" aria-label="Remove Fresh Milk row"><i class="fa-solid fa-trash"></i></button>
                                     </td>
@@ -495,8 +492,8 @@
                                 <tr data-ingredient="Fresh Milk" data-type="deduction">
                                     <td class="ing-name">Fresh Milk</td>
                                     <td><span class="transaction-pill deduction"><i class="fa-solid fa-arrow-down"></i> Order Deduction</span></td>
-                                    <td class="qty-negative">180 ml</td>
-                                    <td>820 ml</td>
+                                    <td class="qty-negative">180 L</td>
+                                    <td>820 L</td>
                                     <td class="stock-history-date">Jul 13, 2026<br><span>9:10 am</span></td>
                                 </tr>
                             </tbody>
@@ -529,7 +526,7 @@
 
                         <div class="modal-field">
                             <label for="newIngredientUnit">Units</label>
-                            <input type="text" id="newIngredientUnit" placeholder="e.g. g, ml, pcs">
+                            <input type="text" id="newIngredientUnit" placeholder="e.g. g, L, pcs">
                         </div>
 
                         <div class="modal-field">
@@ -680,6 +677,59 @@
             const saveAddIngredientBtn = document.getElementById("saveAddIngredientBtn");
             const ingredientsTableBody = document.getElementById("ingredientsTableBody");
 
+            function renderIngredients(items) {
+                ingredientsTableBody.innerHTML = "";
+
+                if (!Array.isArray(items) || items.length === 0) {
+                    emptyState.hidden = false;
+                    emptyState.textContent = "No ingredients match your search.";
+                    return;
+                }
+
+                items.forEach((item) => {
+                    const name = item.name || "Unnamed Ingredient";
+                    const category = item.category || "Uncategorized";
+                    const unit = item.unit || "pcs";
+                    const stock = Number(item.stock || 0);
+                    const minStock = Number(item.min_stock || 0);
+                    const statusClass = stock <= 0 ? "out-of-stock" : stock <= minStock ? "low-stock" : "in-stock";
+                    const statusLabel = stock <= 0 ? "Out of Stock" : stock <= minStock ? "Low Stock" : "In Stock";
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td class="ing-name">${name}</td>
+                        <td>${category}</td>
+                        <td>${stock.toLocaleString()}</td>
+                        <td>${unit}</td>
+                        <td>${minStock.toLocaleString()}</td>
+                        <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+                        <td class="ing-actions">
+                            <button class="icon-btn edit-btn" aria-label="Edit ${name}"><i class="fa-solid fa-pen"></i></button>
+                            <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    ingredientsTableBody.appendChild(row);
+                });
+
+                emptyState.hidden = true;
+            }
+
+            function loadIngredients() {
+                fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' })
+                    .then((response) => response.json())
+                    .then((result) => {
+                        if (!result.success) throw new Error(result.error || 'Ingredients could not be loaded');
+                        renderIngredients(result.ingredients || []);
+                    })
+                    .catch((error) => {
+                        console.error('Unable to load ingredients:', error);
+                        emptyState.hidden = false;
+                        emptyState.textContent = 'Unable to load ingredients from the database.';
+                    });
+            }
+
+            loadIngredients();
+
             addIngredientBtn.addEventListener("click", () => {
                 addIngredientOverlay.hidden = false;
             });
@@ -704,7 +754,14 @@
                     return;
                 }
 
-                let statusClass = "in-stock";
+                fetch('admin_data_api.php?action=ingredient_create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, category, unit, min_stock: minStock, stock: currentStock })
+                }).then(response => response.json()).then(result => {
+                    if (!result.success) throw new Error(result.error || 'Ingredient could not be saved');
+
+                    let statusClass = "in-stock";
                 let statusLabel = "In Stock";
                 if (currentStock <= 0) {
                     statusClass = "out-of-stock";
@@ -714,7 +771,7 @@
                     statusLabel = "Low Stock";
                 }
 
-                const row = document.createElement("tr");
+                    const row = document.createElement("tr");
                 row.innerHTML = `
                     <td class="ing-name">${name}</td>
                     <td>${category}</td>
@@ -727,22 +784,23 @@
                         <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
-                ingredientsTableBody.appendChild(row);
+                    ingredientsTableBody.appendChild(row);
 
-                document.getElementById("newIngredientName").value = "";
+                    document.getElementById("newIngredientName").value = "";
                 document.getElementById("newIngredientCategory").value = "";
                 document.getElementById("newIngredientUnit").value = "";
                 document.getElementById("newIngredientMinStock").value = "";
                 document.getElementById("newIngredientCurrentStock").value = "";
-                addIngredientOverlay.hidden = true;
+                    addIngredientOverlay.hidden = true;
+                }).catch(error => alert(error.message));
             });
 
             searchInput.addEventListener("input", () => {
                 const query = searchInput.value.trim().toLowerCase();
                 let visibleCount = 0;
 
-                rows.forEach((row) => {
-                    const name = row.querySelector(".ing-name").textContent.toLowerCase();
+                document.querySelectorAll("#ingredientsTableBody tr").forEach((row) => {
+                    const name = row.querySelector(".ing-name")?.textContent.toLowerCase() || "";
                     const matches = name.includes(query);
                     row.style.display = matches ? "" : "none";
                     if (matches) visibleCount++;
@@ -754,16 +812,30 @@
         
         (function () {
             const INGREDIENT_CATALOG = [
+                { name: "Espresso", category: "Coffee", unit: "kg" },
+                { name: "Milk", category: "Dairy", unit: "L" },
+                { name: "Biscoff", category: "Powder", unit: "kg" },
+                { name: "Caramel Drizzle", category: "Syrup", unit: "L" },
+                { name: "Cheesecake powder", category: "Powder", unit: "kg" },
+                { name: "Full Cream Milk", category: "Dairy", unit: "L" },
+                { name: "Brown Sugar", category: "Powder", unit: "kg" },
+                { name: "Chocolate Syrup", category: "Syrup", unit: "L" },
+                { name: "Whipped Cream", category: "Dairy", unit: "kg" },
+                { name: "Condensed Milk", category: "Dairy", unit: "kg" },
+                { name: "Vanilla Syrup", category: "Syrup", unit: "L" },
+                { name: "Cinnamon", category: "Powder", unit: "kg" },
+                { name: "Chestnut", category: "Powder", unit: "kg" },
+                { name: "Blue Syrup", category: "Syrup", unit: "L" },
+                { name: "Salted Caramel Syrup", category: "Syrup", unit: "L" },
+                { name: "Sea Salt", category: "Powder", unit: "kg" },
                 { name: "Coffee Beans", category: "Coffee", unit: "g" },
-                { name: "Fresh Milk", category: "Dairy", unit: "ml" },
+                { name: "Fresh Milk", category: "Dairy", unit: "L" },
                 { name: "Matcha Powder", category: "Powder", unit: "g" },
-                { name: "Oat Milk", category: "Dairy", unit: "g" },
+                { name: "Whole Milk", category: "Dairy", unit: "L" },
                 { name: "Clear Cup (22 oz)", category: "Packaging", unit: "pcs" },
                 { name: "Clear Cup (16 oz)", category: "Packaging", unit: "pcs" },
-                { name: "Chocolate Chips", category: "Syrup", unit: "ml" },
-                { name: "Chocolate Syrup", category: "Syrup", unit: "ml" },
-                { name: "Condensed Milk", category: "Dairy", unit: "g" },
-                { name: "Caramel Syrup", category: "Syrup", unit: "ml" },
+                { name: "Chocolate Chips", category: "Syrup", unit: "L" },
+                { name: "Caramel Syrup", category: "Syrup", unit: "L" },
                 { name: "Waffle Batter", category: "Mixes", unit: "g" }
             ];
 
@@ -907,11 +979,20 @@
             });
 
             saveBtn.addEventListener("click", () => {
-                statusEl.hidden = false;
-                clearTimeout(saveBtn._statusTimer);
-                saveBtn._statusTimer = setTimeout(() => {
-                    statusEl.hidden = true;
-                }, 2500);
+                const items = Array.from(tbody.querySelectorAll('tr')).map(row => ({
+                    name: row.querySelector('.ing-name')?.textContent.trim(),
+                    quantity: rowStockValue(row)
+                })).filter(item => item.name && item.quantity > 0);
+                fetch('admin_data_api.php?action=stock_in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items })
+                }).then(response => response.json()).then(result => {
+                    if (!result.success) throw new Error(result.error || 'Stock could not be saved');
+                    statusEl.hidden = false;
+                    clearTimeout(saveBtn._statusTimer);
+                    saveBtn._statusTimer = setTimeout(() => { statusEl.hidden = true; }, 2500);
+                }).catch(error => alert(error.message));
             });
 
             searchInput.addEventListener("input", applyFilter);
@@ -951,6 +1032,7 @@
         })();
 
     </script>
+    <script src="admin-js/admin-responsive.js"></script>
 </body>
 
 </html>

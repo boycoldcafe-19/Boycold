@@ -498,7 +498,8 @@ switch ($action) {
         if ($isAdmin) {
             $stmt = $connect->prepare(
                 "UPDATE orders
-                 SET status = 'cancelled'
+                 SET status = 'cancelled',
+                     payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
                  WHERE id = ?
                    AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
             );
@@ -510,7 +511,8 @@ switch ($action) {
             // back to a name match.
             $stmt = $connect->prepare(
                 "UPDATE orders
-                 SET status = 'cancelled'
+                 SET status = 'cancelled',
+                     payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
                  WHERE id = ?
                    AND (user_id = ? OR (user_id IS NULL AND user_name = ?))
                    AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
@@ -562,6 +564,27 @@ switch ($action) {
             'payment_status' => $order['payment_status'],
             'total' => (float) $order['total'],
         ]);
+        break;
+
+    case 'review':
+        $orderId = (int)($body['order_id'] ?? 0);
+        $rating = (int)($body['rating'] ?? 0);
+        $review = trim((string)($body['review'] ?? ''));
+        if ($userId <= 0 || $orderId <= 0 || $rating < 1 || $rating > 5 || strlen($review) > 1000) {
+            echo json_encode(['success' => false, 'error' => 'Invalid review details.']);
+            break;
+        }
+        $check = $connect->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ? AND status = 'completed' LIMIT 1");
+        $check->bind_param('ii', $orderId, $userId);
+        $check->execute();
+        if (!$check->get_result()->fetch_assoc()) {
+            echo json_encode(['success' => false, 'error' => 'Only your completed orders can be reviewed.']);
+            break;
+        }
+        $stmt = $connect->prepare('INSERT INTO order_reviews (order_id, user_id, rating, review) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE rating = VALUES(rating), review = VALUES(review), updated_at = CURRENT_TIMESTAMP');
+        $stmt->bind_param('iiis', $orderId, $userId, $rating, $review);
+        $stmt->execute();
+        echo json_encode(['success' => true, 'message' => 'Thank you for your feedback.']);
         break;
 
     case 'qrph_details':
