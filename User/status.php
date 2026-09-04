@@ -26,6 +26,23 @@ $userName  = trim((string) ($user['user_name'] ?? ''));
 $_SESSION['user_name']  = $userName;
 $_SESSION['user_email'] = $user['email'];
 
+if (isset($_GET['realtime']) && $_GET['realtime'] === '1') {
+    header('Content-Type: application/json');
+    $realtimeStmt = $connect->prepare(
+        "SELECT o.id, o.status, o.payment_status, o.total, o.created_at
+         FROM orders o
+         WHERE o.user_id = ?
+         ORDER BY o.created_at DESC, o.id DESC
+         LIMIT 1"
+    );
+    $realtimeStmt->bind_param('i', $userId);
+    $realtimeStmt->execute();
+    $realtimeOrder = $realtimeStmt->get_result()->fetch_assoc();
+    $realtimeStmt->close();
+    echo json_encode(['success' => true, 'order' => $realtimeOrder ?: null]);
+    exit;
+}
+
 // Handle cancellation before rendering the page so fetch() always receives JSON.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
     header('Content-Type: application/json');
@@ -600,11 +617,30 @@ function step_class(bool $reached)
     </footer>
 
     <script>
-        <?php if ($hasOrder && ($latestOrder['status'] ?? '') === 'pending'): ?>
-        setTimeout(() => {
-            window.location.reload();
-        }, 5000);
-        <?php endif; ?>
+        (function pollOrderStatus() {
+            const currentOrder = <?= json_encode($latestOrder ? [
+                'id' => (int) $latestOrder['id'],
+                'status' => (string) $latestOrder['status'],
+                'payment_status' => (string) $latestOrder['payment_status'],
+                'total' => (string) $latestOrder['total'],
+                'created_at' => (string) $latestOrder['created_at']
+            ] : null) ?>;
+
+            setInterval(async () => {
+                try {
+                    const response = await fetch('status.php?realtime=1', {
+                        cache: 'no-store',
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    const data = await response.json();
+                    const nextOrder = data.order || null;
+                    if (JSON.stringify(currentOrder) !== JSON.stringify(nextOrder)) {
+                        window.location.reload();
+                    }
+                } catch (error) {}
+            }, 4000);
+        })();
         // ... (existing JavaScript unchanged) ...
 
         // ── Cancel Order functions ──────────────────────────────

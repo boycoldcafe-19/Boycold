@@ -136,6 +136,14 @@ try {
         runChange($connect, "ALTER TABLE orders ADD KEY idx_orders_user_id (user_id)");
     }
 
+    if (!hasIndex($connect, 'orders', 'idx_orders_user_created')) {
+        runChange($connect, "ALTER TABLE orders ADD KEY idx_orders_user_created (user_id, created_at, id)");
+    }
+
+    if (!hasIndex($connect, 'orders', 'idx_orders_branch_created')) {
+        runChange($connect, "ALTER TABLE orders ADD KEY idx_orders_branch_created (branch_id, created_at, id)");
+    }
+
     backfillLoyaltyIdentities($connect);
 
     echo "Loyalty card database migration completed.\n";

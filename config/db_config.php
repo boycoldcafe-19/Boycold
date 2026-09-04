@@ -29,7 +29,6 @@ define('DB_USER', getenv('DB_USER') ?: $_ENV['DB_USER'] ?? 'u627631172_boycold')
 define('DB_PASS', getenv('DB_PASS') ?: $_ENV['DB_PASS'] ?? 'Boycold2026');
 define('DB_NAME', getenv('DB_NAME') ?: $_ENV['DB_NAME'] ?? 'u627631172_boycold_db');
 define('DB_PORT', getenv('DB_PORT') ?: $_ENV['DB_PORT'] ?? 3306);
-
 // Create database connection with error handling
 try {
     $connect = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, (int)DB_PORT);

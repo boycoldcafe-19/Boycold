@@ -595,5 +595,14 @@ function orderhis_format_group_label(string $dateStr): string {
     <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
+    <script>
+        (function refreshHistoryData() {
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    window.location.reload();
+                }
+            }, 10000);
+        })();
+    </script>
 </body>
 </html>
