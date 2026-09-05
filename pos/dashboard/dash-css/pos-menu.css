@@ -700,6 +700,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     color: var(--card-bg);
 }
 
+.card-btn:disabled,
+.card-btn.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
 
 .card-btn i {
     font-size: 16px;   /* was 18px, slightly too big for a 36px box */

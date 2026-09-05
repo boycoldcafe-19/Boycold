@@ -58,8 +58,10 @@ require_once '../config/db_config.php';
 require_once '../config/loyalty.php';
 require_once '../config/payments.php';
 require_once '../config/shift_manager.php';
+require_once '../config/inventory_service.php';
 
 boycold_ensure_payment_schema($connect);
+boycold_ensure_inventory_schema($connect);
 
 header('Content-Type: application/json');
 
@@ -254,6 +256,18 @@ switch ($action) {
                 $connect->rollback();
                 http_response_code(409);
                 echo json_encode(['success' => false, 'error' => $error, 'branch_closed' => true, 'branch_id' => (int) $branchId]);
+                break;
+            }
+
+            $inventoryCheck = boycold_validate_inventory_for_items($connect, $items, (int) $branchId, false, true);
+            if (!$inventoryCheck['success']) {
+                $connect->rollback();
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'error' => $inventoryCheck['error'],
+                    'inventory' => $inventoryCheck,
+                ]);
                 break;
             }
 
@@ -769,7 +783,7 @@ switch ($action) {
         }
 
         $existingOrderStmt = $connect->prepare(
-            "SELECT user_name, status, payment_method, payment_status FROM orders WHERE id = ?"
+            "SELECT user_name, status, payment_method, payment_status, branch_id, cashier_id FROM orders WHERE id = ?"
         );
         $existingOrderStmt->bind_param("i", $orderId);
         $existingOrderStmt->execute();
@@ -796,25 +810,53 @@ switch ($action) {
 
         $shouldAwardLoyalty = ($newStatus === 'completed' && ($existingOrder['status'] ?? '') !== 'completed');
 
-        if ($newStatus === 'completed') {
-            // Auto-settle COD orders on completion; leave QR Ph (already paid) untouched
-            $stmt = $connect->prepare(
-                "UPDATE orders
-                 SET status = ?,
-                     payment_status = IF(payment_method = 'cod', 'paid', payment_status)
-                 WHERE id = ?"
-            );
-        } else {
-            $stmt = $connect->prepare("UPDATE orders SET status = ? WHERE id = ?");
-        }
-        $stmt->bind_param("si", $newStatus, $orderId);
-        $stmt->execute();
+        try {
+            if ($newStatus === 'completed') {
+                $connect->begin_transaction();
 
-        if ($shouldAwardLoyalty && !empty($existingOrder['user_name'])) {
-            awardLoyaltyForCompletedOrder($connect, $orderId, $existingOrder['user_name']);
-        }
+                // Auto-settle COD orders on completion; leave QR Ph (already paid) untouched
+                $stmt = $connect->prepare(
+                    "UPDATE orders
+                     SET status = ?,
+                         payment_status = IF(payment_method = 'cod', 'paid', payment_status)
+                     WHERE id = ?"
+                );
+                $stmt->bind_param("si", $newStatus, $orderId);
+                $stmt->execute();
 
-        echo json_encode(['success' => true, 'message' => "Order status set to '$newStatus'."]);
+                $source = (int) ($existingOrder['cashier_id'] ?? 0) > 0 ? 'pos' : 'online';
+                $deduction = boycold_deduct_inventory_for_order_in_transaction($connect, $orderId, $source, $employeeId ?: null);
+                if (!$deduction['success']) {
+                    throw new RuntimeException((string) ($deduction['error'] ?? 'Inventory deduction failed.'));
+                }
+
+                if ($shouldAwardLoyalty && !empty($existingOrder['user_name'])) {
+                    awardLoyaltyForCompletedOrder(
+                        $connect,
+                        $orderId,
+                        $existingOrder['user_name'],
+                        (int) ($existingOrder['branch_id'] ?? 0),
+                        0,
+                        $employeeId,
+                        false
+                    );
+                }
+
+                $connect->commit();
+            } else {
+                $stmt = $connect->prepare("UPDATE orders SET status = ? WHERE id = ?");
+                $stmt->bind_param("si", $newStatus, $orderId);
+                $stmt->execute();
+            }
+
+            echo json_encode(['success' => true, 'message' => "Order status set to '$newStatus'."]);
+        } catch (Throwable $e) {
+            try {
+                $connect->rollback();
+            } catch (Throwable $rollbackError) {
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
         break;
 
     default:

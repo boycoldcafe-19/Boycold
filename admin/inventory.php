@@ -432,6 +432,57 @@
                     </div>
                 </div>
 
+                <!-- Edit Ingredient Modal -->
+                <div class="modal-overlay" id="editIngredientModalOverlay" hidden>
+                    <div class="modal-box">
+                        <h2 class="modal-title">Edit Ingredient</h2>
+                        <p class="modal-note" id="editIngredientWarning" hidden>
+                            Changing the unit of measure may affect existing ingredient mappings. Please review the mapped quantities after changing the unit.
+                        </p>
+
+                        <div class="modal-field">
+                            <label for="editIngredientName">Ingredient Name</label>
+                            <input type="text" id="editIngredientName" readonly>
+                        </div>
+                        <div class="modal-field">
+                            <label for="editIngredientCategory">Category</label>
+                            <input type="text" id="editIngredientCategory" readonly>
+                        </div>
+                        <div class="modal-field">
+                            <label for="editIngredientStock">Current Stock</label>
+                            <input type="number" id="editIngredientStock" readonly>
+                        </div>
+                        <div class="modal-field">
+                            <label for="editIngredientUnit">Unit of Measure</label>
+                            <select id="editIngredientUnit">
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                                <option value="mg">mg</option>
+                                <option value="ml">ml</option>
+                                <option value="L">L</option>
+                                <option value="cl">cl</option>
+                                <option value="pcs">pcs</option>
+                                <option value="box">box</option>
+                                <option value="pack">pack</option>
+                                <option value="bottle">bottle</option>
+                                <option value="sachet">sachet</option>
+                                <option value="jar">jar</option>
+                                <option value="can">can</option>
+                                <option value="shot">shot</option>
+                                <option value="unit">unit</option>
+                            </select>
+                        </div>
+                        <div class="modal-field">
+                            <label for="editIngredientMinStock">Minimum Stock</label>
+                            <input type="number" id="editIngredientMinStock" readonly>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="cancel-btn" id="cancelEditIngredientBtn">Cancel</button>
+                            <button type="button" class="save-btn" id="saveEditIngredientBtn">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Add Stock Modal -->
                 <div class="modal-overlay" id="addStockModalOverlay" hidden>
                     <div class="modal-box">
@@ -540,6 +591,10 @@
             const cancelAddIngredientBtn = document.getElementById("cancelAddIngredientBtn");
             const saveAddIngredientBtn = document.getElementById("saveAddIngredientBtn");
             const ingredientsTableBody = document.getElementById("ingredientsTableBody");
+            const editIngredientOverlay = document.getElementById("editIngredientModalOverlay");
+            const editIngredientWarning = document.getElementById("editIngredientWarning");
+            const editIngredientUnit = document.getElementById("editIngredientUnit");
+            let editingIngredient = null;
 
             function renderIngredients(items) {
                 ingredientsTableBody.innerHTML = "";
@@ -568,6 +623,7 @@
                         <td>${minStock.toLocaleString()}</td>
                         <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                         <td class="ing-actions">
+                            <button class="icon-btn edit-btn" data-ingredient-id="${item.id}" aria-label="Edit ${name}"><i class="fa-solid fa-pen"></i></button>
                             <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     `;
@@ -582,6 +638,7 @@
                     .then((response) => response.json())
                     .then((result) => {
                         if (!result.success) throw new Error(result.error || 'Ingredients could not be loaded');
+                        window.currentIngredients = result.ingredients || [];
                         renderIngredients(result.ingredients || []);
                     })
                     .catch((error) => {
@@ -592,6 +649,63 @@
             }
 
             loadIngredients();
+
+            ingredientsTableBody.addEventListener("click", (event) => {
+                const editButton = event.target.closest(".edit-btn");
+                if (!editButton) return;
+                const ingredient = window.currentIngredients?.find((item) => String(item.id) === editButton.dataset.ingredientId);
+                if (!ingredient) return;
+                editingIngredient = ingredient;
+                document.getElementById("editIngredientName").value = ingredient.name || "";
+                document.getElementById("editIngredientCategory").value = ingredient.category || "";
+                document.getElementById("editIngredientStock").value = ingredient.stock ?? 0;
+                document.getElementById("editIngredientMinStock").value = ingredient.min_stock ?? 0;
+                editIngredientUnit.value = ingredient.unit || "unit";
+                editIngredientWarning.hidden = Number(ingredient.mapping_count || 0) === 0;
+                editIngredientOverlay.hidden = false;
+            });
+
+            document.getElementById("cancelEditIngredientBtn").addEventListener("click", () => {
+                editIngredientOverlay.hidden = true;
+                editingIngredient = null;
+            });
+
+            editIngredientOverlay.addEventListener("click", (event) => {
+                if (event.target === editIngredientOverlay) editIngredientOverlay.hidden = true;
+            });
+
+            document.getElementById("saveEditIngredientBtn").addEventListener("click", async () => {
+                if (!editingIngredient) return;
+                const nextUnit = editIngredientUnit.value;
+                if (!nextUnit) {
+                    alert("Please select a valid unit of measure.");
+                    return;
+                }
+                if (nextUnit !== editingIngredient.unit && Number(editingIngredient.mapping_count || 0) > 0 &&
+                    !confirm("Changing the unit of measure may affect existing ingredient mappings. Please review the mapped quantities after changing the unit. Continue?")) {
+                    return;
+                }
+
+                const saveButton = document.getElementById("saveEditIngredientBtn");
+                saveButton.disabled = true;
+                try {
+                    const response = await fetch("admin_data_api.php?action=ingredient_update", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: editingIngredient.id, unit: nextUnit })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.error || "Unable to update the unit of measure. Please try again.");
+                    editIngredientOverlay.hidden = true;
+                    editingIngredient = null;
+                    await loadIngredients();
+                    loadStockIngredients();
+                } catch (error) {
+                    alert(error.message || "Unable to update the unit of measure. Please try again.");
+                } finally {
+                    saveButton.disabled = false;
+                }
+            });
 
             addIngredientBtn.addEventListener("click", () => {
                 addIngredientOverlay.hidden = false;
@@ -896,6 +1010,15 @@
             const tableBody = document.getElementById("stockHistoryTableBody");
             const emptyState = document.getElementById("stockHistoryEmpty");
 
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
             function renderHistory(history) {
                 tableBody.innerHTML = (history || []).map((item) => {
                     const isStockIn = item.movement_type === 'stock_in';
@@ -903,14 +1026,21 @@
                     const icon = isStockIn ? 'fa-arrow-up' : 'fa-arrow-down';
                     const sign = isStockIn ? '+' : '-';
                     const quantity = Number(item.quantity || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+                    const reference = item.reference || (item.order_id ? `Order #${item.order_id}` : '');
+                    const source = item.source ? String(item.source).toUpperCase() : '';
+                    const products = item.product_name || '';
+                    const referenceText = [reference, source, products].filter(Boolean).join(' - ');
                     const created = new Date(String(item.created_at).replace(' ', 'T'));
                     const date = Number.isNaN(created.getTime()) ? item.created_at : created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     const time = Number.isNaN(created.getTime()) ? '' : created.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                    return `<tr data-ingredient="${item.name}" data-type="${item.movement_type}">
-                        <td class="ing-name">${item.name}</td>
-                        <td><span class="transaction-pill ${isStockIn ? 'stock-in' : 'deduction'}"><i class="fa-solid ${icon}"></i> ${label}</span></td>
-                        <td class="${isStockIn ? 'qty-positive' : 'qty-negative'}">${sign}${quantity} ${item.unit}</td>
-                        <td>${Number(item.resulting_stock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${item.unit || ''}</td>
+                    return `<tr data-ingredient="${escapeHtml(item.name)}" data-type="${escapeHtml(item.movement_type)}" data-reference="${escapeHtml(referenceText)}">
+                        <td class="ing-name">${escapeHtml(item.name)}</td>
+                        <td>
+                            <span class="transaction-pill ${isStockIn ? 'stock-in' : 'deduction'}"><i class="fa-solid ${icon}"></i> ${label}</span>
+                            ${referenceText ? `<div class="stock-history-reference">${escapeHtml(referenceText)}</div>` : ''}
+                        </td>
+                        <td class="${isStockIn ? 'qty-positive' : 'qty-negative'}">${sign}${quantity} ${escapeHtml(item.unit)}</td>
+                        <td>${Number(item.resulting_stock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${escapeHtml(item.unit || '')}</td>
                         <td class="stock-history-date">${date}<br><span>${time}</span></td>
                     </tr>`;
                 }).join('');
@@ -931,9 +1061,10 @@
                 tableBody.querySelectorAll("tr").forEach((row) => {
                     const ingredientName = row.querySelector(".ing-name").textContent.trim().toLowerCase();
                     const type = row.querySelector(".transaction-pill").textContent.trim().toLowerCase();
+                    const reference = (row.dataset.reference || '').toLowerCase();
                     const ingredient = row.dataset.ingredient;
 
-                    const matchesQuery = ingredientName.includes(query) || type.includes(query);
+                    const matchesQuery = ingredientName.includes(query) || type.includes(query) || reference.includes(query);
                     const matchesFilter = !ingredientFilter || ingredient === ingredientFilter;
                     const visible = matchesQuery && matchesFilter;
 

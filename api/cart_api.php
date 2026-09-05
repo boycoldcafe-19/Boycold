@@ -23,8 +23,10 @@ session_set_cookie_params([
 ]);
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/inventory_service.php';
 
 header('Content-Type: application/json');
+boycold_ensure_inventory_schema($connect);
 
 // ── Auth guard ────────────────────────────────────────────────
 if (!isset($_SESSION['user_name'])) {
@@ -90,6 +92,9 @@ switch ($action) {
         $addons      = substr(trim($body['addons']     ?? ''), 0, 255);
         $orderType   = substr(trim($body['order_type'] ?? ''), 0, 40);
         $notes       = trim($body['notes'] ?? '');
+        $branchId    = isset($body['branch_id']) && (int) $body['branch_id'] > 0
+            ? (int) $body['branch_id']
+            : (int) ($_SESSION['branch_id'] ?? 1);
 
         if (empty($productName)) {
             echo json_encode(['success' => false, 'error' => 'Invalid product_name.']);
@@ -98,6 +103,19 @@ switch ($action) {
 
         // INSERT … ON DUPLICATE KEY UPDATE increments quantity.
         // The UNIQUE KEY is (user_name, product_name) in the schema.
+        $inventoryItems = cartApiInventoryItemsAfterAdd($connect, $userName, [
+            'name' => $productName,
+            'qty' => $qty,
+            'milk' => $milk,
+            'addons' => $addons,
+        ]);
+        $inventoryCheck = boycold_validate_inventory_for_items($connect, $inventoryItems, $branchId, false, true);
+        if (!$inventoryCheck['success']) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'error' => $inventoryCheck['error'], 'inventory' => $inventoryCheck]);
+            break;
+        }
+
         $stmt = $connect->prepare(
             "INSERT INTO cart (user_name, product_name, quantity, milk, addons, order_type, notes)
              VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -118,9 +136,20 @@ switch ($action) {
     case 'update':
         $cartId = isset($body['cart_id'])  ? (int) $body['cart_id']  : 0;
         $qty    = isset($body['quantity']) ? max(1, (int) $body['quantity']) : 1;
+        $branchId = isset($body['branch_id']) && (int) $body['branch_id'] > 0
+            ? (int) $body['branch_id']
+            : (int) ($_SESSION['branch_id'] ?? 1);
 
         if ($cartId <= 0) {
             echo json_encode(['success' => false, 'error' => 'Invalid cart_id.']);
+            break;
+        }
+
+        $inventoryItems = cartApiInventoryItemsAfterUpdate($connect, $userName, $cartId, $qty);
+        $inventoryCheck = boycold_validate_inventory_for_items($connect, $inventoryItems, $branchId, false, true);
+        if (!$inventoryCheck['success']) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'error' => $inventoryCheck['error'], 'inventory' => $inventoryCheck]);
             break;
         }
 
@@ -165,4 +194,69 @@ switch ($action) {
     default:
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Unknown action.']);
+}
+
+function cartApiInventoryItems(mysqli $connect, string $userName): array
+{
+    $stmt = $connect->prepare(
+        "SELECT product_name AS name, quantity AS qty, milk, addons
+         FROM cart
+         WHERE user_name = ?
+         ORDER BY created_at ASC"
+    );
+    $stmt->bind_param('s', $userName);
+    $stmt->execute();
+    $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    return $items;
+}
+
+function cartApiInventoryItemsAfterAdd(mysqli $connect, string $userName, array $nextItem): array
+{
+    $items = cartApiInventoryItems($connect, $userName);
+    $nextKey = boycold_inventory_normalize_name((string) $nextItem['name']);
+    $merged = false;
+
+    foreach ($items as &$item) {
+        if (boycold_inventory_normalize_name((string) $item['name']) !== $nextKey) {
+            continue;
+        }
+        $item['qty'] = max(1, (int) ($item['qty'] ?? 1)) + max(1, (int) ($nextItem['qty'] ?? 1));
+        $item['milk'] = (string) ($nextItem['milk'] ?? '');
+        $item['addons'] = (string) ($nextItem['addons'] ?? '');
+        $merged = true;
+        break;
+    }
+    unset($item);
+
+    if (!$merged) {
+        $items[] = $nextItem;
+    }
+
+    return $items;
+}
+
+function cartApiInventoryItemsAfterUpdate(mysqli $connect, string $userName, int $cartId, int $quantity): array
+{
+    $stmt = $connect->prepare(
+        "SELECT id, product_name AS name, quantity AS qty, milk, addons
+         FROM cart
+         WHERE user_name = ?
+         ORDER BY created_at ASC"
+    );
+    $stmt->bind_param('s', $userName);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    foreach ($rows as &$row) {
+        if ((int) $row['id'] === $cartId) {
+            $row['qty'] = $quantity;
+            break;
+        }
+    }
+    unset($row);
+
+    return $rows;
 }

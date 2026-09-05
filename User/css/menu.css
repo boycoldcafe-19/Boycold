@@ -644,6 +644,55 @@ header .box {
     font-size: 13px;
 }
 
+.menu-stock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+    font-family: 'Afacad', sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.86);
+}
+
+.menu-stock-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.menu-stock-status.available {
+    color: #49D04D;
+}
+
+.menu-stock-status.low {
+    color: #FFB020;
+}
+
+.menu-stock-status.unavailable {
+    color: #FF5A52;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    background: currentColor;
+}
+
+.menu-stock-servings {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.card-btn:disabled,
+.card-btn.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 footer {
     position: relative;
     margin: 0;

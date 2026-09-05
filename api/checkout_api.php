@@ -28,6 +28,7 @@ session_start();
 require_once '../config/db_config.php';
 require_once '../config/payments.php';
 require_once '../config/shift_manager.php';
+require_once '../config/inventory_service.php';
 
 header('Content-Type: application/json');
 
@@ -91,6 +92,7 @@ if (!empty($_SESSION['user_id'])) {
 }
 
 boycold_ensure_payment_schema($connect);
+boycold_ensure_inventory_schema($connect);
 
 $raw   = file_get_contents('php://input');
 $body  = json_decode($raw, true);
@@ -129,6 +131,18 @@ if (!$branchStatus['is_open']) {
         'error' => 'Online orders are currently unavailable for ' . $branchStatus['branch_name'] . ' because the branch is closed. Please select another available branch.',
         'branch_closed' => true,
         'branch_id' => $branchId,
+    ]);
+    exit;
+}
+
+$inventoryCheck = boycold_validate_inventory_for_items($connect, $items, $branchId, false, true);
+if (!$inventoryCheck['success']) {
+    $connect->rollback();
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'error' => $inventoryCheck['error'],
+        'inventory' => $inventoryCheck,
     ]);
     exit;
 }

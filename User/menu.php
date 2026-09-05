@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/inventory_service.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -23,7 +24,14 @@ if (!isset($_SESSION['branch_id'])) {
 }
 
 // Fetch all products from DB
-$products = $connect->query("SELECT id, product_name, price, image, category FROM products WHERE is_available = 1 ORDER BY category, product_name");
+boycold_ensure_inventory_schema($connect);
+$branchId = (int) $_SESSION['branch_id'];
+$productsResult = $connect->query("SELECT id, product_name, price, image, category FROM products WHERE is_available = 1 ORDER BY category, product_name");
+$productsList = [];
+while ($productsResult && ($row = $productsResult->fetch_assoc())) {
+    $productsList[] = $row;
+}
+$productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($productsList, 'product_name'));
 ?>
 
 
@@ -152,12 +160,18 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                 <div class="product-grid" id="productGrid">
                     <?php
                     $popularProducts = ['americano', 'cafe latte', 'spanish latte', 'sea salt latte', 'french vanilla', 'white mocha', 'mont blanc', 'horchata', 'ocean mist', 'cheesecake latte', 'dark mocha', 'biscoff creamy latte', 'caramel macchiato', 'salted caramel', 'einspanner latte', 'strawberry milk', 'blueberry milk', 'milky oreo', 'choco berry', 'choco banana pudding', 'choco vanilla cookie', 'strawberry matcha', 'matcha banana pudding', 'biscoff matcha', 'mango matcha', 'sea salt matcha', 'matcha freddo', 'matcha latte', 'ube matcha', 'cheesecake matcha', 'strawberry smoothie', 'berry mango', 'tropical matcha yogurt', 'ube yogurt', 'blueberry', 'mango graham', 'hershey delight', 'ube frappe', 'oreo frappe', 'matcha frappe', 'java chips', 'cheesecake frappe', 'black forrest', 'biscoff frappe', 'honey gochujang katsu', 'dak galbi', 'salted egg fish fillet', 'cheezy fries', 'fries and chicken tenders', 'onion rings', 'nachos', 'chicken alfredo', 'chicken pesto', 'aglio olio', 'carbonara', 'lolly waffle biscoff', 'lolly waffle chocolate', 'lolly waffle matcha', 'lolly waffle strawberry', 'lolly waffle oreo', 'lolly waffle tiramisu', 'chicken quesadilla', 'beef quesadilla']; // Add more popular product names here (lowercase)
-                    if ($products && $products->num_rows > 0) {
-                        while ($product = $products->fetch_assoc()) {
+                    if (!empty($productsList)) {
+                        foreach ($productsList as $product) {
                             $id    = htmlspecialchars($product['id']);
                             $name  = htmlspecialchars($product['product_name']);
                             $price = htmlspecialchars($product['price']);
                             $image = htmlspecialchars($product['image'] ?? '');
+                            $availabilityInfo = $productAvailability[boycold_inventory_normalize_name((string) $product['product_name'])] ?? null;
+                            $stockStatus = htmlspecialchars((string) ($availabilityInfo['status'] ?? 'unavailable'));
+                            $stockLabel = htmlspecialchars((string) ($availabilityInfo['status_label'] ?? 'Unavailable'));
+                            $stockReason = htmlspecialchars((string) ($availabilityInfo['reason'] ?? ''));
+                            $canOrder = !empty($availabilityInfo['can_order']);
+                            $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
                             $categoryValue = strtolower(trim((string) ($product['category'] ?? '')));
                             $categoryValue = match ($categoryValue) {
                                 'bites' => 'light-snack',
@@ -183,7 +197,11 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                                 data-product-id="<?= $id ?>"
                                 data-product-name="<?= $name ?>"
                                 data-price="<?= $price ?>"
-                                data-image="<?= $image ?>">
+                                data-image="<?= $image ?>"
+                                data-can-order="<?= $canOrder ? '1' : '0' ?>"
+                                data-stock-status="<?= $stockStatus ?>"
+                                data-available-servings="<?= $servings ?>"
+                                data-stock-reason="<?= $stockReason ?>">
                                 <div class="card-image">
                                     <div class="card-image-placeholder">
                                         <div class="card-top">
@@ -209,11 +227,17 @@ $products = $connect->query("SELECT id, product_name, price, image, category FRO
                                         <p class="card-price">₱<?= number_format($price, 2) ?></p>
                                     </div>
                                     <div class="card-footer">
+                                        <div class="menu-stock">
+                                            <span class="menu-stock-status <?= $stockStatus ?>">
+                                                <span class="status-dot"></span><?= $stockLabel ?>
+                                            </span>
+                                            <span class="menu-stock-servings"><?= $servings ?> serving<?= $servings === 1 ? '' : 's' ?></span>
+                                        </div>
                                         <div class="card-actions">
-                                            <button class="card-btn btn-cart">
+                                            <button class="card-btn btn-cart" <?= $canOrder ? '' : 'disabled' ?>>
                                                 <i class="fa-solid fa-cart-shopping"></i> Cart
                                             </button>
-                                            <button class="card-btn btn-order">
+                                            <button class="card-btn btn-order" <?= $canOrder ? '' : 'disabled' ?>>
                                                 <i class="fa-solid fa-bag-shopping"></i> Order
                                             </button>
                                         </div>

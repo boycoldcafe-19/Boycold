@@ -260,6 +260,19 @@ $_SESSION['user_email'] = $user['email'];
 
         let currentCart = [];
 
+        function getSelectedBranchId() {
+            try {
+                const selectedStore = JSON.parse(
+                    sessionStorage.getItem('boycold_selected_store')
+                    || localStorage.getItem('boycold_selected_store')
+                    || 'null'
+                );
+                return selectedStore?.branchId || <?= (int) $_SESSION['branch_id'] ?> || 1;
+            } catch (e) {
+                return <?= (int) $_SESSION['branch_id'] ?> || 1;
+            }
+        }
+
         async function loadCart() {
             try {
                 const res = await fetch(`${CART_API}?action=get`);
@@ -355,12 +368,15 @@ $_SESSION['user_email'] = $user['email'];
                     body: JSON.stringify({
                         action: 'update',
                         cart_id: cartId,
-                        quantity: newQty
+                        quantity: newQty,
+                        branch_id: getSelectedBranchId()
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
                     await loadCart(); // reload whole cart
+                } else {
+                    alert(data.error || 'Could not update quantity.');
                 }
             } catch (err) {
                 console.error(err);

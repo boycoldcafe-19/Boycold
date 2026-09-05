@@ -21,8 +21,10 @@ require_once __DIR__ . '/auth/guard.php';
 pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/shift_manager.php';
+require_once __DIR__ . '/../config/inventory_service.php';
 
 header('Content-Type: application/json');
+boycold_ensure_inventory_schema($connect);
 
 function pos_json_response(array $payload, int $statusCode = 200): void
 {
@@ -223,14 +225,6 @@ try {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
-    $trackIngredients = pos_table_exists($connect, 'product_ingredients') && pos_table_exists($connect, 'order_ingredients');
-    $piStmt = null;
-    $oiStmt = null;
-    if ($trackIngredients) {
-        $piStmt = $connect->prepare('SELECT ingredient_id, amount FROM product_ingredients WHERE product_name = ?');
-        $oiStmt = $connect->prepare('INSERT INTO order_ingredients (order_id, ingredient_id, amount) VALUES (?, ?, ?)');
-    }
-
     foreach ($items as $item) {
         $name = substr(trim((string) ($item['name'] ?? 'Unknown Item')), 0, 150);
         if ($name === '') {
@@ -259,52 +253,11 @@ try {
             $itemNotes
         );
         $itemStmt->execute();
-
-        if ($piStmt && $oiStmt) {
-            $piStmt->bind_param('s', $name);
-            $piStmt->execute();
-            $res = $piStmt->get_result();
-            while ($prow = $res->fetch_assoc()) {
-                $ingredientId = (int) $prow['ingredient_id'];
-                $totalAmount = (float) $prow['amount'] * $qty;
-                $oiStmt->bind_param('iid', $orderId, $ingredientId, $totalAmount);
-                $oiStmt->execute();
-            }
-        }
     }
 
-    if ($trackIngredients) {
-        $deductStmt = $connect->prepare(
-            "UPDATE ingredients
-             SET stock = GREATEST(0, stock - ?)
-             WHERE id = ?"
-        );
-        $movementStmt = $connect->prepare(
-            "INSERT INTO ingredient_stock_movements
-                (ingredient_id, movement_type, quantity, resulting_stock, created_by)
-             SELECT id, 'deduction', ?, stock, ?
-             FROM ingredients
-             WHERE id = ?"
-        );
-        $ingredientTotals = [];
-        $oiLookup = $connect->prepare('SELECT ingredient_id, amount FROM order_ingredients WHERE order_id = ?');
-        $oiLookup->bind_param('i', $orderId);
-        $oiLookup->execute();
-        $oiResult = $oiLookup->get_result();
-        while ($ingredientRow = $oiResult->fetch_assoc()) {
-            $ingredientId = (int) $ingredientRow['ingredient_id'];
-            $ingredientTotals[$ingredientId] = ($ingredientTotals[$ingredientId] ?? 0) + (float) $ingredientRow['amount'];
-        }
-        $oiLookup->close();
-
-        foreach ($ingredientTotals as $ingredientId => $amountUsed) {
-            $deductStmt->bind_param('di', $amountUsed, $ingredientId);
-            $deductStmt->execute();
-            $movementStmt->bind_param('dii', $amountUsed, $cashierId, $ingredientId);
-            $movementStmt->execute();
-        }
-        $deductStmt->close();
-        $movementStmt->close();
+    $inventoryResult = boycold_deduct_inventory_for_order_in_transaction($connect, $orderId, 'pos', $cashierId);
+    if (!$inventoryResult['success']) {
+        throw new RuntimeException((string) ($inventoryResult['error'] ?? 'Inventory deduction failed.'));
     }
 
     $createdAt = date('Y-m-d H:i:s');

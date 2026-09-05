@@ -30,6 +30,8 @@ $productName  = htmlspecialchars($productNameRaw);
 $productPrice = isset($_GET['price']) ? htmlspecialchars(strip_tags($_GET['price'])) : '0.00';
 $productImage = isset($_GET['image']) ? htmlspecialchars(strip_tags($_GET['image'])) : '../picture/SC-Einspanner Latte _ 149 1.png';
 $productAddon = isset($_GET['addon']) ? htmlspecialchars(strip_tags($_GET['addon'])) : '';
+$availableServings = isset($_GET['servings']) ? max(0, (int) $_GET['servings']) : 0;
+$selectedBranchId = isset($_GET['branch_id']) ? max(1, (int) $_GET['branch_id']) : (int) ($_SESSION['branch_id'] ?? 1);
 
 // Product category controls customization; order_type is only the pickup/delivery choice.
 $productCategory = '';
@@ -356,6 +358,8 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
         const hasSauceOptions = <?= $hasSauceOptions ? 'true' : 'false' ?>;
         let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
         let addOnTotal = 0;
+        const availableServings = <?= (int) $availableServings ?>;
+        const selectedBranchId = <?= (int) $selectedBranchId ?>;
 
         // If this item has sauce radio buttons, wire them up
         if (hasSauceOptions) {
@@ -501,14 +505,15 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                         milk: item.milk,
                         addons: item.addons,
                         order_type: item.orderType,
-                        notes: item.notes
+                        notes: item.notes,
+                        branch_id: selectedBranchId
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
                     window.location.href = 'addtocart.php';
                 } else {
-                    alert('Failed to add to cart. Please try again.');
+                    alert(data.error || 'Failed to add to cart. Please try again.');
                 }
             } catch (err) {
                 alert('Network error. Please try again.');
@@ -566,7 +571,12 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
         });
         document.getElementById('qtyPlus').addEventListener('click', function() {
             const el = document.getElementById('qtyValue');
-            el.textContent = parseInt(el.textContent) + 1;
+            const nextQty = parseInt(el.textContent) + 1;
+            if (availableServings > 0 && nextQty > availableServings) {
+                alert(`Only ${availableServings} serving${availableServings === 1 ? '' : 's'} available for this item.`);
+                return;
+            }
+            el.textContent = nextQty;
             recalcTotal();
             updateMiniCard();
         });

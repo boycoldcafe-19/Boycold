@@ -953,6 +953,16 @@ button {
     margin-bottom: 20px;
 }
 
+.modal-note {
+    margin: -8px 0 18px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--primary);
+    background: #fff8e8;
+    color: var(--text-light);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 .modal-field {
     margin-bottom: 18px;
 }
@@ -986,6 +996,13 @@ button {
 .modal-field input[readonly] {
     background: var(--bg);
     color: var(--text-light);
+}
+
+.stock-history-reference {
+    margin-top: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .modal-actions {

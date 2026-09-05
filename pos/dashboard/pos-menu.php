@@ -4,6 +4,7 @@ pos_start_session();
 require_once '../config/db_config.php';
 $guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
+require_once '../../config/inventory_service.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -46,6 +47,7 @@ $openingCash = $shiftResult['opening_cash_float'];
 $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Fetch all products from database
+boycold_ensure_inventory_schema($connect);
 $productsStmt = $connect->prepare("SELECT id, product_name, description, price, image, category, is_available FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsStmt->execute();
 $productsResult = $productsStmt->get_result();
@@ -54,6 +56,7 @@ while ($row = $productsResult->fetch_assoc()) {
     $products[] = $row;
 }
 $productsStmt->close();
+$productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($products, 'product_name'));
 
 // Branch identity comes from the authenticated employee record.
 $branchId = (int) $guardEmployee['branch_id'];
@@ -290,7 +293,23 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                     </div>
                     <div class="product-grid" id="productGrid">
                         <?php foreach ($products as $product): ?>
-                        <div class="product-card" data-category="<?= htmlspecialchars($product['category']) ?>" data-id="<?= $product['id'] ?>">
+                        <?php
+                            $availabilityInfo = $productAvailability[boycold_inventory_normalize_name((string) $product['product_name'])] ?? [];
+                            $stockStatus = htmlspecialchars((string) ($availabilityInfo['status'] ?? 'unavailable'), ENT_QUOTES);
+                            $stockLabel = htmlspecialchars((string) ($availabilityInfo['status_label'] ?? 'Unavailable'), ENT_QUOTES);
+                            $stockReason = htmlspecialchars((string) ($availabilityInfo['reason'] ?? ''), ENT_QUOTES);
+                            $ingredientStatus = htmlspecialchars((string) ($availabilityInfo['ingredient_status'] ?? 'Insufficient'), ENT_QUOTES);
+                            $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
+                            $canOrder = !empty($availabilityInfo['can_order']);
+                        ?>
+                        <div class="product-card"
+                             data-category="<?= htmlspecialchars($product['category'], ENT_QUOTES) ?>"
+                             data-id="<?= (int) $product['id'] ?>"
+                             data-product-name="<?= htmlspecialchars($product['product_name'], ENT_QUOTES) ?>"
+                             data-can-order="<?= $canOrder ? '1' : '0' ?>"
+                             data-stock-status="<?= $stockStatus ?>"
+                             data-available-servings="<?= $servings ?>"
+                             data-stock-reason="<?= $stockReason ?>">
                             <div class="card-image">
                                 <div class="card-image-placeholder">
                                     <?php
@@ -319,20 +338,24 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
 
                                     <!-- Inventory Status -->
                                     <div class="drink-stock">
-                                        <p class="drink-status available">
+                                        <p class="drink-status <?= $stockStatus ?>">
                                             <span class="status-dot"></span>
-                                            Available
+                                            <?= $stockLabel ?>
                                         </p>
 
                                         <p class="drink-ingredient">
-                                            Ingredients: <span>Sufficient</span>
+                                            Ingredients: <span><?= $ingredientStatus ?></span>
+                                        </p>
+
+                                        <p class="drink-servings">
+                                            Servings: <span class="servings-value"><?= $servings ?></span>
                                         </p>
 
                                         <p class="drink-cups">
-                                            Cups: <span>40 pcs</span>
+                                            Cups: <span class="cups-value"><?= $servings ?></span>
                                         </p>
                                     </div>
-                                    <button class="card-btn btn-order" aria-label="Add to order">
+                                    <button class="card-btn btn-order" aria-label="Add to order" <?= $canOrder ? '' : 'disabled' ?>>
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
                                 </div>
@@ -691,7 +714,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                 if (data.success) {
                     const fullStock = await loadInventory();
                     await renderInventoryBar();
-                    updateProductCardsStock();
+                    await updateProductCardsStock();
                 }
             } catch (e) {
                 console.error('Failed to reset inventory:', e);
@@ -799,17 +822,73 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             });
         }
 
+        async function loadProductAvailability() {
+            try {
+                const response = await fetch('../api/pos_inventory_api.php?action=product_availability', { cache: 'no-store' });
+                const data = await response.json();
+                if (data.success && data.availability) return data.availability;
+            } catch (e) {
+                console.error('Failed to load product availability:', e);
+            }
+            return {};
+        }
+
+        function applyMappedProductAvailability(card, info) {
+            if (!info) return;
+
+            const status = info.status || 'unavailable';
+            const label = info.status_label || 'Unavailable';
+            const servings = Number(info.available_servings || 0);
+            const canOrder = !!info.can_order;
+
+            card.dataset.canOrder = canOrder ? '1' : '0';
+            card.dataset.stockStatus = status;
+            card.dataset.availableServings = String(servings);
+            card.dataset.stockReason = info.reason || '';
+
+            const statusEl = card.querySelector('.drink-status');
+            const ingredientSpan = card.querySelector('.drink-ingredient span');
+            const cupsValueSpan = card.querySelector('.drink-cups .cups-value') || card.querySelector('.drink-cups span:last-child');
+            const servingsValueSpan = card.querySelector('.drink-servings .servings-value') || card.querySelector('.drink-servings span:last-child');
+            const orderBtn = card.querySelector('.btn-order');
+            if (!statusEl || !ingredientSpan || !cupsValueSpan) return;
+
+            statusEl.classList.remove('available', 'low', 'unavailable');
+            statusEl.classList.add(status);
+            statusEl.innerHTML = '<span class="status-dot"></span>' + label;
+            ingredientSpan.textContent = info.ingredient_status || (canOrder ? 'Sufficient' : 'Insufficient');
+            cupsValueSpan.textContent = servings;
+            if (servingsValueSpan) servingsValueSpan.textContent = servings;
+
+            if (orderBtn) {
+                orderBtn.disabled = !canOrder;
+                orderBtn.classList.toggle('is-disabled', !canOrder);
+                orderBtn.title = canOrder ? '' : (info.reason || 'Insufficient inventory');
+            }
+        }
+
+        async function updateProductCardsStock() {
+            const availability = await loadProductAvailability();
+            document.querySelectorAll('.product-card').forEach(card => {
+                const key = (card.dataset.productName || card.querySelector('.card-name')?.textContent || '').trim().toLowerCase();
+                applyMappedProductAvailability(card, availability[key]);
+            });
+        }
+
         function attachOrderButtonHandlers() {
             document.querySelectorAll('.product-card').forEach(card => {
                 const orderBtn = card.querySelector('.btn-order');
                 if (!orderBtn) return;
 
-                // Remove existing handler if present to avoid duplicates
-                orderBtn.dataset.navReady = 'false';
+                if (orderBtn.dataset.navReady === 'true') return;
 
                 orderBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (orderBtn.disabled) return;
+                    if (card.dataset.canOrder !== '1') {
+                        alert(card.dataset.stockReason || 'This item is currently unavailable.');
+                        return;
+                    }
 
                     const name = card.querySelector('.card-name')?.textContent.trim() || '';
                     const priceText = card.querySelector('.card-price')?.textContent.trim() || '₱0.00';
@@ -817,8 +896,9 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                     const img = card.querySelector('.card-image img')?.getAttribute('src') || '';
                     const id = card.getAttribute('data-id') || '';
                     const category = card.getAttribute('data-category') || '';
+                    const availableServings = Number(card.dataset.availableServings || 0);
 
-                    const product = { id, name, price, img, category };
+                    const product = { id, name, price, img, category, availableServings };
                     // Only clear cart if this is a fresh start (not continuing an existing order)
                     // Check if we have items in cart - if yes, we're continuing an order
                     fetch('../api/pos_cart_api.php?action=get_cart')
@@ -842,13 +922,16 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             });
         }
 
-        // Save the defaults on first load, then render
+        // Render database-backed inventory on load.
         (async () => {
-            saveInventory(await loadInventory());
             await renderInventoryBar();
             document.querySelectorAll('.product-card').forEach(setupListViewStock);
-            updateProductCardsStock();
+            await updateProductCardsStock();
             attachOrderButtonHandlers();
+            setInterval(() => {
+                renderInventoryBar();
+                updateProductCardsStock();
+            }, 30000);
         })();
 
         const resetStockBtn = document.getElementById('resetStockBtn');

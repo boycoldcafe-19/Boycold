@@ -316,7 +316,7 @@ function step_class(bool $reached)
                             <span>You haven't placed an order yet. Browse our menu and start your order!</span>
                         <?php endif; ?>
                     </div>
-                    <a href="../user/menu.php" class="no-order-banner-btn">Order Now</a>
+                    <a href="menu.php" class="no-order-banner-btn">Order Now</a>
                 </div>
             <?php else: ?>
                 <?php if ($hasActiveOrder): ?>

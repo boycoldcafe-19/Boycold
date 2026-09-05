@@ -6,12 +6,14 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 require_once '../auth/guard.php';
 pos_start_session();
 require_once '../config/db_config.php';
+require_once '../../config/inventory_service.php';
 
 header('Content-Type: application/json');
 
 $employee = pos_require_employee($connect, true);
 $employeeId = (int) $employee['id'];
 $branchId = (int) $employee['branch_id'];
+boycold_ensure_inventory_schema($connect);
 
 // Generate or get session ID
 $sessionId = isset($_SESSION['pos_session_id']) ? $_SESSION['pos_session_id'] : null;
@@ -122,6 +124,22 @@ function addToCart(mysqli $connect, int $employeeId, int $branchId, string $sess
         $milkPrice = 0;
         $addons = '[]';
         $itemTotal = $basePrice * $quantity;
+    }
+
+    $inventoryItems = posCartInventoryItems($connect, $employeeId, $branchId, $sessionId);
+    $inventoryItems[] = [
+        'name' => $productName,
+        'qty' => $quantity,
+        'milk' => $milk,
+        'addons' => $addons,
+    ];
+    $inventoryCheck = boycold_validate_inventory_for_items($connect, $inventoryItems, $branchId, false, true);
+    if (!$inventoryCheck['success']) {
+        return [
+            'success' => false,
+            'error' => $inventoryCheck['error'],
+            'inventory' => $inventoryCheck,
+        ];
     }
 
     $stmt = $connect->prepare(
@@ -240,4 +258,19 @@ function ensureSession(mysqli $connect, int $employeeId, int $branchId, string $
         $insertStmt->execute();
         $insertStmt->close();
     }
+}
+
+function posCartInventoryItems(mysqli $connect, int $employeeId, int $branchId, string $sessionId): array {
+    $stmt = $connect->prepare(
+        "SELECT product_name AS name, quantity AS qty, milk, addons
+         FROM pos_cart
+         WHERE employee_id = ? AND branch_id = ? AND session_id = ?
+         ORDER BY created_at"
+    );
+    $stmt->bind_param('iis', $employeeId, $branchId, $sessionId);
+    $stmt->execute();
+    $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    return $items;
 }

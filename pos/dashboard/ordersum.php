@@ -636,6 +636,11 @@ if ($shiftResult) {
             }
         });
         document.getElementById('qtyPlus').addEventListener('click', () => {
+            const maxServings = Number(currentProduct.availableServings || 0);
+            if (maxServings > 0 && quantity >= maxServings) {
+                alert(`Only ${maxServings} serving${maxServings === 1 ? '' : 's'} available for this item.`);
+                return;
+            }
             quantity++;
             qtyValue.textContent = quantity;
             updateTotal();
@@ -922,74 +927,6 @@ if ($shiftResult) {
             }
         });
 
-        const INVENTORY_KEY = 'boycold_inventory';
-
-        async function loadInventory() {
-            try {
-                const response = await fetch('../api/pos_inventory_api.php?action=get_inventory');
-                const data = await response.json();
-                if (data.success) {
-                    return data.inventory;
-                }
-            } catch (e) {
-                console.error('Failed to load inventory:', e);
-            }
-            return {
-                coffeeBeans: { current: 1000, max: 1000, unit: 'g' },
-                milk: { current: 5000, max: 5000, unit: 'ml' },
-                matcha: { current: 1000, max: 1000, unit: 'g' },
-                chocolate: { current: 1000, max: 1000, unit: 'g' },
-                cups: { current: 100, max: 100, unit: 'pcs' }
-            };
-        }
-
-        async function saveInventory(inv) {
-            try {
-                const response = await fetch('../api/pos_inventory_api.php?action=update_inventory', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(inv)
-                });
-                const data = await response.json();
-                return data.success;
-            } catch (e) {
-                console.error('Failed to save inventory:', e);
-                return false;
-            }
-        }
-
-        // Tune these per-cup consumption amounts as needed
-        const RECIPE_PER_CUP = {
-            cups: 1,
-            milkMl: 150,
-            coffeeBeansG: 18,
-            matchaG: 5
-        };
-
-        async function deductInventoryForOrder(cart) {
-            const inv = await loadInventory();
-
-            cart.forEach(item => {
-                const qty = item.qty || 1;
-                const category = (item.category || '').trim();
-
-                if (inv.cups) {
-                    inv.cups.current = Math.max(0, inv.cups.current - RECIPE_PER_CUP.cups * qty);
-                }
-                if (inv.milk) {
-                    inv.milk.current = Math.max(0, inv.milk.current - RECIPE_PER_CUP.milkMl * qty);
-                }
-                if (inv.coffeeBeans && category.includes('coffee')) {
-                    inv.coffeeBeans.current = Math.max(0, inv.coffeeBeans.current - RECIPE_PER_CUP.coffeeBeansG * qty);
-                }
-                if (inv.matcha && category.includes('matcha')) {
-                    inv.matcha.current = Math.max(0, inv.matcha.current - RECIPE_PER_CUP.matchaG * qty);
-                }
-            });
-
-            saveInventory(inv);
-        }
-
         // Force-enable Complete Payment regardless of whatever CSS/disabled
         // state it starts in — it was showing up unclickable/disabled-looking
         // even though nothing in this file ever set it disabled.
@@ -1024,8 +961,6 @@ if ($shiftResult) {
                 if (!saved) {
                     return;
                 }
-
-                await deductInventoryForOrder(cart);
 
                 // Build and show the receipt with the order that was just paid for,
                 // then swap the POS interface out for the centered receipt overlay.

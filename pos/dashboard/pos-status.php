@@ -6,6 +6,8 @@ $guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 require_once '../../config/loyalty.php';
 require_once '../../config/payments.php';
+require_once '../../config/inventory_service.php';
+boycold_ensure_inventory_schema($connect);
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -108,38 +110,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    // Update status
-    if ($newStatus === 'completed') {
-        // Auto-settle COD orders on completion
-        $stmt = $connect->prepare(
-            "UPDATE orders
-             SET status = ?,
-                 payment_status = IF(payment_method = 'cod', 'paid', payment_status)
-             WHERE id = ? AND branch_id = ?"
-        );
-        $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
-    } else {
-        $stmt = $connect->prepare("UPDATE orders
-                                   SET status = ?,
-                                       payment_status = IF(? = 'cancelled' AND payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
-                                   WHERE id = ? AND branch_id = ?");
-        $stmt->bind_param("ssii", $newStatus, $newStatus, $orderId, $branchId);
-    }
+    try {
+        if ($newStatus === 'completed') {
+            $connect->begin_transaction();
 
-    if ($stmt->execute()) {
-        if ($newStatus === 'completed' && ($existingOrder['status'] ?? '') !== 'completed') {
-            awardLoyaltyForCompletedOrder(
-                $connect,
-                $orderId,
-                (string) ($existingOrder['user_name'] ?? ''),
-                $branchId,
-                0,
-                $employeeId
+            $stmt = $connect->prepare(
+                "UPDATE orders
+                 SET status = ?,
+                     payment_status = IF(payment_method = 'cod', 'paid', payment_status)
+                 WHERE id = ? AND branch_id = ?"
             );
+            $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
+            $stmt->execute();
+
+            $deduction = boycold_deduct_inventory_for_order_in_transaction($connect, $orderId, 'online', $employeeId);
+            if (!$deduction['success']) {
+                throw new RuntimeException((string) ($deduction['error'] ?? 'Inventory deduction failed.'));
+            }
+
+            if (($existingOrder['status'] ?? '') !== 'completed') {
+                awardLoyaltyForCompletedOrder(
+                    $connect,
+                    $orderId,
+                    (string) ($existingOrder['user_name'] ?? ''),
+                    $branchId,
+                    0,
+                    $employeeId,
+                    false
+                );
+            }
+
+            $connect->commit();
+        } else {
+            $stmt = $connect->prepare("UPDATE orders
+                                       SET status = ?,
+                                           payment_status = IF(? = 'cancelled' AND payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
+                                       WHERE id = ? AND branch_id = ?");
+            $stmt->bind_param("ssii", $newStatus, $newStatus, $orderId, $branchId);
+            $stmt->execute();
         }
+
         echo json_encode(['success' => true, 'message' => "Order status updated to '$newStatus'."]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Failed to update order status.']);
+    } catch (Throwable $e) {
+        try {
+            $connect->rollback();
+        } catch (Throwable $rollbackError) {
+        }
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;
 }

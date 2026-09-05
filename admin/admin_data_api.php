@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/inventory_service.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -23,6 +24,21 @@ function requireValue(array $data, string $key): string
     $value = trim((string)($data[$key] ?? ''));
     if ($value === '') response(['success' => false, 'error' => "$key is required"], 422);
     return $value;
+}
+
+function validateIngredientUnit(array $data): string
+{
+    $unit = trim((string)($data['unit'] ?? ''));
+    $allowedUnits = [
+        'g', 'kg', 'mg', 'ml', 'L', 'cl', 'pcs', 'box', 'pack',
+        'bottle', 'sachet', 'jar', 'can', 'shot', 'unit'
+    ];
+
+    if ($unit === '' || !in_array($unit, $allowedUnits, true)) {
+        response(['success' => false, 'error' => 'Please select a valid unit of measure.'], 422);
+    }
+
+    return $unit;
 }
 
 function currentAdmin(mysqli $connect): ?array
@@ -62,6 +78,8 @@ if (!currentAdmin($connect)) {
 }
 
 try {
+    boycold_ensure_inventory_schema($connect);
+
     switch ($action) {
         case 'settings_get':
             $admin = currentAdmin($connect);
@@ -165,7 +183,15 @@ try {
             response(['success' => true]);
 
         case 'ingredients':
-            $result = $connect->query('SELECT id, name, category, unit, stock, min_stock, branch_id FROM ingredients ORDER BY name');
+            ensureProductIngredientsTable($connect);
+            $result = $connect->query(
+                'SELECT i.id, i.name, i.category, i.unit, i.stock, i.min_stock, i.branch_id,
+                        COUNT(pi.id) AS mapping_count
+                 FROM ingredients i
+                 LEFT JOIN product_ingredients pi ON pi.ingredient_id = i.id
+                 GROUP BY i.id, i.name, i.category, i.unit, i.stock, i.min_stock, i.branch_id
+                 ORDER BY i.name'
+            );
             $ingredients = [];
             while ($row = $result->fetch_assoc()) $ingredients[] = $row;
             response(['success' => true, 'ingredients' => $ingredients]);
@@ -240,15 +266,22 @@ try {
 
         case 'ingredient_update':
             $id = (int)($data['id'] ?? 0);
-            $name = requireValue($data, 'name');
-            $category = requireValue($data, 'category');
-            $unit = requireValue($data, 'unit');
-            $stock = (float)($data['stock'] ?? 0);
-            $minStock = (float)($data['min_stock'] ?? 0);
-            $stmt = $connect->prepare('UPDATE ingredients SET name = ?, category = ?, unit = ?, stock = ?, min_stock = ? WHERE id = ?');
-            $stmt->bind_param('sssddi', $name, $category, $unit, $stock, $minStock, $id);
-            $stmt->execute();
-            response(['success' => true]);
+            if ($id < 1) response(['success' => false, 'error' => 'Invalid ingredient.'], 422);
+            $unit = validateIngredientUnit($data);
+            $stmt = $connect->prepare('UPDATE ingredients SET unit = ? WHERE id = ?');
+            $stmt->bind_param('si', $unit, $id);
+            if (!$stmt->execute()) {
+                response(['success' => false, 'error' => 'Unable to update the unit of measure.'], 500);
+            }
+            if ($stmt->affected_rows < 1) {
+                $exists = $connect->prepare('SELECT id FROM ingredients WHERE id = ? LIMIT 1');
+                $exists->bind_param('i', $id);
+                $exists->execute();
+                if (!$exists->get_result()->fetch_assoc()) {
+                    response(['success' => false, 'error' => 'Ingredient not found.'], 404);
+                }
+            }
+            response(['success' => true, 'message' => 'Ingredient unit updated successfully.']);
 
         case 'ingredient_delete':
             $id = (int)($data['id'] ?? 0);
@@ -282,7 +315,8 @@ try {
             response(['success' => true]);
 
         case 'stock_history':
-            $result = $connect->query("SELECT m.id, i.name, i.unit, m.movement_type, m.quantity, m.resulting_stock, m.created_at
+            $result = $connect->query("SELECT m.id, i.name, i.unit, m.movement_type, m.quantity, m.resulting_stock,
+                                              m.order_id, m.source, m.product_name, m.reference, m.created_at
                                        FROM ingredient_stock_movements m JOIN ingredients i ON i.id = m.ingredient_id
                                        ORDER BY m.created_at DESC LIMIT 200");
             $history = [];

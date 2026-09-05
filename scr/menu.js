@@ -171,6 +171,82 @@ async function isStoreOpen(branchId = getSelectedBranchId()) {
     return true;
 }
 
+function productCanOrder(card) {
+    if (!card || card.dataset.canOrder === '1') return true;
+    alert(card.dataset.stockReason || 'This item is currently unavailable.');
+    return false;
+}
+
+function ensureMenuStock(card) {
+    let stock = card.querySelector('.menu-stock');
+    if (stock) return stock;
+
+    stock = document.createElement('div');
+    stock.className = 'menu-stock';
+    stock.innerHTML = `
+        <span class="menu-stock-status unavailable"><span class="status-dot"></span>Unavailable</span>
+        <span class="menu-stock-servings">0 servings</span>
+    `;
+
+    const footer = card.querySelector('.card-footer');
+    const actions = card.querySelector('.card-actions');
+    if (footer && actions) {
+        footer.insertBefore(stock, actions);
+    } else if (footer) {
+        footer.appendChild(stock);
+    }
+
+    return stock;
+}
+
+function applyProductAvailability(card, info) {
+    if (!card || !info) return;
+
+    const status = info.status || 'unavailable';
+    const label = info.status_label || 'Unavailable';
+    const servings = Number(info.available_servings || 0);
+    const canOrder = info.can_order ? '1' : '0';
+
+    card.dataset.canOrder = canOrder;
+    card.dataset.stockStatus = status;
+    card.dataset.availableServings = String(servings);
+    card.dataset.stockReason = info.reason || '';
+
+    const stock = ensureMenuStock(card);
+    const statusEl = stock.querySelector('.menu-stock-status');
+    const servingsEl = stock.querySelector('.menu-stock-servings');
+
+    if (statusEl) {
+        statusEl.className = `menu-stock-status ${status}`;
+        statusEl.innerHTML = '<span class="status-dot"></span>' + label;
+    }
+    if (servingsEl) {
+        servingsEl.textContent = `${servings} serving${servings === 1 ? '' : 's'}`;
+    }
+
+    card.querySelectorAll('.btn-cart, .btn-order').forEach((button) => {
+        button.disabled = canOrder !== '1';
+        button.classList.toggle('is-disabled', canOrder !== '1');
+    });
+}
+
+async function refreshMenuAvailability() {
+    try {
+        const branchId = getSelectedBranchId();
+        const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+        const response = await fetch(`../api/inventory_availability_api.php${query}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (!data.success || !data.availability) return;
+
+        document.querySelectorAll('.product-card').forEach((card) => {
+            const key = (card.dataset.productName || '').trim().toLowerCase();
+            applyProductAvailability(card, data.availability[key]);
+        });
+    } catch (e) {
+        console.error('Unable to refresh menu availability:', e);
+    }
+}
+
 // ── SINGLE delegated handler for all card interactions ────────
 document.addEventListener('click', async function(e) {
 
@@ -226,26 +302,29 @@ document.addEventListener('click', async function(e) {
         if (!await isStoreOpen()) return;
 
         const card  = cartBtn.closest('.product-card');
+        if (!productCanOrder(card)) return;
         const name  = card.dataset.productName || card.querySelector('.card-name')?.textContent.trim() || '';
         if (!name) return;
+        const branchId = getSelectedBranchId();
 
         cartBtn.disabled = true;
         try {
             const res  = await fetch('../api/cart_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'add', product_name: name, quantity: 1 })
+                body: JSON.stringify({ action: 'add', product_name: name, quantity: 1, branch_id: branchId })
             });
             const data = await res.json();
             if (data.success) {
                 showCartToast(name);
+                await refreshMenuAvailability();
             } else {
-                alert('Could not add to cart. Please try again.');
+                alert(data.error || 'Could not add to cart. Please try again.');
             }
         } catch (err) {
             alert('Network error. Please try again.');
         }
-        cartBtn.disabled = false;
+        cartBtn.disabled = card.dataset.canOrder !== '1';
         return;
     }
 
@@ -254,13 +333,16 @@ document.addEventListener('click', async function(e) {
     if (orderBtn) {
         e.preventDefault();
         e.stopPropagation();
+        const card   = orderBtn.closest('.product-card');
+        if (!productCanOrder(card)) return;
         if (!await isStoreOpen()) return;
 
-        const card   = orderBtn.closest('.product-card');
         const name   = card.querySelector('.card-name')?.textContent.trim()  || '';
         const price  = card.querySelector('.card-price')?.textContent.replace('₱','').trim() || '';
         const image  = card.querySelector('.card-image img')?.getAttribute('src') || '';
-        const params = new URLSearchParams({ name, price, image });
+        const servings = card.dataset.availableServings || '0';
+        const branchId = getSelectedBranchId();
+        const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId });
         window.location.href = 'ordercustom.php?' + params.toString();
         return;
     }
@@ -277,6 +359,8 @@ function showCartToast(name) {
 
 // ── INIT ─────────────────────────────────────────────────────
 loadFavorites();
+refreshMenuAvailability();
+setInterval(refreshMenuAvailability, 30000);
 const _initActiveLink = document.querySelector('.box ul li a.active');
 if (_initActiveLink) {
     activeCategory = _initActiveLink.getAttribute('data-filter') || 'popular';
