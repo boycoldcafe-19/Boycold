@@ -668,6 +668,12 @@ if ($paymentMethodKey === 'qrph') {
                                     Confirm Cash Payment
                                 </button>
                             <?php endif; ?>
+                            <?php if (!in_array($orderStatus, ['completed', 'delivered', 'cancelled'], true)): ?>
+                                <button class="status-btn danger" type="button" id="cancelOrderBtn">
+                                    <i class="fa-solid fa-ban"></i>
+                                    Cancel Order
+                                </button>
+                            <?php endif; ?>
                         </footer>
                     <?php endif; ?>
                 </article>
@@ -747,6 +753,48 @@ if ($paymentMethodKey === 'qrph') {
                     alert('Network error. Please try again.');
                     confirmCodBtn.disabled = false;
                     confirmCodBtn.textContent = original;
+                }
+            });
+        }
+
+        const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+        if (cancelOrderBtn) {
+            cancelOrderBtn.addEventListener('click', async () => {
+                if (!currentOrderId) return;
+                if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) return;
+                
+                cancelOrderBtn.disabled = true;
+                const original = cancelOrderBtn.textContent;
+                cancelOrderBtn.textContent = 'Cancelling...';
+                
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'update_status');
+                    formData.append('order_id', currentOrderId);
+                    formData.append('status', 'cancelled');
+                    
+                    const response = await fetch('pos-status.php', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    
+                    if (!response.ok || !data.success) {
+                        alert(data.error || 'Could not cancel order.');
+                        cancelOrderBtn.disabled = false;
+                        cancelOrderBtn.textContent = original;
+                        return;
+                    }
+                    
+                    window.location.href = 'pos-status.php?order_id=' + encodeURIComponent(currentOrderId);
+                } catch (err) {
+                    alert('Network error. Please try again.');
+                    cancelOrderBtn.disabled = false;
+                    cancelOrderBtn.textContent = original;
                 }
             });
         }

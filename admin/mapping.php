@@ -1,4 +1,4 @@
-﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
+﻿﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
