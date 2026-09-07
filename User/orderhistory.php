@@ -13,7 +13,7 @@ $userName = $_SESSION['user_name'];
 
 // Fetch latest user data
 $stmt = $connect->prepare(
-    "SELECT firstname, lastname, email, phone, address, avatar, card_no FROM users WHERE id = ?"
+    "SELECT firstname, lastname, email, phone, address, avatar, card_no, user_name FROM users WHERE id = ?"
 );
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -33,7 +33,7 @@ $address  = $user['address'] ? htmlspecialchars($user['address']) : '';
 $cardNo   = $user['card_no'] ? htmlspecialchars($user['card_no']) : '—';
 
 if ($avatar) $_SESSION['user_avatar'] = $avatar;
-$_SESSION['user_name']  = $user['firstname'] . ' ' . $user['lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 ?>
 <!DOCTYPE html>

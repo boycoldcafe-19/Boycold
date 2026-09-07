@@ -32,6 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password does not meet the requirements.';
     } else {
         try {
+            $posCheck = $connect->prepare("SELECT id FROM employees WHERE email=? LIMIT 1");
+            $posCheck->bind_param("s", $email);
+            $posCheck->execute();
+            $isPosEmail = (bool) $posCheck->get_result()->fetch_assoc();
+            $posCheck->close();
+
+            if ($isPosEmail) {
+                $error = 'This email is reserved for POS access. Please use a different customer email.';
+                throw new Exception('POS email used for customer registration: ' . $email);
+            }
+
             $chk = $connect->prepare("SELECT id, account_status, is_verified FROM users WHERE email=? LIMIT 1");
             if (!$chk) {
                 throw new Exception('Database prepare failed: ' . $connect->error);
@@ -87,7 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $chk->close();
         } catch (Exception $e) {
-            $error = 'An error occurred during registration. Please try again.';
+            if ($error === '') {
+                $error = 'An error occurred during registration. Please try again.';
+            }
             error_log("Registration error for email: $email. Exception: " . $e->getMessage());
         }
     }

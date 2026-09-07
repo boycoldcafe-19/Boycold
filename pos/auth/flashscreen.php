@@ -2,13 +2,18 @@
 require_once __DIR__ . '/guard.php';
 pos_start_session();
 
-// Check if user is already logged in - redirect to login for PIN verification
-if (!empty($_SESSION['pos_pin_verified'])) {
-    header('Location: login.php');
+if (empty($_SESSION['employee_id'])) {
+    header('Location: ../../User/login.php');
     exit;
 }
 
-$redirectPage = 'login.php';
+if (!empty($_SESSION['pos_pin_verified'])) {
+    header('Location: ../dashboard/pos-shift.php');
+    exit;
+}
+
+$redirectPage = 'verify_pin.php';
+$branchName = $_SESSION['branch_name'] ?? 'Assigned POS Branch';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,7 +31,7 @@ $redirectPage = 'login.php';
         <img src="/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="BoyCold Cafe">
         <div class="middle-part">
             <h1>BoyCold Cafe</h1>
-            <p>Every sip, a moment for you.</p>
+            <p><?= htmlspecialchars($branchName) ?></p>
         </div>
     </div>
     <script>

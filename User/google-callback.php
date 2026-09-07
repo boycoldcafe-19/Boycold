@@ -158,6 +158,18 @@ try {
         redirectWithGoogleError('Please verify your email address in Google before signing in.');
     }
 
+    $posEmailStmt = $connect->prepare("SELECT id FROM employees WHERE email = ? LIMIT 1");
+    if (!$posEmailStmt) {
+        throw new Exception('Database error: ' . $connect->error);
+    }
+    $posEmailStmt->bind_param('s', $googleEmail);
+    $posEmailStmt->execute();
+    $isPosEmail = (bool) $posEmailStmt->get_result()->fetch_assoc();
+    $posEmailStmt->close();
+    if ($isPosEmail) {
+        redirectWithGoogleError('This Google account is reserved for POS access and cannot be used as a customer account.');
+    }
+
     $existingUser = null;
     $googleUsers = fetchUsersByGoogleId($connect, $googleId);
     $existingUser = $googleUsers[0] ?? null;

@@ -1,4 +1,8 @@
 <?php
+header('Location: ../../User/login.php');
+exit;
+/* Legacy POS login retained as a safe redirect target. */
+/*
 require_once __DIR__ . '/guard.php';
 pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
@@ -222,3 +226,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
     </script>
 </body>
 </html>
+*/

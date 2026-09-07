@@ -28,7 +28,7 @@ $avatar    = $user['avatar'] ? htmlspecialchars($user['avatar']) : '';
 $userName  = $user['user_name'];
 
 // Keep session in sync
-$_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 ?>
 

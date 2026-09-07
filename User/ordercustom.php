@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 // Fetch fresh user data from DB (same pattern as account.php)
-$stmt = $connect->prepare("SELECT Firstname, Lastname, email, avatar FROM users WHERE id=?");
+$stmt = $connect->prepare("SELECT Firstname, Lastname, user_name, email, avatar FROM users WHERE id=?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -21,7 +21,7 @@ $userEmail = htmlspecialchars($user['email']);
 $avatar    = $user['avatar'] ? htmlspecialchars($user['avatar']) : '';
 
 // Keep session in sync
-$_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 
 // Product data passed from menu.php via URL query params

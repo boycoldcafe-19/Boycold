@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/db_config.php';
 
 // Check if user is logged in
 if (empty($_SESSION['employee_id'])) {
-    header('Location: login.php');
+    header('Location: ../../User/login.php');
     exit;
 }
 
@@ -20,19 +20,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
     }
 
     if (empty($response['errors'])) {
+        $lockedUntil = (int) ($_SESSION['pos_pin_locked_until'] ?? 0);
+        if ($lockedUntil > time()) {
+            $response['errors']['pin'] = 'Too many attempts. Please try again later.';
+            echo json_encode($response);
+            exit;
+        }
+
         $stmt = $connect->prepare('SELECT pin, is_active, branch_id FROM employees WHERE id = ? LIMIT 1');
         $stmt->bind_param('i', $_SESSION['employee_id']);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$result || (int) $result['is_active'] !== 1 || (int) $result['branch_id'] <= 0 || empty($result['pin']) || !password_verify($pin, $result['pin'])) {
+        if (!$result || (int) $result['is_active'] !== 1 || (int) $result['branch_id'] <= 0 ||
+            (int) $result['branch_id'] !== (int) ($_SESSION['branch_id'] ?? 0) ||
+            empty($result['pin']) || !password_verify($pin, $result['pin'])) {
             $response['errors']['pin'] = 'Incorrect PIN.';
+            $_SESSION['pos_pin_attempts'] = (int) ($_SESSION['pos_pin_attempts'] ?? 0) + 1;
+            if ($_SESSION['pos_pin_attempts'] >= 5) {
+                $_SESSION['pos_pin_locked_until'] = time() + 300;
+                $_SESSION['pos_pin_attempts'] = 0;
+            }
         } else {
             session_regenerate_id(true);
             $_SESSION['pos_pin_verified'] = true;
             $_SESSION['pos_authenticated'] = true;
             $_SESSION['pos_login_at'] = date('c');
+            $_SESSION['pos_pin_attempts'] = 0;
+            unset($_SESSION['pos_pin_locked_until']);
             $response['success'] = true;
             $response['redirect'] = '../dashboard/pos-shift.php';
         }

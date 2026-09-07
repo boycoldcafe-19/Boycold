@@ -4,30 +4,14 @@
 // an order (?order_id=123) — either as its own page or embedded
 // in checkout.php's popup iframe.
 // ─────────────────────────────────────────────────────────────
-session_name('POS_SESSION');
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => false,
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-session_start();
+require_once __DIR__ . '/auth/guard.php';
+pos_start_session();
 require_once '../config/db_config.php';
 
-$userId     = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
-$employeeId = isset($_SESSION['employee_id']) ? (int) $_SESSION['employee_id'] : 0;
-$isStaff    = $employeeId > 0 || !empty($_SESSION['is_admin']);
-
-// Log session info for debugging
-error_log('[Order Popup] Session check - userId: ' . $userId . ', employeeId: ' . $employeeId . ', isStaff: ' . ($isStaff ? 'true' : 'false'));
-
-if ($userId <= 0 && !$isStaff) {
-    error_log('[Order Popup] No valid session, redirecting to flash screen');
-    header('Location: auth/flashscreen.php');
-    exit;
-}
+$employee = pos_require_employee($connect);
+$userId = 0;
+$employeeId = (int) $employee['id'];
+$isStaff = true;
 
 // Resolve user_name + phone fresh from the DB — never trust the
 // session for this (same reasoning as orders_api.php: keeps
@@ -39,12 +23,6 @@ if ($userId > 0) {
     $uStmt->execute();
     $userRow = $uStmt->get_result()->fetch_assoc();
     $uStmt->close();
-}
-
-if (!$userRow && !$isStaff) {
-    session_destroy();
-    header('Location: auth/flashscreen.php');
-    exit;
 }
 
 $userName  = $userRow['user_name'] ?? '';
@@ -62,17 +40,7 @@ if ($orderId <= 0) {
 } else {
     // Get employee branch for staff members
     $employeeBranchId = 0;
-    if ($employeeId > 0) {
-        $empStmt = $connect->prepare("SELECT branch_id FROM employees WHERE id = ?");
-        $empStmt->bind_param("i", $employeeId);
-        $empStmt->execute();
-        $empResult = $empStmt->get_result()->fetch_assoc();
-        $empStmt->close();
-        if ($empResult) {
-            $employeeBranchId = (int) $empResult['branch_id'];
-        }
-        error_log('[Order Popup] Employee branch_id: ' . $employeeBranchId);
-    }
+    $employeeBranchId = (int) $employee['branch_id'];
 
     if ($isAdmin && $employeeBranchId > 0) {
         // Staff member with branch assignment - check branch ownership

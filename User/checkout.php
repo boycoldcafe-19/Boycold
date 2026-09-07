@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 // Fetch user data for sidebar display
-$stmt = $connect->prepare("SELECT firstname, lastname, email, phone, address, avatar, card_no FROM users WHERE id = ?");
+$stmt = $connect->prepare("SELECT firstname, lastname, email, phone, address, avatar, card_no, user_name FROM users WHERE id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -31,7 +31,7 @@ $avatar   = $user['avatar'] ?? '';
 
 // Keep session data in sync
 if ($avatar) $_SESSION['user_avatar'] = $avatar;
-$_SESSION['user_name']  = $user['firstname'] . ' ' . $user['lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 $phone    = $user['phone']   ? htmlspecialchars($user['phone'])   : '';
 

@@ -41,7 +41,7 @@ if ($cartItemCount > 0) {
 }
 
 // No items – fetch user data for sidebar display
-$stmt = $connect->prepare("SELECT firstname, lastname, email, avatar FROM users WHERE id = ?");
+$stmt = $connect->prepare("SELECT firstname, lastname, email, avatar, user_name FROM users WHERE id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -59,7 +59,7 @@ $avatar   = $user['avatar'] ?? '';
 
 // Keep session data in sync
 if ($avatar) $_SESSION['user_avatar'] = $avatar;
-$_SESSION['user_name']  = $user['firstname'] . ' ' . $user['lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 ?>
 

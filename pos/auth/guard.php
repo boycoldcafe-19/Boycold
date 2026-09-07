@@ -8,7 +8,7 @@ function pos_start_session(): void
             'lifetime' => 0,
             'path' => '/',
             'domain' => '',
-            'secure' => false,
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
@@ -37,7 +37,11 @@ function pos_require_employee(mysqli $connect, bool $json = false): array
             echo json_encode(['success' => false, 'error' => 'Unauthorized access.']);
             exit;
         }
-        header('Location: ' . (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/dashboard/') ? '../auth/login.php' : 'login.php'));
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $loginPath = str_contains($script, '/dashboard/') || str_contains($script, '/auth/')
+            ? '../../User/login.php'
+            : '../User/login.php';
+        header('Location: ' . $loginPath);
         exit;
     }
 
@@ -59,16 +63,39 @@ function pos_require_employee(mysqli $connect, bool $json = false): array
         && in_array($employee['role'], ['cashier', 'admin'], true)
         && ((int) $employee['branch_id'] > 0 && $employee['branch_status'] === 'active'
             || $employee['role'] === 'admin' && (int) $employee['branch_id'] === 0)
-        && !empty($_SESSION['pos_pin_verified']);
+        && !empty($_SESSION['pos_authenticated'])
+        && !empty($_SESSION['pos_pin_verified'])
+        && (int) ($_SESSION['branch_id'] ?? 0) === (int) $employee['branch_id'];
 
-    if (!$valid) {
+    $accountValid = $employee
+        && (int) $employee['is_active'] === 1
+        && in_array($employee['role'], ['cashier', 'admin'], true)
+        && ((int) $employee['branch_id'] > 0 && $employee['branch_status'] === 'active'
+            || $employee['role'] === 'admin' && (int) $employee['branch_id'] === 0)
+        && (int) ($_SESSION['branch_id'] ?? 0) === (int) $employee['branch_id'];
+
+    if (!$accountValid) {
         pos_clear_session();
         if ($json) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Unauthorized access.']);
             exit;
         }
-        header('Location: ' . (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/dashboard/') ? '../auth/login.php' : 'login.php'));
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $loginPath = str_contains($script, '/dashboard/') || str_contains($script, '/auth/')
+            ? '../../User/login.php'
+            : '../User/login.php';
+        header('Location: ' . $loginPath);
+        exit;
+    }
+
+    if (empty($_SESSION['pos_authenticated']) || empty($_SESSION['pos_pin_verified'])) {
+        if ($json) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'PIN verification required.']);
+            exit;
+        }
+        header('Location: ../auth/flashscreen.php');
         exit;
     }
 

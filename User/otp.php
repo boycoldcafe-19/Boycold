@@ -133,12 +133,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $user = $userData->get_result()->fetch_assoc();
                         $userData->close();
                         
-                        $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE is_verified=1, password=VALUES(password)");
+                        $ins = $connect->prepare("INSERT INTO users (firstname, lastname, email, password, is_verified) VALUES (?, ?, ?, ?, 1)");
                         if (!$ins) {
                             throw new Exception('Database error: ' . $connect->error);
                         }
                         $ins->bind_param("ssss", $user['firstname'], $user['lastname'], $email, $user['password']);
-                        $ins->execute();
+                        if (!$ins->execute()) {
+                            throw new Exception('This email or account identity is already registered. Please log in or use different details.');
+                        }
 
                         // ── Assign loyalty card number ────────────────────────
                         $uid = $connect->insert_id;

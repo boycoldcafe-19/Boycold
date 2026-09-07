@@ -73,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $connect->prepare("UPDATE users SET firstname=?, lastname=? WHERE id=?");
         $stmt->bind_param("ssi", $firstname, $lastname, $userId);
         $stmt->execute();
-        $_SESSION['user_name'] = $firstname . ' ' . $lastname;
         echo json_encode(['success' => true, 'fullname' => htmlspecialchars($firstname . ' ' . $lastname)]);
         exit;
     } elseif ($field === 'phone') {
@@ -383,15 +382,12 @@ if ($completedOrderCount > 0 || $pendingOrderCount > 0 || $cancelledOrderCount >
 
 // Keep session in sync
 if ($avatar) $_SESSION['user_avatar'] = $avatar;
-$_SESSION['user_name']  = $user['firstname'] . ' ' . $user['lastname'];
+$_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 
 // Saved delivery addresses (address book) — same `addresses` table used
 // by checkout.php's "DELIVER TO" dropdown, managed here via addresses_api.php.
-// NOTE: addresses.user_name is matched against $_SESSION['user_name'], which
-// above is the user's full name — NOT the `user_name` handle column ($userName)
-// used a few lines up for the favorites count. Kept as a separate variable
-// on purpose so this never silently breaks if that column's meaning changes.
+// Address records use the same stable database identity as cart, favorites, and orders.
 $addressBookKey = $_SESSION['user_name'];
 $addrStmt = $connect->prepare(
     "SELECT id, label, recipient_name, phone, street_address, barangay, city, province, zip_code, is_default

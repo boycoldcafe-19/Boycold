@@ -1,6 +1,69 @@
 <?php
 require_once '../config/google.php';
 require_once '../config/db_config.php';
+require_once __DIR__ . '/../config/session_config.php';
+require_once __DIR__ . '/../pos/auth/guard.php';
+
+function clearPosSessionIfPresent(): void
+{
+    if (empty($_COOKIE['POS_SESSION'])) {
+        return;
+    }
+
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    pos_start_session();
+    pos_clear_session();
+    boycold_start_session('PHPSESSID');
+}
+
+function startUnifiedPosSession(array $employee): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
+    pos_start_session();
+    $_SESSION = [];
+    session_regenerate_id(true);
+    $_SESSION['employee_id'] = (int) $employee['id'];
+    $_SESSION['employee_name'] = $employee['employee_name'];
+    $_SESSION['employee_email'] = $employee['email'];
+    $_SESSION['employee_role'] = $employee['role'];
+    $_SESSION['branch_id'] = (int) $employee['branch_id'];
+    $_SESSION['branch_code'] = $employee['branch_code'];
+    $_SESSION['branch_name'] = $employee['branch_name'];
+    $_SESSION['pos_authenticated'] = false;
+    $_SESSION['pos_pin_verified'] = false;
+    $_SESSION['pos_login_at'] = null;
+}
+
+function authenticatePosEmployee(mysqli $connect, string $email, string $password): ?array
+{
+    $stmt = $connect->prepare(
+        "SELECT e.id, e.employee_name, e.email, e.password, e.role, e.is_active, e.branch_id,
+            b.branch_code, b.branch_name, b.status AS branch_status
+         FROM employees e
+         LEFT JOIN branches b ON b.id = e.branch_id
+         WHERE e.email = ? AND e.branch_id > 0
+         LIMIT 1"
+    );
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $employee = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$employee || !password_verify($password, $employee['password'])) {
+        return null;
+    }
+
+    if ((int) $employee['is_active'] !== 1 || ($employee['branch_status'] ?? '') !== 'active') {
+        $employee['_inactive'] = true;
+    }
+
+    return $employee;
+}
 
 $error = $_SESSION['google_error'] ?? '';
 unset($_SESSION['google_error']);
@@ -15,7 +78,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Email and password are required.';
     } else {
-        $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, account_status FROM users WHERE email=? AND is_verified=1");
+        $employee = authenticatePosEmployee($connect, $email, $password);
+
+        if ($employee) {
+            if (!empty($employee['_inactive'])) {
+                $error = 'This POS account has been deactivated.';
+            } else {
+                startUnifiedPosSession($employee);
+                $response = ['success' => true, 'redirect' => '../pos/auth/flashscreen.php'];
+                header('Content-Type: application/json');
+                echo json_encode($response);
+                exit;
+            }
+        }
+
+        if ($error === '') {
+            $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, account_status FROM users WHERE email=? AND is_verified=1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
@@ -23,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user && (($user['account_status'] ?? 'active') !== 'active')) {
             $error = 'This account is inactive. Please contact the administrator to reactivate it.';
         } elseif ($user && password_verify($password, $user['password'])) {
+            clearPosSessionIfPresent();
             session_regenerate_id(true);
             $_SESSION = [];
             $_SESSION['user_id']    = $user['id'];
@@ -35,11 +114,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie('remember_email', '', time() - 3600, '/');
             }
 
-            header('Location: home.php');
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'redirect' => 'home.php']);
             exit;
         } else {
             $error = 'Invalid email or password.';
         }
+        }
+
+        if ($error !== '') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'errors' => ['password' => $error]]);
+            exit;
+        }
+    }
+
+    if ($error !== '') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'errors' => ['password' => $error]]);
+        exit;
     }
 }
 

@@ -1,4 +1,4 @@
 <?php
 
-header('Location: auth/flashscreen.php');
+header('Location: ../User/login.php');
 exit;
