@@ -1335,7 +1335,7 @@ footer {
     height: 46px;
     border: none;
     border-radius: 25px;
-    background: #6f4e37;
+    background: #692727;
     color: #fff;
     font-size: 15px;
     font-weight: 700;
@@ -1346,7 +1346,13 @@ footer {
 }
 
 .co-place-btn:hover {
-    background: #5d412d;
+    background: #541f1f;
+}
+
+.co-place-btn:disabled {
+    background: #692727;
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .co-terms {
@@ -1358,7 +1364,7 @@ footer {
 }
 
 .co-terms a {
-    color: #6f4e37;
+    color: #692727;
     text-decoration: none;
     font-weight: 600;
 }

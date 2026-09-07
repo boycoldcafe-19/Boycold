@@ -696,18 +696,26 @@ $branches = $branches ?? [];
 
             const btn = document.getElementById('coPlaceBtn');
             btn.textContent = 'Place Order — ₱' + total.toFixed(2);
-            btn.disabled = subtotal === 0 || !branchIsAvailable;
-            btn.style.opacity = btn.disabled ? '0.45' : '1';
-            btn.style.cursor  = btn.disabled ? 'not-allowed' : 'pointer';
+            updatePlaceButtonState();
             updatePaymentHints();
+        }
+
+        function updatePlaceButtonState() {
+            const btn = document.getElementById('coPlaceBtn');
+            if (!btn) return;
+            const hasItems = cartItems.length > 0;
+            const hasBranch = Boolean(document.getElementById('branchSelect')?.value);
+            btn.disabled = !hasItems || !hasBranch || !branchIsAvailable;
+            btn.style.opacity = btn.disabled ? '0.45' : '1';
+            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
         }
 
         async function checkBranchAvailability(branchId) {
             const message = document.getElementById('branchAvailability');
-            const placeButton = document.getElementById('coPlaceBtn');
             if (!branchId) {
                 message.textContent = '';
                 branchIsAvailable = false;
+                updatePlaceButtonState();
                 return false;
             }
 
@@ -722,17 +730,17 @@ $branches = $branches ?? [];
                 if (!response.ok || !result.success || !result.is_open) {
                     message.textContent = branchName + ' is currently closed and cannot accept online orders.';
                     branchIsAvailable = false;
-                    placeButton.disabled = true;
+                    updatePlaceButtonState();
                     return false;
                 }
                 message.textContent = branchName + ' is currently accepting orders.';
                 branchIsAvailable = true;
-                placeButton.disabled = false;
+                updatePlaceButtonState();
                 return true;
             } catch (error) {
                 message.textContent = 'Unable to verify branch availability. Please try again.';
                 branchIsAvailable = false;
-                placeButton.disabled = true;
+                updatePlaceButtonState();
                 return false;
             }
         }
@@ -796,7 +804,7 @@ $branches = $branches ?? [];
             } catch (err) {
                 console.error('Network error:', err);
                 alert('Network error: ' + err.message + '\n\nPlease check browser console for details.');
-                this.disabled = false;
+                btn.disabled = false;
                 updateTotals(subtotal);
             }
         }
