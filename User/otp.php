@@ -112,6 +112,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $u->close();
 
                     if ($type === 'register') {
+                        $statusCheck = $connect->prepare("SELECT account_status FROM users WHERE email=? LIMIT 1");
+                        if (!$statusCheck) {
+                            throw new Exception('Database error: ' . $connect->error);
+                        }
+                        $statusCheck->bind_param("s", $email);
+                        $statusCheck->execute();
+                        $existingStatus = $statusCheck->get_result()->fetch_assoc();
+                        $statusCheck->close();
+                        if ($existingStatus && (($existingStatus['account_status'] ?? 'active') !== 'active')) {
+                            throw new Exception('This account is inactive. Please contact the administrator to reactivate it.');
+                        }
+
                         $userData = $connect->prepare("SELECT firstname, lastname, password FROM otp WHERE email=? AND type='register' ORDER BY id DESC LIMIT 1");
                         if (!$userData) {
                             throw new Exception('Database error: ' . $connect->error);

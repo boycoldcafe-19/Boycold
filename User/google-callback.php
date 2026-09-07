@@ -70,7 +70,7 @@ function signInGoogleUser(array $user): void
 function fetchUsersByGoogleId(mysqli $connect, string $googleId): array
 {
     $stmt = $connect->prepare(
-        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified
+        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified, account_status
          FROM users
          WHERE google_id = ?
          ORDER BY id"
@@ -95,7 +95,7 @@ function fetchUsersByGoogleId(mysqli $connect, string $googleId): array
 function fetchUsersByEmail(mysqli $connect, string $email): array
 {
     $stmt = $connect->prepare(
-        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified
+        "SELECT id, firstname, lastname, user_name, email, google_id, auth_provider, is_verified, account_status
          FROM users
          WHERE email = ?
          ORDER BY id"
@@ -169,6 +169,10 @@ try {
 
     if ($existingUser) {
         $userId = (int) $existingUser['id'];
+
+        if (($existingUser['account_status'] ?? 'active') !== 'active') {
+            redirectWithGoogleError('This account is inactive. Please contact the administrator to reactivate it.');
+        }
 
         if (!empty($existingUser['google_id']) && $existingUser['google_id'] !== $googleId) {
             throw new Exception('This email is already linked to a different Google account. Please sign in with that Google account or contact support.');

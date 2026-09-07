@@ -75,6 +75,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
 
     if ($_POST['action'] === 'confirm_payment') {
+        $paymentOrderStmt = $connect->prepare(
+            "SELECT status, payment_method, payment_status
+             FROM orders
+             WHERE id = ? AND branch_id = ?
+             LIMIT 1"
+        );
+        $paymentOrderStmt->bind_param('ii', $orderId, $branchId);
+        $paymentOrderStmt->execute();
+        $paymentOrder = $paymentOrderStmt->get_result()->fetch_assoc();
+        $paymentOrderStmt->close();
+
+        if (!$paymentOrder) {
+            echo json_encode(['success' => false, 'error' => 'Order not found.']);
+            exit;
+        }
+        if (strtolower((string) ($paymentOrder['payment_method'] ?? '')) !== 'cod') {
+            echo json_encode(['success' => false, 'error' => 'Only cash-on-delivery orders require POS payment confirmation.']);
+            exit;
+        }
+        if (($paymentOrder['status'] ?? '') !== 'ready') {
+            echo json_encode(['success' => false, 'error' => 'Confirm payment only when the order is Out for Delivery.']);
+            exit;
+        }
+
         echo json_encode(boycold_confirm_cod_payment($connect, $orderId, $branchId));
         exit;
     }
@@ -110,14 +134,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($newStatus === 'delivered' && $payMethod === 'cod' && $payStatus !== 'paid') {
+        echo json_encode(['success' => false, 'error' => 'Confirm the cash payment before marking the order as Delivered.']);
+        exit;
+    }
+
     try {
         if ($newStatus === 'completed') {
             $connect->begin_transaction();
 
             $stmt = $connect->prepare(
                 "UPDATE orders
-                 SET status = ?,
-                     payment_status = IF(payment_method = 'cod', 'paid', payment_status)
+                 SET status = ?
                  WHERE id = ? AND branch_id = ?"
             );
             $stmt->bind_param("sii", $newStatus, $orderId, $branchId);
@@ -220,7 +248,7 @@ $statusMessages = [
     'pending'   => ['Waiting for confirmation.', 'Confirm this order to notify the customer.'],
     'confirmed' => ['The order has been confirmed.', 'Click the button below when preparation starts.'],
     'preparing' => ['The order is being prepared.', 'Click the button below when the order is ready to go out.'],
-    'ready'     => ['The order is out for delivery.', 'Click the button below once the customer receives the order.'],
+    'ready'     => ['The order is out for delivery.', 'Confirm the cash payment before marking the order as delivered.'],
     'delivered' => ['The order has been delivered.', 'Click the button below to close and complete this order.'],
     'completed' => ['The order is completed.', 'No further status update is needed.'],
     'cancelled' => ['This order was cancelled.', 'No further status update is needed.'],
@@ -284,6 +312,12 @@ $statusMessage = $statusMessages[$orderStatus] ?? ['Order status updated.', ''];
 $nextStatus = $nextStatusMap[$orderStatus] ?? null;
 $prevStatus = $prevStatusMap[$orderStatus] ?? null;
 
+if ($paymentMethodKey === 'cod' && $orderStatus === 'ready' && $paymentStatusKey !== 'paid') {
+    $nextStatus = null;
+} elseif ($paymentMethodKey === 'cod' && $orderStatus === 'ready' && $paymentStatusKey === 'paid') {
+    $nextStatus = ['status' => 'delivered', 'label' => 'Mark as Delivered'];
+}
+
 if ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
     $nextStatus = null;
     $statusMessages['pending'] = ['Waiting for QRPh payment.', 'This order is confirmed automatically after PayMongo verifies the payment.'];
@@ -291,7 +325,7 @@ if ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
 
 // Define different status flows based on payment method
 if ($paymentMethodKey === 'qrph') {
-    // QRPh flow: Order Confirmed → Payment Confirmed → Preparing → Out for Delivery → Delivered
+    // QRPh flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
     $statusIndex = [
         'pending'   => 0,
         'confirmed' => 0,
@@ -304,15 +338,15 @@ if ($paymentMethodKey === 'qrph') {
     $paymentReached = $paymentStatusKey === 'paid';
     $stepReached = [
         in_array($orderStatus, ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
+        in_array($orderStatus, ['confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
         $paymentReached,
         in_array($orderStatus, ['preparing', 'ready', 'delivered', 'completed'], true),
         in_array($orderStatus, ['ready', 'delivered', 'completed'], true),
-        in_array($orderStatus, ['delivered', 'completed'], true),
     ];
 
     $steps = [
         ['title' => $orderStatus === 'pending' ? 'Order Pending' : 'Order Confirmed', 'icon' => $orderStatus === 'pending' ? 'fa-clock' : 'fa-check', 'note' => ''],
-        ['title' => $paymentStepLabel, 'icon' => 'fa-credit-card', 'note' => ''],
+        ['title' => $paymentStepLabel, 'icon' => 'fa-clipboard-check', 'note' => ''],
         ['title' => 'Preparing', 'icon' => 'fa-mug-hot', 'note' => 'The order is being prepared'],
         ['title' => 'Out for Delivery', 'icon' => 'fa-truck', 'note' => ''],
         ['title' => 'Delivered', 'icon' => 'fa-house', 'note' => ''],
@@ -324,7 +358,7 @@ if ($paymentMethodKey === 'qrph') {
         'confirmed' => 0,
         'preparing' => 1,
         'ready'     => 2,
-        'delivered' => 3,
+        'delivered' => 4,
         'completed' => 4,
     ][$orderStatus] ?? 0;
 
@@ -414,7 +448,7 @@ if ($paymentMethodKey === 'qrph') {
                     </li>
                     <li>
                         <a href="pos-online.php">
-                            <span class="nav-icon2"><i class="fa-regular fa-bell"></i></span>
+                            <span class="nav-icon2"><i class="fa-solid fa-bag-shopping"></i></span>
                             <span class="nav-label">Online Orders</span>
                             <?php if ($pendingCount > 0): ?>
                                 <span class="nav-badge"><?= $pendingCount ?></span>
@@ -501,8 +535,8 @@ if ($paymentMethodKey === 'qrph') {
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
 
-                <button class="icon-btn">
-                    <i class="fa-regular fa-bell"></i>
+                <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                     <?php if ($pendingCount > 0): ?>
                         <span class="icon-badge"><?= $pendingCount ?></span>
                     <?php endif; ?>
@@ -663,7 +697,7 @@ if ($paymentMethodKey === 'qrph') {
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </a>
                             <?php endif; ?>
-                            <?php if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid'): ?>
+                            <?php if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid' && $orderStatus === 'ready'): ?>
                                 <button class="status-btn primary" type="button" id="confirmCodPayBtn">
                                     Confirm Cash Payment
                                 </button>
@@ -800,6 +834,7 @@ if ($paymentMethodKey === 'qrph') {
         }
     </script>
     <script src="pos-responsive.js"></script>
+    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

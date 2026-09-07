@@ -5,6 +5,9 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../../config/db_config.php';
+require_once __DIR__ . '/../../config/inventory_service.php';
+
+boycold_ensure_inventory_schema($connect);
 
 // Get parameters
 $branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
@@ -391,22 +394,31 @@ $trendingItems = array_slice($trendingItems, 0, 6);
 // ==========================================
 // 6. INGREDIENT RESTOCK PREDICTIONS
 // ==========================================
-$restockQuery = "SELECT 
+$restockQuery = "SELECT
+    i.id,
     i.name,
     i.stock,
+    i.min_stock,
     i.unit,
-    COALESCE(SUM(iud.amount_used), 0) as total_used,
-    COUNT(DISTINCT iud.usage_date) as days_used
+    COALESCE(SUM(ism.quantity), 0) AS total_used,
+    COUNT(DISTINCT DATE(ism.created_at)) AS days_used
 FROM ingredients i
-LEFT JOIN ingredient_usage_daily iud ON i.id = iud.ingredient_id
-    AND iud.usage_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-WHERE i.branch_id = ? OR ? = 'all'
-GROUP BY i.id, i.name, i.stock, i.unit
-ORDER BY i.name";
+LEFT JOIN ingredient_stock_movements ism
+    ON i.id = ism.ingredient_id
+    AND ism.movement_type = 'deduction'
+    AND ism.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
 
-$restockBranchId = ($branchId !== 'all') ? intval($branchId) : 1;
+$restockParams = [$histDaysParam];
+$restockTypes = 'i';
+if ($branchId !== 'all') {
+    $restockQuery .= ' WHERE i.branch_id = ?';
+    $restockParams[] = intval($branchId);
+    $restockTypes .= 'i';
+}
+$restockQuery .= ' GROUP BY i.id, i.name, i.stock, i.min_stock, i.unit ORDER BY i.name';
+
 $stmt = $connect->prepare($restockQuery);
-$stmt->bind_param('iis', $histDaysParam, $restockBranchId, $branchId);
+boycold_inventory_bind($stmt, $restockTypes, $restockParams);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -415,6 +427,7 @@ $criticalCount = 0;
 $soonCount = 0;
 while ($row = $result->fetch_assoc()) {
     $stock = floatval($row['stock']);
+    $minStock = floatval($row['min_stock']);
     $totalUsed = floatval($row['total_used']);
     $daysUsed = intval($row['days_used']);
     
@@ -422,10 +435,10 @@ while ($row = $result->fetch_assoc()) {
     $daysRemaining = $dailyUsage > 0 ? $stock / $dailyUsage : 999;
     
     $status = 'ok';
-    if ($daysRemaining <= 3) {
+    if ($stock <= 0 || $daysRemaining <= 3) {
         $status = 'critical';
         $criticalCount++;
-    } elseif ($daysRemaining <= 7) {
+    } elseif ($stock <= $minStock || $daysRemaining <= 7) {
         $status = 'soon';
         $soonCount++;
     }
@@ -433,9 +446,11 @@ while ($row = $result->fetch_assoc()) {
     $restockItems[] = [
         'name' => $row['name'],
         'stock' => $stock,
+        'min_stock' => $minStock,
         'unit' => $row['unit'],
         'daily_usage' => round($dailyUsage, 2),
         'days_remaining' => round($daysRemaining, 1),
+        'recommended_restock' => round(max(0, ($minStock * 2) - $stock), 2),
         'status' => $status
     ];
 }

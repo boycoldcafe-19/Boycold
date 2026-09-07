@@ -80,7 +80,9 @@
     });
 
     function findNotificationButton() {
-        return document.getElementById('notifBtn') ||
+        const existingButton = document.getElementById('notifBtn');
+        if (existingButton?.dataset.inventoryAlert === 'true') return null;
+        return existingButton ||
             document.querySelector('.top-header .icon-btn, header.top-header .icon-btn');
     }
 
@@ -298,6 +300,7 @@
     function updateOrderCountBadges(count) {
         const normalizedCount = Math.max(0, Number(count) || 0);
         document.querySelectorAll('.nav-badge, .icon-badge').forEach((badge) => {
+            if (badge.closest('[data-inventory-alert="true"]')) return;
             badge.textContent = String(normalizedCount);
             badge.style.display = normalizedCount > 0 ? 'flex' : 'none';
         });

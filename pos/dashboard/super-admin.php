@@ -275,7 +275,7 @@ $recentOrdersStmt->close();
                     </li>
                     <li>
                         <a href="pos-online.php">
-                            <span class="nav-icon2"><i class="fa-regular fa-bell"></i></span>
+                            <span class="nav-icon2"><i class="fa-solid fa-bag-shopping"></i></span>
                             <span class="nav-label">Online Orders</span>
                         </a>
                     </li>

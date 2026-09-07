@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password does not meet the requirements.';
     } else {
         try {
-            $chk = $connect->prepare("SELECT id FROM users WHERE email=? AND is_verified=1");
+            $chk = $connect->prepare("SELECT id, account_status, is_verified FROM users WHERE email=? LIMIT 1");
             if (!$chk) {
                 throw new Exception('Database prepare failed: ' . $connect->error);
             }
@@ -40,7 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $chk->bind_param("s", $email);
             $chk->execute();
             
-            if ($chk->get_result()->num_rows > 0) {
+            $existingUser = $chk->get_result()->fetch_assoc();
+            if ($existingUser && (($existingUser['account_status'] ?? 'active') !== 'active')) {
+                $error = 'This account is inactive. Please contact the administrator to reactivate it.';
+            } elseif ($existingUser && (int) $existingUser['is_verified'] === 1) {
                 $error = 'This email is already registered. Please log in.';
             } else {
                 $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='register' AND status='pending'");

@@ -195,7 +195,7 @@ function orderhis_format_group_label(string $dateStr): string {
                     </li>
                     <li>
                         <a href="pos-online.php">
-                            <span class="nav-icon2"><i class="fa-regular fa-bell"></i></span>
+                            <span class="nav-icon2"><i class="fa-solid fa-bag-shopping"></i></span>
                             <span class="nav-label">Online Orders</span>
                             <span class="nav-badge">3</span>
                             <i class="fa-solid fa-chevron-right nav-chevron"></i>
@@ -271,8 +271,8 @@ function orderhis_format_group_label(string $dateStr): string {
                 </div>
 
                 <div class="notif-wrap">
-                    <button class="icon-btn" id="notifBtn" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
+                    <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
                         <span class="icon-badge" id="notifBadge">3</span>
                     </button>
 
@@ -606,6 +606,7 @@ function orderhis_format_group_label(string $dateStr): string {
         }
     </script>
     <script src="pos-responsive.js"></script>
+    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
     <script>

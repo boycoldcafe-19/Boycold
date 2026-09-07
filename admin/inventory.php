@@ -159,6 +159,14 @@
                     </div>
                 </div>
 
+                <div class="inventory-stock-warning" id="inventoryStockWarning" hidden role="status">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div>
+                        <strong>Stock warning</strong>
+                        <p id="inventoryStockWarningText"></p>
+                    </div>
+                </div>
+
                 <div class="inventory-tabs" role="tablist">
                     <div class="inventory-tab-group">
                         <button type="button" class="inventory-tab active" data-tab="ingredients" role="tab" aria-selected="true">Ingredients</button>
@@ -596,8 +604,22 @@
             const editIngredientUnit = document.getElementById("editIngredientUnit");
             let editingIngredient = null;
 
+            function updateStockWarning(items) {
+                const warning = document.getElementById("inventoryStockWarning");
+                const warningText = document.getElementById("inventoryStockWarningText");
+                const lowStockItems = (items || []).filter((item) => Number(item.stock || 0) <= Number(item.min_stock || 0));
+
+                warning.hidden = lowStockItems.length === 0;
+                if (!lowStockItems.length) return;
+
+                const names = lowStockItems.slice(0, 5).map((item) => item.name).join(", ");
+                const remaining = lowStockItems.length - Math.min(lowStockItems.length, 5);
+                warningText.textContent = `${lowStockItems.length} ingredient${lowStockItems.length === 1 ? "" : "s"} need attention: ${names}${remaining > 0 ? ` and ${remaining} more` : ""}.`;
+            }
+
             function renderIngredients(items) {
                 ingredientsTableBody.innerHTML = "";
+                updateStockWarning(items);
 
                 if (!Array.isArray(items) || items.length === 0) {
                     emptyState.hidden = false;

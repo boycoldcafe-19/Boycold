@@ -236,6 +236,15 @@ while ($row = $branchesResult->fetch_assoc()) {
                     </div>
 
                 </div>
+                <div class="chart-card restock-list-card" id="restockListCard">
+                    <div class="chart-card-header">
+                        <h2 class="chart-card-title">Ingredients to Restock</h2>
+                        <span class="restock-list-caption" id="restockListCaption">Based on stock level and recent usage</span>
+                    </div>
+                    <div class="restock-list" id="restockList">
+                        <div class="restock-list-empty">Loading restock recommendations...</div>
+                    </div>
+                </div>
                 <div class="single-row">
                     <div class="chart-card full-width-card" id="salesForecastCard">
                         <div class="chart-card-header">
@@ -456,6 +465,7 @@ while ($row = $branchesResult->fetch_assoc()) {
             document.getElementById('restockCount').textContent = data.stats.critical_restocks + data.stats.soon_restocks;
             document.getElementById('restockCritical').textContent = data.stats.critical_restocks + ' Critical';
             document.getElementById('restockSoon').textContent = data.stats.soon_restocks + ' Soon';
+            updateRestockList(data.restock_items);
             
             document.getElementById('highestDemandItem').textContent = data.stats.highest_demand_item;
             document.getElementById('highestDemandQty').textContent = data.stats.highest_demand_qty + ' orders (forecast)';
@@ -478,6 +488,30 @@ while ($row = $branchesResult->fetch_assoc()) {
 
             // Insights
             updateInsights(data.insights);
+        }
+
+        function updateRestockList(items) {
+            const list = document.getElementById('restockList');
+            const restockItems = (items || []).filter(item => item.status !== 'ok');
+            list.innerHTML = '';
+
+            if (!restockItems.length) {
+                list.innerHTML = '<div class="restock-list-empty"><i class="fa-solid fa-circle-check"></i> All ingredients have sufficient stock.</div>';
+                return;
+            }
+
+            restockItems.forEach(item => {
+                const row = document.createElement('div');
+                row.className = `restock-list-row restock-list-${item.status}`;
+                const days = Number(item.days_remaining) >= 999 ? 'No recent usage' : `${item.days_remaining} days left`;
+                const quantity = Number(item.recommended_restock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+                row.innerHTML = `
+                    <div class="restock-list-name"><i class="fa-solid fa-triangle-exclamation"></i><strong>${item.name}</strong><span>${item.stock.toLocaleString()} ${item.unit} remaining</span></div>
+                    <span class="restock-list-days">${days}</span>
+                    <span class="restock-list-quantity">Restock ${quantity} ${item.unit}</span>
+                `;
+                list.appendChild(row);
+            });
         }
 
         // ==========================================

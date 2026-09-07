@@ -498,6 +498,33 @@ button {
     color: var(--text-light);
 }
 
+.inventory-stock-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid #F0C6A2;
+    border-left: 4px solid #D9822B;
+    border-radius: 8px;
+    background: #FFF7EF;
+    color: #6B4330;
+}
+
+.inventory-stock-warning > i {
+    margin-top: 2px;
+    color: #D9822B;
+}
+
+.inventory-stock-warning strong {
+    display: block;
+    font-size: 16px;
+}
+
+.inventory-stock-warning p {
+    margin-top: 3px;
+    font-size: 14px;
+}
+
 .add-ingredient-btn {
     display: flex;
     align-items: center;

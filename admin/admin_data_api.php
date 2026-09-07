@@ -257,7 +257,7 @@ try {
             $category = requireValue($data, 'category');
             $unit = requireValue($data, 'unit');
             $stock = (float)($data['stock'] ?? 0);
-            $minStock = 5.0;
+            $minStock = max(0, (float)($data['min_stock'] ?? 0));
             $stmt = $connect->prepare('INSERT INTO ingredients (name, category, unit, stock, min_stock, branch_id) VALUES (?, ?, ?, ?, ?, ?)');
             $branch = isset($data['branch_id']) && $data['branch_id'] !== '' ? (int)$data['branch_id'] : null;
             $stmt->bind_param('sssddi', $name, $category, $unit, $stock, $minStock, $branch);

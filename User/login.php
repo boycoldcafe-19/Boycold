@@ -15,12 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Email and password are required.';
     } else {
-        $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password FROM users WHERE email=? AND is_verified=1");
+        $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, account_status FROM users WHERE email=? AND is_verified=1");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
 
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && (($user['account_status'] ?? 'active') !== 'active')) {
+            $error = 'This account is inactive. Please contact the administrator to reactivate it.';
+        } elseif ($user && password_verify($password, $user['password'])) {
             session_regenerate_id(true);
             $_SESSION = [];
             $_SESSION['user_id']    = $user['id'];

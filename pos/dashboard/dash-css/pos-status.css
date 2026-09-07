@@ -761,12 +761,14 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 .status-actions {
     display: flex;
     justify-content: center;
-    gap: 128px;
+    flex-wrap: wrap;
+    gap: 16px;
     margin-top: 22px;
 }
 
 .status-btn {
-    min-width: 294px;
+    min-width: 200px;
+    max-width: 300px;
     min-height: 52px;
     border-radius: 6px;
     border: 1px solid var(--border);
@@ -781,6 +783,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     cursor: pointer;
     background: var(--bg);
     transition: background 0.15s, border-color 0.15s;
+    flex: 0 1 auto;
 }
 
 .status-btn.secondary {
@@ -794,6 +797,17 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     background: var(--primary);
     border-color: var(--primary);
     color: var(--primary-text);
+}
+
+.status-btn.danger {
+    background: #e53935;
+    border-color: #e53935;
+    color: #ffffff;
+}
+
+.status-btn.danger:hover {
+    background: #c62828;
+    border-color: #c62828;
 }
 
 
@@ -1237,11 +1251,12 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .status-actions {
-        gap: 40px;
+        gap: 16px;
     }
 
     .status-btn {
-        min-width: 240px;
+        min-width: 200px;
+        max-width: 280px;
     }
 }
 

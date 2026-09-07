@@ -250,7 +250,7 @@ if ($branchId > 0) {
                     </li>
                     <li>
                         <a href="pos-online.php"  class="active">
-                            <span class="nav-icon2"><i class="fa-regular fa-bell"></i></span>
+                            <span class="nav-icon2"><i class="fa-solid fa-bag-shopping"></i></span>
                             <span class="nav-label">Online Orders</span>
                             <?php if ($pendingCount > 0): ?>
                             <span class="nav-badge"><?= $pendingCount ?></span>
@@ -337,8 +337,8 @@ if ($branchId > 0) {
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
 
-                <button class="icon-btn">
-                    <i class="fa-regular fa-bell"></i>
+                <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                     <?php if ($pendingCount > 0): ?>
                     <span class="icon-badge"><?= $pendingCount ?></span>
                     <?php endif; ?>
@@ -468,6 +468,7 @@ if ($branchId > 0) {
         applyStatusFilter('all');
     </script>
     <script src="pos-responsive.js"></script>
+    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

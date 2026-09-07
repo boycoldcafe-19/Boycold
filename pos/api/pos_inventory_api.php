@@ -46,7 +46,7 @@ try {
 function getInventory(mysqli $connect, int $branchId): array {
     $hasMaxStock = boycold_inventory_column_exists($connect, 'ingredients', 'max_stock');
     $maxStockSql = $hasMaxStock ? 'max_stock' : 'GREATEST(stock, min_stock, 1) AS max_stock';
-    $stmt = $connect->prepare("SELECT name, unit, stock, {$maxStockSql} FROM ingredients WHERE branch_id = ?");
+    $stmt = $connect->prepare("SELECT name, unit, stock, min_stock, {$maxStockSql} FROM ingredients WHERE branch_id = ?");
     $stmt->bind_param('i', $branchId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -58,7 +58,9 @@ function getInventory(mysqli $connect, int $branchId): array {
             $inventory[$key] = [
                 'current' => (float) $row['stock'],
                 'max' => (float) $row['max_stock'],
-                'unit' => $row['unit']
+                'min' => (float) ($row['min_stock'] ?? 0),
+                'unit' => $row['unit'],
+                'name' => $row['name'],
             ];
         }
     }
