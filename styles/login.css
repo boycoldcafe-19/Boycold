@@ -67,7 +67,7 @@ h1.font {
 }
 
 button {
-    background-color: #6F4E37;
+    background-color: #692727;
     color: #fff;
     border: none;
     padding: 10px 20px;
@@ -87,7 +87,7 @@ button {
 #email {
     padding: 10px;
     padding-right: 40px;
-    border: 1.5px solid #6F4E37;
+    border: 1.5px solid #692727;
     border-radius: 10px;
     height: 55px;
     width: 275px;
@@ -115,7 +115,7 @@ button {
     width: 15px;
     height: 15px;
     cursor: pointer;
-    accent-color: #6F4E37;
+    accent-color: #692727;
 }
 
 .forgot {
@@ -126,7 +126,7 @@ button {
 }
 
 .forgot:hover {
-    color: #6F4E37;
+    color: #692727;
     text-decoration: underline;
     font-family: 'Afacad', sans-serif;
 }
@@ -138,7 +138,7 @@ p {
 
 .p1 {
     font-size: 18px;
-    color: #6F4E37;
+    color: #692727;
     padding-left: 150px;
     margin-bottom: 30px;
     font-family: 'Afacad', sans-serif;
@@ -152,7 +152,7 @@ p {
 }
 
 .terms a {
-    color: #6F4E37;
+    color: #692727;
     text-decoration: none;
 }
 

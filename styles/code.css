@@ -60,7 +60,7 @@ p {
 
 .p1 {
     font-size: 18px;
-    color: #6F4E37;
+    color: #692727;
     padding-left: 80px;
     font-size: larger;
     margin-bottom: 100px;
@@ -82,7 +82,7 @@ p {
     width: 55px;
     height: 65px;
     border-radius: 15px;
-    border: 2px solid #6F4E37;
+    border: 2px solid #692727;
     text-align: center;
     font-size: 26px;
     font-weight: bold;
@@ -95,7 +95,7 @@ p {
 }
 
 button {
-    background-color: #6F4E37;
+    background-color: #692727;
     color: #fff;
     border: none;
     padding: 10px 20px;
@@ -118,7 +118,7 @@ button {
 }
 
 .resend-link {
-    color: #6F4E37;
+    color: #692727;
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;

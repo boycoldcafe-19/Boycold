@@ -139,7 +139,7 @@ p {
 }
 
 #registerBtn {
-    background-color: #6F4E37;
+    background-color: #692727;
     color: #fff;
     border: none;
     padding: 10px 20px;
@@ -152,11 +152,11 @@ p {
 }
 
 #registerBtn:hover {
-    background-color: #5a3d2a;
+    background-color: #692727;
 }
 
 h4 {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .terms {
