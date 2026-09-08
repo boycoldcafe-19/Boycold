@@ -18,6 +18,42 @@ function clearPosSessionIfPresent(): void
     boycold_start_session('PHPSESSID');
 }
 
+function isJsonRequest(): bool
+{
+    $header = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+    if (strtolower($header) === 'xmlhttprequest') {
+        return true;
+    }
+
+    $contentType = strtolower($_SERVER['CONTENT_TYPE'] ?? '');
+    if (strpos($contentType, 'application/json') !== false) {
+        return true;
+    }
+
+    return false;
+}
+
+function sendAuthResponse(bool $success, string $redirect, ?string $errorMessage = null): void
+{
+    if (isJsonRequest()) {
+        header('Content-Type: application/json');
+        echo json_encode($success
+            ? ['success' => true, 'redirect' => $redirect]
+            : ['success' => false, 'errors' => ['password' => $errorMessage ?? 'Invalid email or password.']]
+        );
+        exit;
+    }
+
+    if ($success) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    $_SESSION['login_error'] = $errorMessage ?? 'Invalid email or password.';
+    header('Location: login.php');
+    exit;
+}
+
 function startUnifiedPosSession(array $employee): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -27,6 +63,7 @@ function startUnifiedPosSession(array $employee): void
     pos_start_session();
     $_SESSION = [];
     session_regenerate_id(true);
+    $_SESSION['user_type'] = 'pos';
     $_SESSION['employee_id'] = (int) $employee['id'];
     $_SESSION['employee_name'] = $employee['employee_name'];
     $_SESSION['employee_email'] = $employee['email'];
@@ -65,10 +102,70 @@ function authenticatePosEmployee(mysqli $connect, string $email, string $passwor
     return $employee;
 }
 
+function authenticateAdminEmployee(mysqli $connect, string $email, string $password): ?array
+{
+    $stmt = $connect->prepare(
+        "SELECT id, employee_name, firstname, lastname, email, password, avatar, branch_id, role, is_active
+         FROM employees
+         WHERE email = ? AND role = 'admin'
+         LIMIT 1"
+    );
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $admin = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$admin || !password_verify($password, $admin['password'])) {
+        return null;
+    }
+
+    return $admin;
+}
+
+function startUnifiedAdminSession(array $admin): void
+{
+    clearPosSessionIfPresent();
+    session_regenerate_id(true);
+    $_SESSION = [];
+    $_SESSION['admin_logged_in'] = true;
+    $_SESSION['user_type'] = 'admin';
+    $_SESSION['employee_id'] = (int) $admin['id'];
+    $_SESSION['employee_name'] = $admin['employee_name'] ?: trim(($admin['firstname'] ?? '') . ' ' . ($admin['lastname'] ?? ''));
+    $_SESSION['employee_email'] = $admin['email'];
+    $_SESSION['employee_role'] = 'admin';
+    $_SESSION['branch_id'] = (int) ($admin['branch_id'] ?? 0);
+    $_SESSION['admin_key'] = (int) $admin['id'];
+    $_SESSION['admin_account_id'] = (int) $admin['id'];
+}
+
+function hasActiveAdminSession(mysqli $connect): bool
+{
+    if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['user_type'] ?? '') !== 'admin') {
+        return false;
+    }
+
+    $adminId = (int) ($_SESSION['employee_id'] ?? $_SESSION['admin_account_id'] ?? -1);
+    if ($adminId < 0) {
+        return false;
+    }
+
+    $stmt = $connect->prepare("SELECT id FROM employees WHERE id = ? AND role = 'admin' AND is_active = 1 LIMIT 1");
+    $stmt->bind_param('i', $adminId);
+    $stmt->execute();
+    $active = (bool) $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $active;
+}
+
 $error = $_SESSION['google_error'] ?? '';
 unset($_SESSION['google_error']);
 $verified = isset($_GET['verified']);
 $reset    = isset($_GET['reset']);
+
+if (hasActiveAdminSession($connect)) {
+    header('Location: ../admin/dashboard.php');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = strtolower(trim($_POST['email'] ?? ''));
@@ -78,60 +175,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Email and password are required.';
     } else {
+        $admin = authenticateAdminEmployee($connect, $email, $password);
+
+        if ($admin) {
+            if ((int) $admin['is_active'] !== 1) {
+                sendAuthResponse(false, 'login.php', 'This admin account has been deactivated.');
+            }
+
+            startUnifiedAdminSession($admin);
+            sendAuthResponse(true, '../admin/dashboard.php');
+        }
+
         $employee = authenticatePosEmployee($connect, $email, $password);
 
         if ($employee) {
             if (!empty($employee['_inactive'])) {
-                $error = 'This POS account has been deactivated.';
-            } else {
-                startUnifiedPosSession($employee);
-                $response = ['success' => true, 'redirect' => '../pos/auth/flashscreen.php'];
-                header('Content-Type: application/json');
-                echo json_encode($response);
-                exit;
+                sendAuthResponse(false, '../pos/auth/flashscreen.php', 'This POS account has been deactivated.');
             }
+
+            startUnifiedPosSession($employee);
+            sendAuthResponse(true, '../pos/auth/flashscreen.php');
         }
 
         if ($error === '') {
             $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, account_status FROM users WHERE email=? AND is_verified=1");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
 
-        if ($user && (($user['account_status'] ?? 'active') !== 'active')) {
-            $error = 'This account is inactive. Please contact the administrator to reactivate it.';
-        } elseif ($user && password_verify($password, $user['password'])) {
-            clearPosSessionIfPresent();
-            session_regenerate_id(true);
-            $_SESSION = [];
-            $_SESSION['user_id']    = $user['id'];
-            $_SESSION['user_email'] = $email;
-            $_SESSION['user_name']  = $user['user_name'];
+            if ($user && (($user['account_status'] ?? 'active') !== 'active')) {
+                $error = 'This account is inactive. Please contact the administrator to reactivate it.';
+            } elseif ($user && password_verify($password, $user['password'])) {
+                clearPosSessionIfPresent();
+                session_regenerate_id(true);
+                $_SESSION = [];
+                $_SESSION['user_type'] = 'customer';
+                $_SESSION['user_id']    = $user['id'];
+                $_SESSION['user_email'] = $email;
+                $_SESSION['user_name']  = $user['user_name'];
 
-            if ($remember) {
-                setcookie('remember_email', $email, time() + (86400 * 30), '/');
+                if ($remember) {
+                    setcookie('remember_email', $email, time() + (86400 * 30), '/');
+                } else {
+                    setcookie('remember_email', '', time() - 3600, '/');
+                }
+
+                sendAuthResponse(true, 'home.php');
             } else {
-                setcookie('remember_email', '', time() - 3600, '/');
+                $error = 'Invalid email or password.';
             }
-
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'redirect' => 'home.php']);
-            exit;
-        } else {
-            $error = 'Invalid email or password.';
-        }
         }
 
-        if ($error !== '') {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'errors' => ['password' => $error]]);
-            exit;
-        }
+        sendAuthResponse(false, 'home.php', $error);
     }
 
     if ($error !== '') {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'errors' => ['password' => $error]]);
+        $_SESSION['login_error'] = $error;
+        header('Location: login.php');
         exit;
     }
 }

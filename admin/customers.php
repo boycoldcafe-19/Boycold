@@ -642,7 +642,7 @@
 
         if (logoutYes) {
             logoutYes.addEventListener("click", function () {
-                window.location.href = "adminlogin.html";
+                    window.location.href = "logout.php";
             });
         }
 
@@ -726,11 +726,14 @@
 
         statusFilter.addEventListener('change', applyFilters);
 
+        const customerTableBody = document.getElementById('customerTableBody');
+        customerTableBody.innerHTML = '';
+
         fetch('admin_data_api.php?action=customers')
             .then(response => response.json())
             .then(result => {
-                if (!result.success) return;
-                const tbody = document.getElementById('customerTableBody');
+            if (!result.success) throw new Error(result.error || 'Customers could not be loaded');
+            const tbody = customerTableBody;
                 tbody.innerHTML = result.customers.map(customer => {
                     const name = `${customer.firstname} ${customer.lastname}`;
                     const initials = `${customer.firstname[0] || ''}${customer.lastname[0] || ''}`.toUpperCase();
@@ -754,6 +757,10 @@
                     wrap.querySelector('.action-item.deactivate').addEventListener('click', () => setRowStatusPersisted(row, 'inactive'));
                 });
                 applyFilters();
+            })
+            .catch(error => {
+                customerTableBody.innerHTML = `<tr><td colspan="7">${error.message || 'Unable to load customers from the database.'}</td></tr>`;
+                console.error(error);
             });
 
         function setRowStatusPersisted(row, status) {
@@ -786,7 +793,7 @@
 
             const loyaltyStatus = row.querySelector('.badge-loyalty') ? 'Member' : 'Not a Member';
             let cardNo = row.querySelector('.loyalty-card-no')?.textContent.trim() || '';
-            if (cardNo === '...') cardNo = 'â€”';
+            if (cardNo === '...') cardNo = '-';
 
             const accountStatus = row.getAttribute('data-status') === 'active' ? 'Active' : 'Inactive';
 
@@ -811,21 +818,12 @@
                         ctx.drawImage(img, 0, 0);
                         resolve(canvas.toDataURL('image/png'));
                     } catch (err) {
-                        resolve(null); // tainted canvas (CORS) â€” fall back
+                        resolve(null); // tainted canvas (CORS); fall back
                     }
                 };
                 img.onerror = () => resolve(null);
-                img.src = '/public/assets/icons/LOGO 2.png';
+                img.src = new URL('../img/LOGO.png', document.baseURI).href;
             });
-        }
-
-        function drawFallbackLogo(doc, x, y, size) {
-            doc.setFillColor(...BRAND_MAROON);
-            doc.circle(x + size / 2, y + size / 2, size / 2, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(size * 2.1);
-            doc.text('BC', x + size / 2, y + size / 2 + size * 0.14, { align: 'center' });
         }
 
         async function generatePdfReport(rows) {
@@ -845,8 +843,6 @@
             const logoSize = 18;
             if (logoDataUrl) {
                 doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
-            } else {
-                drawFallbackLogo(doc, marginX, 12, logoSize);
             }
 
             doc.setTextColor(20, 20, 20);
@@ -909,7 +905,7 @@
                     d.email + '\n' + d.emailVerified,
                     d.phone + '\n' + d.phoneVerified,
                     d.orders,
-                    d.loyaltyStatus + (d.cardNo !== 'â€”' ? '\n' + d.cardNo : ''),
+                    d.loyaltyStatus + (d.cardNo !== '-' ? '\n' + d.cardNo : ''),
                     d.accountStatus
                 ];
             });
@@ -958,7 +954,7 @@
                         doc.internal.pageSize.getHeight() - 10,
                         { align: 'right' }
                     );
-                    doc.text('BoyCold Cafe â€” Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
+                    doc.text('BoyCold Cafe - Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
                 }
             });
             const dateStamp = now.toISOString().slice(0, 10);

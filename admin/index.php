@@ -1,4 +1,4 @@
 <?php
 
-header('Location: adminlogin.php');
+header('Location: ../User/login.php');
 exit;

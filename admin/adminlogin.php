@@ -1,5 +1,10 @@
 <?php
-session_start();
+header('Location: ../User/login.php');
+exit;
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 require_once __DIR__ . '/../config/db_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
@@ -8,14 +13,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
     $password = $_POST['password'] ?? '';
     $response = ['success' => false, 'errors' => []];
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $response['errors']['email'] = 'Enter a valid email.';
-    if (strlen($password) < 8) $response['errors']['password'] = 'Password must be at least 8 characters.';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $response['errors']['email'] = 'Enter a valid email.';
+    }
+    if (strlen($password) < 8) {
+        $response['errors']['password'] = 'Password must be at least 8 characters.';
+    }
 
     if (!$response['errors']) {
-        $stmt = $connect->prepare("SELECT id, employee_name, email, password, avatar, branch_id
-                                   FROM employees
-                                   WHERE email = ? AND role = 'admin' AND is_active = 1
-                                   LIMIT 1");
+        $stmt = $connect->prepare(
+            "SELECT id, employee_name, email, password, avatar, branch_id, role, is_active
+             FROM employees
+             WHERE email = ? AND is_active = 1
+             LIMIT 1"
+        );
         $stmt->bind_param('s', $email);
         $stmt->execute();
         $admin = $stmt->get_result()->fetch_assoc();
@@ -23,15 +34,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
 
         if (!$admin || !password_verify($password, $admin['password'])) {
             $response['errors']['password'] = 'Invalid email or password.';
+        } elseif (($admin['role'] ?? '') !== 'admin') {
+            $response['errors']['password'] = 'This account does not have admin access.';
         } else {
             session_regenerate_id(true);
-            $_SESSION['employee_id'] = (int)$admin['id'];
+            $_SESSION = [];
+            $_SESSION['user_type'] = 'admin';
+            $_SESSION['employee_id'] = (int) $admin['id'];
             $_SESSION['employee_name'] = $admin['employee_name'];
             $_SESSION['employee_email'] = $admin['email'];
             $_SESSION['employee_role'] = 'admin';
-            $_SESSION['branch_id'] = $admin['branch_id'];
-            $_SESSION['admin_key'] = (int)$admin['id'];
-            $_SESSION['admin_account_id'] = (int)$admin['id'];
+            $_SESSION['branch_id'] = (int) ($admin['branch_id'] ?? 0);
+            $_SESSION['admin_key'] = (int) $admin['id'];
+            $_SESSION['admin_account_id'] = (int) $admin['id'];
             $response['success'] = true;
             $response['redirect'] = 'dashboard.php';
         }

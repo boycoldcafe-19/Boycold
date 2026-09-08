@@ -682,7 +682,7 @@ switch ($action) {
             $extension = strtolower($match[1]) === 'jpeg' ? 'jpg' : strtolower($match[1]);
             $filename = 'report_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
             if (file_put_contents($uploadDir . '/' . $filename, $binary) !== false) {
-                $savedPhotos[] = 'User/uploads/reports/' . $filename;
+                $savedPhotos[] = '/User/uploads/reports/' . $filename;
             }
         }
 

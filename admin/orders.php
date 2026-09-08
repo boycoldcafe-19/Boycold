@@ -234,8 +234,10 @@
                                     <th>CUSTOMER</th>
                                     <th>TIME</th>
                                     <th>ORDER TYPE</th>
+                                    <th>BRANCH</th>
                                     <th>TOTAL</th>
                                     <th>PAYMENT</th>
+                                    <th>STATUS</th>
                                     <th>ACTION</th>
                                 </tr>
                             </thead>
@@ -371,9 +373,7 @@
                     <span class="receipt-logo-text">B<span class="special-letter">o</span><span
                             class="special-letter-2">y</span>C<span class="special-letter">o</span>LD CAFE</span>
                     <p class="receipt-store-sub">Specialty Coffee & Beverages</p>
-                    <p class="receipt-store-info">Sta. Barbara Branch, Baliwag</p>
-                    <p class="receipt-store-info">Tel: +63 912 345 6789</p>
-                    <p class="receipt-store-info">VAT Reg TIN: 000-123-456-000</p>
+                    <p class="receipt-store-info" id="modalBranch">Branch information unavailable</p>
                 </div>
 
                 <div class="receipt-divider-double">================================</div>
@@ -630,7 +630,7 @@
 
             if (logoutYes) {
                 logoutYes.addEventListener("click", function () {
-                    window.location.href = "adminlogin.html";
+                    window.location.href = "logout.php";
                 });
             }
 
@@ -646,6 +646,8 @@
             // Filter Tabs & Search Logic
             const filterBtns = document.querySelectorAll('.order-filter-btn');
             const searchInput = document.getElementById('orderSearch');
+            const ordersTableBody = document.getElementById('ordersTableBody');
+            ordersTableBody.innerHTML = '';
             let tableRows = document.querySelectorAll('#ordersTableBody tr');
             const noOrdersMessage = document.getElementById('noOrdersMessage');
 
@@ -695,8 +697,6 @@
             const closeModalBtn = document.getElementById('closeModalBtn');
             const modalDoneBtn = document.getElementById('modalDoneBtn');
             const modalPrintBtn = document.getElementById('modalPrintBtn');
-            const ordersTableBody = document.getElementById('ordersTableBody');
-
             function escapeOrderText(value) {
                 return String(value ?? '').replace(/[&<>'"]/g, character => ({
                     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -708,13 +708,16 @@
                     const online = ['delivery', 'pickup'].includes(String(order.order_type).toLowerCase());
                     const orderType = online ? 'Online' : 'Physical';
                     const payment = String(order.payment_method || 'cod').toLowerCase() === 'qrph' ? 'QRPh' : 'COD';
-                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(order.user_name)}" data-time="${escapeOrderText(order.created_at)}" data-payment="${payment}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
+                    const customerName = order.customer_name || order.user_name || 'Unknown customer';
+                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(customerName)}" data-time="${escapeOrderText(order.created_at)}" data-payment="${payment}" data-payment-status="${escapeOrderText(order.payment_status || '')}" data-reference="${escapeOrderText(order.payment_reference || '')}" data-status="${escapeOrderText(order.status || '')}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
                         <td class="order-id">#ORDER-${String(order.id).padStart(4, '0')}</td>
-                        <td class="customer-name">${escapeOrderText(order.user_name)}</td>
+                        <td class="customer-name">${escapeOrderText(customerName)}</td>
                         <td class="order-time">${escapeOrderText(order.created_at)}</td>
                         <td class="order-type">${orderType}</td>
+                        <td class="order-branch">${escapeOrderText(order.branch_name || 'Unassigned')}</td>
                         <td class="order-total">₱${Number(order.total).toFixed(2)}</td>
-                        <td class="order-payment"><span class="payment-tag ${payment === 'COD' ? 'cod' : 'qrph'}">${payment}</span></td>
+                        <td class="order-payment"><span class="payment-tag ${payment === 'COD' ? 'cod' : 'qrph'}">${payment} / ${escapeOrderText(order.payment_status || 'unpaid')}</span></td>
+                        <td class="order-status">${escapeOrderText(order.status || '')}</td>
                         <td class="order-action"><button type="button" class="view-btn">View</button></td>
                     </tr>`;
                 }).join('');
@@ -732,7 +735,14 @@
                     if (!result.success) throw new Error(result.error || 'Orders could not be loaded');
                     renderDatabaseOrders(result.orders);
                 })
-                .catch(error => console.error(error));
+                .catch(error => {
+                    ordersTableBody.innerHTML = '';
+                    if (noOrdersMessage) {
+                        noOrdersMessage.querySelector('p').textContent = error.message || 'Unable to load orders from the database.';
+                        noOrdersMessage.style.display = 'flex';
+                    }
+                    console.error(error);
+                });
 
             function formatReceiptDate(dateString) {
                 const date = dateString ? new Date(dateString) : new Date();
@@ -753,13 +763,14 @@
                 const type = row.getAttribute('data-order-type') || 'Physical';
                 const payment = row.getAttribute('data-payment') || 'COD';
                 const tenderedAttr = parseFloat(row.getAttribute('data-tendered'));
+                document.getElementById('modalBranch').textContent = row.getAttribute('data-branch') || 'Branch information unavailable';
 
                 // Parse line items JSON
                 let items = [];
                 try {
                     items = JSON.parse(row.getAttribute('data-items')) || [];
                 } catch (e) {
-                    items = [{ name: "Standard Item", qty: 1, price: 100.00, details: [] }];
+                    items = [];
                 }
 
                 // Header Metadata
@@ -786,7 +797,7 @@
                     let detailsHTML = '';
                     if (item.details && item.details.length > 0) {
                         detailsHTML = `<div class="receipt-item-details">` +
-                            item.details.map(d => `<span class="r-indent">â€¢ ${d}</span>`).join('') +
+                            item.details.map(d => `<span class="r-indent">&bull; ${d}</span>`).join('') +
                             `</div>`;
                     }
 
@@ -829,7 +840,7 @@
                     tenderedRow.style.display = 'none';
                     changeRow.style.display = 'none';
                     refRow.style.display = 'flex';
-                    document.getElementById('modalRefNo').textContent = 'GC-' + Math.floor(10000000 + Math.random() * 90000000);
+                    document.getElementById('modalRefNo').textContent = row.getAttribute('data-reference') || 'Not available';
                 }
 
                 modal.hidden = false;
@@ -850,6 +861,7 @@
                         if (row) openReceiptModal(row);
                     }
                 });
+
             }
 
             if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);

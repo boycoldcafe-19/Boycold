@@ -4197,7 +4197,7 @@
 
             if (logoutYes) {
                 logoutYes.addEventListener("click", function () {
-                    window.location.href = "adminlogin.html";
+                    window.location.href = "logout.php";
                 });
             }
 
@@ -4254,6 +4254,28 @@
                 if (noMenuMessage) {
                     noMenuMessage.style.display = visibleCount === 0 ? 'flex' : 'none';
                 }
+            }
+
+            function renderDatabaseCategories(products) {
+                const staticPills = catPillsWrap.querySelectorAll('.cat-pill:not(.cat-add-ghost)');
+                staticPills.forEach(pill => pill.remove());
+
+                const categories = [...new Set(products.map(product => String(product.category || '').trim()).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b));
+                const ghost = getAddCategoryGhost();
+                categories.forEach(category => {
+                    const pill = document.createElement('a');
+                    pill.href = '#';
+                    pill.className = 'cat-pill';
+                    pill.dataset.filter = normalizeProductCategory(category);
+                    pill.innerHTML = `${escapeProductText(category)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
+                    catPillsWrap.insertBefore(pill, ghost || addCategoryBtn);
+                    addCategoryOptionToSelects(normalizeProductCategory(category), category);
+                });
+
+                const firstPill = getCatPills()[0];
+                currentCategory = firstPill ? firstPill.dataset.filter : 'all';
+                firstPill?.classList.add('active');
             }
 
             if (menuSearch) {
@@ -4510,7 +4532,7 @@
                 productGrid.innerHTML = products.map(product => {
                     const name = escapeProductText(product.product_name);
                     const category = escapeProductText(normalizeProductCategory(product.category || 'uncategorized'));
-                    const image = escapeProductText(product.image || '/img/LOGO 2.png');
+                    const image = escapeProductText(product.image || '');
                     const status = Number(product.is_available) ? 'available' : 'unavailable';
                     const statusLabel = Number(product.is_available) ? 'Available' : 'Unavailable';
                     return `<div class="product-card" data-category="${category}" data-id="${Number(product.id)}">
@@ -4524,8 +4546,7 @@
                         <div class="card-info"><div class="card-mid"><p class="card-name">${name}</p></div>
                             <div class="card-footer"><p class="card-price">₱${Number(product.price).toFixed(2)}</p><div class="drink-stock">
                                 <p class="drink-status ${status}"><span class="status-dot"></span> ${statusLabel}</p>
-                                <p class="drink-ingredient">Ingredients: <span>Sufficient</span></p>
-                                <p class="drink-cups">Cups: <span class="cups-value">40 pcs</span></p><p class="drink-servings"><span class="servings-value">0</span></p>
+                                <p class="drink-ingredient">Ingredients: <span>${escapeProductText(product.ingredient_status || 'Not mapped')}</span></p>
                             </div></div>
                         </div>
                     </div>`;
@@ -4538,9 +4559,17 @@
                 .then(response => response.json())
                 .then(result => {
                     if (!result.success) throw new Error(result.error || 'Products could not be loaded');
+                    renderDatabaseCategories(result.products || []);
                     renderDatabaseProducts(result.products);
                 })
-                .catch(error => console.error(error));
+                .catch(error => {
+                    if (productGrid) productGrid.innerHTML = '';
+                    if (noMenuMessage) {
+                        noMenuMessage.textContent = error.message || 'Unable to load products from the database.';
+                        noMenuMessage.style.display = 'flex';
+                    }
+                    console.error(error);
+                });
 
             function syncProductActionVisibility() {
                 const isListView = productGrid.classList.contains("list-view");
@@ -4644,7 +4673,7 @@
                     const price = parseFloat(priceInput.value).toFixed(2);
                     const cups = stockQtyInput.value ? stockQtyInput.value + ' pcs' : '40 pcs';
                     const servings = servingsQtyInput.value ? servingsQtyInput.value : '25';
-                    const imgSrc = imagePreview?.src || '../../../img/Americano.png';
+                    const imgSrc = imagePreview?.src || '';
 
                     fetch('admin_data_api.php?action=product_create', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },

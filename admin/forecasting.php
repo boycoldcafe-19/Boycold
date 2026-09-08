@@ -20,12 +20,14 @@ while ($row = $branchesResult->fetch_assoc()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/forecasting.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
-    <link rel="icon" href="../POS/img/LOGO 2.png">
+    <link rel="icon" href="../pos/img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <title>BoyCold - Forecasting</title>
 </head>
 
@@ -37,7 +39,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../POS/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../pos/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">BoyCold Cafe</span>
@@ -191,6 +193,10 @@ while ($row = $branchesResult->fetch_assoc()) {
                                 </div>
                             </div>
                         </div>
+                        <button class="export-btn" id="exportForecastBtn" type="button">
+                            <i class="fa-solid fa-arrow-down-to-line"></i>
+                            Export Report
+                        </button>
                         <div class="last-update-badge" id="lastUpdateBadge">
                             <i class="fa-solid fa-circle" style="color: #4CAF50; font-size: 8px;"></i>
                             <span id="lastUpdateText">Live</span>
@@ -221,7 +227,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                         <div class="stat-value" id="restockCount">0</div>
                         <div class="restock-status">
                             <span class="restock-critical" id="restockCritical">0 Critical</span>
-                            <span class="restock-dot">â€¢</span>
+                            <span class="restock-dot">&bull;</span>
                             <span class="restock-soon" id="restockSoon">0 Soon</span>
                         </div>
                     </div>
@@ -421,7 +427,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
         function getProductImage(productName) {
             const name = imageMapping[productName] || productName + '.png';
-            return '../POS/img/' + name;
+            return '../pos/img/' + name;
         }
 
         // State
@@ -452,7 +458,194 @@ while ($row = $branchesResult->fetch_assoc()) {
         // ==========================================
         // UPDATE DASHBOARD
         // ==========================================
+        const EXPORT_BRAND_MAROON = [105, 39, 39];
+
+        function loadLogoDataUrl() {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (err) {
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = new URL('../img/LOGO.png', document.baseURI).href;
+            });
+        }
+
+        async function generateForecastPdfReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const marginX = 15;
+            const exportData = window.forecastSnapshot || {};
+            const now = new Date();
+            const generatedOn = now.toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const logoDataUrl = await loadLogoDataUrl();
+            const logoSize = 18;
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
+            }
+
+            doc.setTextColor(20, 20, 20);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('BOYCOLD CAFE', marginX + logoSize + 6, 19);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(110, 110, 110);
+            doc.text('Administration Panel', marginX + logoSize + 6, 25);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('FORECASTING REPORT', pageWidth - marginX, 18, { align: 'right' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(110, 110, 110);
+            doc.text(`Generated: ${generatedOn}`, pageWidth - marginX, 24, { align: 'right' });
+
+            doc.setDrawColor(...EXPORT_BRAND_MAROON);
+            doc.setLineWidth(0.8);
+            doc.line(marginX, 34, pageWidth - marginX, 34);
+
+            const branchLabel = document.querySelector('.branch-trigger-label')?.textContent || 'All Branches';
+            const metricRows = [
+                ['Predicted Sales (14 Days)', `₱ ${Number((exportData.stats && exportData.stats.predicted_sales_next_14) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ['Restock Items', Number((exportData.stats && exportData.stats.critical_restocks) || 0) + Number((exportData.stats && exportData.stats.soon_restocks) || 0)],
+                ['Critical Restocks', Number((exportData.stats && exportData.stats.critical_restocks) || 0)],
+                ['Soon Restocks', Number((exportData.stats && exportData.stats.soon_restocks) || 0)],
+                ['Highest Demand Item', (exportData.stats && exportData.stats.highest_demand_item) || 'N/A'],
+                ['Highest Demand Qty', Number((exportData.stats && exportData.stats.highest_demand_qty) || 0)],
+                ['Sales Change %', `${Math.abs(Number((exportData.stats && exportData.stats.sales_change_percent) || 0)).toFixed(2)}%`],
+                ['Branch', branchLabel.trim()]
+            ];
+
+            const restockRows = ((exportData.restock_items || []).map(item => [
+                item.name,
+                item.status,
+                `${Number(item.stock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim(),
+                `${Number(item.recommended_restock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim()
+            ])).length ? ((exportData.restock_items || []).map(item => [
+                item.name,
+                item.status,
+                `${Number(item.stock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim(),
+                `${Number(item.recommended_restock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim()
+            ])) : [['No restock needs', '-', '-', '-']];
+
+            const demandRows = ((exportData.demand_forecast || []).map(item => [
+                item.product_name,
+                item.forecasted_orders,
+                item.trend || 'Stable'
+            ])).length ? ((exportData.demand_forecast || []).map(item => [
+                item.product_name,
+                item.forecasted_orders,
+                item.trend || 'Stable'
+            ])) : [['No demand forecast data', '0', 'Stable']];
+
+            doc.setFontSize(9.5);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Branch:', marginX, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(branchLabel.trim(), marginX + 18, 41);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Prepared By:', marginX, 46.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Admin', marginX + 24, 46.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Historical Range:', pageWidth - marginX - 70, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${historicalDays} days`, pageWidth - marginX - 40, 41);
+
+            doc.autoTable({
+                startY: 56,
+                margin: { left: marginX, right: marginX },
+                head: [['Metric', 'Value']],
+                body: metricRows,
+                styles: {
+                    font: 'helvetica', fontSize: 8.5, cellPadding: 3,
+                    lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] },
+                didDrawPage: (data) => {
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(140, 140, 140);
+                    doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} of ${pageCount}`, pageWidth - marginX, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+                    doc.text('BoyCold Cafe - Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
+                }
+            });
+
+            const restockStartY = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('Restock Needs', marginX, restockStartY);
+
+            doc.autoTable({
+                startY: restockStartY + 4,
+                margin: { left: marginX, right: marginX },
+                head: [['Item', 'Status', 'Stock', 'Recommended Restock']],
+                body: restockRows,
+                styles: { font: 'helvetica', fontSize: 7.8, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] }
+            });
+
+            const demandStartY = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('Demand Forecast', marginX, demandStartY);
+
+            doc.autoTable({
+                startY: demandStartY + 4,
+                margin: { left: marginX, right: marginX },
+                head: [['Item', 'Predicted Orders', 'Trend']],
+                body: demandRows,
+                styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] }
+            });
+
+            const fileDate = now.toISOString().slice(0, 10);
+            doc.save(`forecasting-report_${fileDate}.pdf`);
+        }
+
+        document.getElementById('exportForecastBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportForecastBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+            try {
+                await generateForecastPdfReport();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+
         function updateDashboard(data) {
+            window.forecastSnapshot = data;
             // Stats cards
             document.getElementById('predictedSalesValue').textContent = '₱ ' + Number(data.stats.predicted_sales_next_14).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             
@@ -584,7 +777,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                     ctx.setLineDash([]);
 
                     // Draw "Forecast" pill label on the right side
-                    const label = 'Forecast â†’';
+                    const label = 'Forecast ->';
                     ctx.font = "600 12px 'Afacad', sans-serif";
                     const textWidth = ctx.measureText(label).width;
                     const paddingX = 10;
@@ -750,7 +943,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 const row = document.createElement('div');
                 row.className = 'demand-row';
                 row.innerHTML = `
-                    <span class="demand-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../POS/img/icon.png'"></span>
+                        <span class="demand-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../pos/img/icon.png'"></span>
                     <span class="demand-item-name">${item.product_name}</span>
                     <span class="demand-orders">${item.forecasted_orders} orders</span>
                     <span class="demand-trend ${trendClass}">
@@ -871,7 +1064,7 @@ while ($row = $branchesResult->fetch_assoc()) {
         function updateLastUpdateTime() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('lastUpdateText').textContent = 'Live â€¢ ' + timeStr;
+            document.getElementById('lastUpdateText').textContent = 'Live - ' + timeStr;
         }
 
         // ==========================================

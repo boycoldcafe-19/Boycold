@@ -429,7 +429,7 @@
 
         if (logoutYes) {
             logoutYes.addEventListener("click", function () {
-                window.location.href = "adminlogin.html";
+                    window.location.href = "logout.php";
             });
         }
 

@@ -576,7 +576,7 @@
             const rows = document.querySelectorAll("#ingredientsTableBody tr");
             const emptyState = document.getElementById("ingredientsEmpty");
 
-            // ADD THIS BLOCK â€” it's missing entirely right now
+            // ADD THIS BLOCK - it is missing entirely right now
             tabs.forEach((tab) => {
                 tab.addEventListener("click", () => {
                     tabs.forEach((t) => {

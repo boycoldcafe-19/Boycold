@@ -1,10 +1,18 @@
 <?php
+require_once __DIR__ . '/../../config/admin_auth.php';
+require_once __DIR__ . '/../../config/db_config.php';
+
+if (!boycold_admin_account($connect)) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Admin login required']);
+    exit;
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/inventory_service.php';
 
 boycold_ensure_inventory_schema($connect);
@@ -67,11 +75,11 @@ $stmt->close();
 function computeForecast(array $historicalSales, int $forecastDays): array {
     $n = count($historicalSales);
     if ($n < 3) {
-        // Not enough data, return simple average
+        // Not enough history for a trend; use the actual historical average.
         $avg = $n > 0 ? array_sum(array_column($historicalSales, 'sales')) / $n : 0;
         $forecast = [];
         for ($i = 1; $i <= $forecastDays; $i++) {
-            $forecast[] = round($avg + (rand(-5, 5) / 100) * $avg, 2);
+            $forecast[] = round($avg, 2);
         }
         return $forecast;
     }
@@ -435,10 +443,16 @@ while ($row = $result->fetch_assoc()) {
     $daysRemaining = $dailyUsage > 0 ? $stock / $dailyUsage : 999;
     
     $status = 'ok';
-    if ($stock <= 0 || $daysRemaining <= 3) {
+    if ($stock <= 0) {
         $status = 'critical';
         $criticalCount++;
-    } elseif ($stock <= $minStock || $daysRemaining <= 7) {
+    } elseif ($stock <= $minStock) {
+        $status = 'soon';
+        $soonCount++;
+    } elseif ($daysRemaining <= 3) {
+        $status = 'critical';
+        $criticalCount++;
+    } elseif ($daysRemaining <= 7) {
         $status = 'soon';
         $soonCount++;
     }

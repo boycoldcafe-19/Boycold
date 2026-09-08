@@ -1,12 +1,15 @@
 ﻿<?php
 require_once __DIR__ . '/admin_guard.php';
 
-// Get date range for analytics (default to this week)
-$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('monday this week'));
-$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d', strtotime('sunday this week'));
+// Keep Dashboard metrics aligned with Data Analytics: latest rolling seven days.
+$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-6 days'));
+$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
 
-// Get branch filter
-$branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : (isset($_SESSION['branch_id']) ? $_SESSION['branch_id'] : 'all');
+// Admin accounts use branch_id = 0, which means all branches.
+$sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
+$branchId = isset($_GET['branch_id'])
+    ? $_GET['branch_id']
+    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
 
 // Fetch available branches
 $branchesQuery = "SELECT b.id, b.branch_name,
@@ -263,11 +266,13 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
-    <link rel="icon" href="../POS/img/LOGO 2.png">
+    <link rel="icon" href="../pos/img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <title>BoyCold - Dashboard</title>
 </head>
 
@@ -279,7 +284,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../POS/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../pos/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">BoyCold Cafe</span>
@@ -420,7 +425,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                                 <option value="all" <?php echo $branchId === 'all' ? 'selected' : ''; ?>>All Branches</option>
                                 <?php foreach ($branches as $branch): ?>
                                     <option value="<?php echo $branch['id']; ?>" <?php echo $branchId == $branch['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($branch['branch_name'] . ' — Online orders: ' . ((int) $branch['shift_open'] === 1 ? 'ACCEPTING' : 'NOT ACCEPTING')); ?>
+                                        <?php echo htmlspecialchars($branch['branch_name'] . ' - Online orders: ' . ((int) $branch['shift_open'] === 1 ? 'ACCEPTING' : 'NOT ACCEPTING')); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -429,6 +434,10 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <i class="fa-solid fa-circle" style="color: #4CAF50; font-size: 8px;"></i>
                             <span id="lastUpdateText">Live</span>
                         </span>
+                        <button class="export-btn" id="exportDashboardBtn" type="button">
+                            <i class="fa-solid fa-arrow-down-to-line"></i>
+                            Export Report
+                        </button>
                         <button class="refresh-btn" id="refreshDataBtn">
                             <i class="fa-solid fa-arrows-rotate"></i>
                             Refresh Data
@@ -813,6 +822,166 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
         })();
 
 
+        const EXPORT_BRAND_MAROON = [105, 39, 39];
+
+        function loadLogoDataUrl() {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (err) {
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = new URL('../img/LOGO.png', document.baseURI).href;
+            });
+        }
+
+        async function generateDashboardPdfReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const marginX = 15;
+            const now = new Date();
+            const generatedOn = now.toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const logoDataUrl = await loadLogoDataUrl();
+            const logoSize = 18;
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
+            }
+
+            doc.setTextColor(20, 20, 20);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('BOYCOLD CAFE', marginX + logoSize + 6, 19);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(110, 110, 110);
+            doc.text('Administration Panel', marginX + logoSize + 6, 25);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('DASHBOARD REPORT', pageWidth - marginX, 18, { align: 'right' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(110, 110, 110);
+            doc.text(`Generated: ${generatedOn}`, pageWidth - marginX, 24, { align: 'right' });
+
+            doc.setDrawColor(...EXPORT_BRAND_MAROON);
+            doc.setLineWidth(0.8);
+            doc.line(marginX, 34, pageWidth - marginX, 34);
+
+            const branchLabel = document.getElementById('branchSelect')?.selectedOptions?.[0]?.text || 'All Branches';
+            const metricRows = [
+                ['Total Sales', document.getElementById('totalSalesValue')?.textContent || '₱ 0.00'],
+                ['Total Orders', document.getElementById('totalOrdersValue')?.textContent || '0'],
+                ['Online Orders', document.getElementById('onlineOrdersValue')?.textContent || '0'],
+                ['New Customers', document.getElementById('customersValue')?.textContent || '0'],
+                ['Average Order Value', document.getElementById('avgOrderValue')?.textContent || '₱ 0.00'],
+                ['Top Selling Item', document.getElementById('topSellingItem')?.textContent || 'N/A'],
+                ['Transactions', document.getElementById('transactionsCount')?.textContent || '0'],
+                ['Sales Trend', document.getElementById('salesTrend')?.textContent || '0%'],
+                ['Online Trend', document.getElementById('onlineTrend')?.textContent || '0%'],
+                ['Customer Trend', document.getElementById('customersTrend')?.textContent || '0%']
+            ];
+
+            const statusRows = [
+                ['Pending', '<?php echo $statusPending; ?>'],
+                ['Preparing', '<?php echo $statusPreparing; ?>'],
+                ['Ready', '<?php echo $statusReady; ?>'],
+                ['Completed', '<?php echo $statusCompleted; ?>'],
+                ['Cancelled', '<?php echo $statusCancelled; ?>']
+            ];
+
+            doc.setFontSize(9.5);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Branch:', marginX, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(branchLabel.trim(), marginX + 18, 41);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Prepared By:', marginX, 46.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Admin', marginX + 24, 46.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Date Range:', pageWidth - marginX - 65, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${startDate} to ${endDate}`, pageWidth - marginX - 40, 41);
+
+            doc.autoTable({
+                startY: 56,
+                margin: { left: marginX, right: marginX },
+                head: [['Metric', 'Value']],
+                body: metricRows,
+                styles: {
+                    font: 'helvetica', fontSize: 8.5, cellPadding: 3,
+                    lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] },
+                didDrawPage: (data) => {
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(140, 140, 140);
+                    doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} of ${pageCount}`, pageWidth - marginX, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+                    doc.text('BoyCold Cafe - Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
+                }
+            });
+
+            const statusStartY = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('Order Status Summary', marginX, statusStartY);
+
+            doc.autoTable({
+                startY: statusStartY + 4,
+                margin: { left: marginX, right: marginX },
+                head: [['Status', 'Count']],
+                body: statusRows,
+                styles: {
+                    font: 'helvetica', fontSize: 8.5, cellPadding: 3,
+                    lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] }
+            });
+
+            const fileDate = now.toISOString().slice(0, 10);
+            doc.save(`dashboard-report_${fileDate}.pdf`);
+        }
+
+        document.getElementById('exportDashboardBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportDashboardBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+            try {
+                await generateDashboardPdfReport();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+
         // ==========================================
         // REFRESH BUTTON
         // ==========================================
@@ -826,7 +995,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
         function updateLastUpdateTime() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('lastUpdateText').textContent = 'Live â€¢ ' + timeStr;
+            document.getElementById('lastUpdateText').textContent = 'Live - ' + timeStr;
         }
         updateLastUpdateTime();
         setInterval(updateLastUpdateTime, 30000);

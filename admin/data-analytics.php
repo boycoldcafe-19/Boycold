@@ -2,9 +2,9 @@
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
-// Get date range for analytics (default to this week)
-$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('monday this week'));
-$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d', strtotime('sunday this week'));
+// Get date range for analytics (default to the latest rolling seven days)
+$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-6 days'));
+$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
 
 // Get branch filter (default to all branches)
 $branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
@@ -220,12 +220,14 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/data-analytics.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
-    <link rel="icon" href="../POS/img/LOGO 2.png">
+    <link rel="icon" href="../pos/img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <title>BoyCold - Data Analytics</title>
 </head>
 
@@ -237,7 +239,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../POS/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../pos/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">BoyCold Cafe</span>
@@ -389,6 +391,10 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                                 </div>
                             </div>
                         </div>
+                        <button class="export-btn" id="exportAnalyticsBtn" type="button">
+                            <i class="fa-solid fa-arrow-down-to-line"></i>
+                            Export Report
+                        </button>
                     </div>
                 </div>
 
@@ -533,7 +539,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             ?>
                             <div class="top-item">
                                 <span class="item-rank"><?php echo $index + 1; ?></span>
-                                <span class="item-thumb"><img src="../POS/img/<?php echo $imageName; ?>" alt="" onerror="this.src='../POS/img/icon.png'"></span>
+                                <span class="item-thumb"><img src="../pos/img/<?php echo $imageName; ?>" alt="" onerror="this.src='../pos/img/icon.png'"></span>
                                 <div class="item-content">
                                     <div class="item-top-row">
                                         <span class="item-name"><?php echo $productName; ?></span>
@@ -748,6 +754,180 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
     </div>
     
     <script>
+        const EXPORT_BRAND_MAROON = [105, 39, 39];
+
+        function loadLogoDataUrl() {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (err) {
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = new URL('../img/LOGO.png', document.baseURI).href;
+            });
+        }
+
+        async function generateAnalyticsPdfReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const marginX = 15;
+            const now = new Date();
+            const generatedOn = now.toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const logoDataUrl = await loadLogoDataUrl();
+            const logoSize = 18;
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
+            }
+
+            doc.setTextColor(20, 20, 20);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('BOYCOLD CAFE', marginX + logoSize + 6, 19);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(110, 110, 110);
+            doc.text('Administration Panel', marginX + logoSize + 6, 25);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('DATA ANALYTICS REPORT', pageWidth - marginX, 18, { align: 'right' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(110, 110, 110);
+            doc.text(`Generated: ${generatedOn}`, pageWidth - marginX, 24, { align: 'right' });
+
+            doc.setDrawColor(...EXPORT_BRAND_MAROON);
+            doc.setLineWidth(0.8);
+            doc.line(marginX, 34, pageWidth - marginX, 34);
+
+            const branchLabel = document.querySelector('.branch-trigger-label')?.textContent || 'All Branches';
+            const metricRows = [
+                ['Total Sales', `₱ ${Number(analyticsData.total_sales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ['Average Order Value', `₱ ${Number(analyticsData.avg_order_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ['New Customers', Number(analyticsData.new_customers || 0)],
+                ['Sales Trend', `${Math.abs(Number(analyticsData.sales_trend || 0)).toFixed(2)}%`],
+                ['Average Order Trend', `${Math.abs(Number(analyticsData.avg_order_trend || 0)).toFixed(2)}%`],
+                ['Customers Trend', `${Math.abs(Number(analyticsData.customers_trend || 0)).toFixed(2)}%`],
+                ['Date Range', `${startDate} to ${endDate}`],
+                ['Branch', branchLabel.trim()]
+            ];
+
+            const topItemsRows = (analyticsData.top_items || []).map(item => [
+                item.product_name,
+                `${item.total_quantity} orders`,
+                `₱ ${Number(item.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ]);
+
+            const timeRows = (analyticsData.time_of_day || []).map(item => [
+                `${Number(item.hour)}:00 - ${(Number(item.hour) + 1) % 24}:00`,
+                item.orders
+            ]);
+
+            doc.setFontSize(9.5);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Branch:', marginX, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(branchLabel.trim(), marginX + 18, 41);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Prepared By:', marginX, 46.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Admin', marginX + 24, 46.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Filter:', pageWidth - marginX - 60, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${startDate} to ${endDate}`, pageWidth - marginX - 35, 41);
+
+            doc.autoTable({
+                startY: 56,
+                margin: { left: marginX, right: marginX },
+                head: [['Metric', 'Value']],
+                body: metricRows,
+                styles: {
+                    font: 'helvetica', fontSize: 8.5, cellPadding: 3,
+                    lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] },
+                didDrawPage: (data) => {
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(140, 140, 140);
+                    doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} of ${pageCount}`, pageWidth - marginX, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+                    doc.text('BoyCold Cafe - Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
+                }
+            });
+
+            const itemsStartY = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('Top Selling Items', marginX, itemsStartY);
+
+            doc.autoTable({
+                startY: itemsStartY + 4,
+                margin: { left: marginX, right: marginX },
+                head: [['Item', 'Orders', 'Revenue']],
+                body: topItemsRows.length ? topItemsRows : [['No sales data available', '0', '₱ 0.00']],
+                styles: { font: 'helvetica', fontSize: 8.2, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] }
+            });
+
+            const timeStartY = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...EXPORT_BRAND_MAROON);
+            doc.text('Sales by Time of Day', marginX, timeStartY);
+
+            doc.autoTable({
+                startY: timeStartY + 4,
+                margin: { left: marginX, right: marginX },
+                head: [['Time Slot', 'Orders']],
+                body: timeRows.length ? timeRows : [['No time data available', '0']],
+                styles: { font: 'helvetica', fontSize: 8.2, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
+                headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                alternateRowStyles: { fillColor: [247, 245, 243] }
+            });
+
+            const fileDate = now.toISOString().slice(0, 10);
+            doc.save(`data-analytics-report_${fileDate}.pdf`);
+        }
+
+        document.getElementById('exportAnalyticsBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportAnalyticsBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+            try {
+                await generateAnalyticsPdfReport();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+
         // PHP analytics data passed to JavaScript
         const analyticsData = <?php echo json_encode($analytics); ?>;
         const startDate = '<?php echo $startDate; ?>';

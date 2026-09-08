@@ -1,6 +1,29 @@
 <?php
 require_once __DIR__ . '/admin_guard.php';
 
+function boycold_feedback_photo_url($photo): string
+{
+    $photo = trim((string) $photo);
+    if ($photo === '') {
+        return '';
+    }
+
+    if (preg_match('#^(https?:)?//#i', $photo) || preg_match('#^data:#i', $photo)) {
+        return $photo;
+    }
+
+    $normalized = str_replace('\\', '/', $photo);
+    $normalized = preg_replace('#^\./+#', '', $normalized);
+    $normalized = preg_replace('#^\.\./+#', '', $normalized);
+    $normalized = ltrim($normalized, '/');
+
+    if ($normalized === '') {
+        return '';
+    }
+
+    return '/' . $normalized;
+}
+
 $reviews = [];
 $reviewQuery = $connect->query("SELECT r.id, r.order_id, r.rating, r.review, r.created_at,
                                        CONCAT(u.firstname, ' ', u.lastname) AS customer_name,
@@ -66,7 +89,7 @@ if ($reportQuery) {
                     <div class="sidebar-divider"></div>
                     <ul>
                         <li><a href="adminsettings.php"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span><span class="nav-label">Settings</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
-                        <li><a href="adminlogin.php" class="logout-link"><span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="nav-label">Log Out</span></a></li>
+                        <li><a href="logout.php" class="logout-link"><span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="nav-label">Log Out</span></a></li>
                     </ul>
                 </div>
             </nav>
@@ -99,11 +122,31 @@ if ($reportQuery) {
                 <?php else: ?>
                     <div class="review-list">
                         <?php foreach ($reports as $report): ?>
-                            <?php $reportPhotos = json_decode((string)$report['photo_paths'], true) ?: []; ?>
+                            <?php
+                                $reportPhotos = [];
+                                $storedPhotos = $report['photo_paths'] ?? '';
+                                if (is_string($storedPhotos) && $storedPhotos !== '') {
+                                    $decodedPhotos = json_decode($storedPhotos, true);
+                                    if (is_array($decodedPhotos) && $decodedPhotos !== []) {
+                                        $reportPhotos = $decodedPhotos;
+                                    } else {
+                                        $reportPhotos = [$storedPhotos];
+                                    }
+                                }
+                            ?>
                             <article class="review-card problem-report-card">
                                 <div class="review-card-head"><div><strong><?= htmlspecialchars($report['customer_name']) ?></strong><small><?= htmlspecialchars($report['email']) ?></small></div><span class="report-issue-label"><?= htmlspecialchars($report['issue']) ?></span></div>
                                 <p><?= nl2br(htmlspecialchars($report['details'])) ?></p>
-                                <?php if ($reportPhotos): ?><div class="report-photo-list"><?php foreach ($reportPhotos as $photo): ?><button type="button" class="report-photo-button" data-photo="../<?= htmlspecialchars(ltrim($photo, '/')) ?>"><img src="../<?= htmlspecialchars(ltrim($photo, '/')) ?>" alt="Customer report attachment"></button><?php endforeach; ?></div><?php endif; ?>
+                                <?php if ($reportPhotos): ?>
+                                    <div class="report-photo-list">
+                                        <?php foreach ($reportPhotos as $photo): ?>
+                                            <?php $photoUrl = boycold_feedback_photo_url($photo); if ($photoUrl === '') continue; ?>
+                                            <button type="button" class="report-photo-button" data-photo="<?= htmlspecialchars($photoUrl) ?>">
+                                                <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Customer report attachment">
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                                 <footer>Order #<?= (int)$report['order_id'] ?> · <?= htmlspecialchars(date('M d, Y g:i A', strtotime($report['created_at']))) ?></footer>
                             </article>
                         <?php endforeach; ?>

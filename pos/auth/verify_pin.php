@@ -27,15 +27,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
             exit;
         }
 
-        $stmt = $connect->prepare('SELECT pin, is_active, branch_id FROM employees WHERE id = ? LIMIT 1');
+        $stmt = $connect->prepare('SELECT id, employee_name, email, role, pin, is_active, branch_id FROM employees WHERE id = ? LIMIT 1');
         $stmt->bind_param('i', $_SESSION['employee_id']);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$result || (int) $result['is_active'] !== 1 || (int) $result['branch_id'] <= 0 ||
-            (int) $result['branch_id'] !== (int) ($_SESSION['branch_id'] ?? 0) ||
-            empty($result['pin']) || !password_verify($pin, $result['pin'])) {
+        $employeeIsValid = $result
+            && (int) $result['is_active'] === 1
+            && in_array($result['role'], ['cashier', 'admin'], true)
+            && (int) $result['branch_id'] > 0;
+
+        if (!$employeeIsValid || empty($result['pin']) || !password_verify($pin, $result['pin'])) {
             $response['errors']['pin'] = 'Incorrect PIN.';
             $_SESSION['pos_pin_attempts'] = (int) ($_SESSION['pos_pin_attempts'] ?? 0) + 1;
             if ($_SESSION['pos_pin_attempts'] >= 5) {
@@ -44,6 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
             }
         } else {
             session_regenerate_id(true);
+            // Refresh branch identity from the verified database record so a stale
+            // POS session cannot reject a correct PIN after switching branches.
+            $_SESSION['employee_id'] = (int) $result['id'];
+            $_SESSION['employee_name'] = $result['employee_name'];
+            $_SESSION['employee_email'] = $result['email'];
+            $_SESSION['employee_role'] = $result['role'];
+            $_SESSION['branch_id'] = (int) $result['branch_id'];
             $_SESSION['pos_pin_verified'] = true;
             $_SESSION['pos_authenticated'] = true;
             $_SESSION['pos_login_at'] = date('c');

@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/admin_auth.php';
 require_once __DIR__ . '/../config/inventory_service.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -43,13 +43,10 @@ function validateIngredientUnit(array $data): string
 
 function currentAdmin(mysqli $connect): ?array
 {
-    $id = (int)($_SESSION['admin_account_id'] ?? $_SESSION['employee_id'] ?? -1);
-    if ($id < 0 || ($_SESSION['employee_role'] ?? '') !== 'admin') return null;
-    $stmt = $connect->prepare("SELECT id, employee_name AS full_name, email, password, avatar
-                               FROM employees WHERE id = ? AND role = 'admin' AND is_active = 1 LIMIT 1");
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_assoc() ?: null;
+    $admin = boycold_admin_account($connect);
+    if (!$admin) return null;
+    $admin['full_name'] = $admin['employee_name'];
+    return $admin;
 }
 
 function ensureProductIngredientsTable(mysqli $connect): void
@@ -122,7 +119,7 @@ try {
                            u.account_status, u.card_no, u.created_at, u.loyalty_card_status,
                            COUNT(DISTINCT o.id) AS order_count
                     FROM users u
-                    LEFT JOIN orders o ON o.user_name = u.user_name
+                    LEFT JOIN orders o ON o.user_id = u.id OR (o.user_id IS NULL AND o.user_name = u.user_name)
                     GROUP BY u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
                              u.account_status, u.card_no, u.created_at, u.loyalty_card_status
                     ORDER BY u.created_at DESC";
@@ -197,15 +194,36 @@ try {
             response(['success' => true, 'ingredients' => $ingredients]);
 
         case 'products':
-            $result = $connect->query('SELECT id, product_name, description, price, image, category, is_available FROM products ORDER BY category, product_name');
+            $result = $connect->query(
+                "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available,
+                        COUNT(pi.id) AS mapping_count,
+                        CASE
+                            WHEN COUNT(pi.id) = 0 THEN 'Not mapped'
+                            WHEN SUM(CASE WHEN i.stock < pi.amount THEN 1 ELSE 0 END) > 0 THEN 'Low stock'
+                            ELSE 'Sufficient'
+                        END AS ingredient_status
+                 FROM products p
+                 LEFT JOIN product_ingredients pi ON pi.product_name = p.product_name
+                 LEFT JOIN ingredients i ON i.id = pi.ingredient_id
+                 GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available
+                 ORDER BY p.category, p.product_name"
+            );
             $products = [];
             while ($row = $result->fetch_assoc()) $products[] = $row;
             response(['success' => true, 'products' => $products]);
 
         case 'orders':
-            $result = $connect->query("SELECT id, user_name, status, order_type, payment_method, payment_status,
-                                              payment_reference, total, created_at
-                                       FROM orders ORDER BY created_at DESC, id DESC");
+                 $result = $connect->query("SELECT o.id, o.user_id, o.user_name,
+                                    COALESCE(NULLIF(CONCAT_WS(' ', u.firstname, u.lastname), ''), o.user_name) AS customer_name,
+                                    u.email AS customer_email,
+                                    o.status, o.order_type, o.payment_method, o.payment_status,
+                                              o.payment_reference, o.subtotal, o.delivery_fee, o.tax, o.total,
+                                              o.branch_id, b.branch_code, b.branch_name, o.address, o.notes,
+                                              o.created_at, o.updated_at
+                                       FROM orders o
+                                LEFT JOIN users u ON u.id = o.user_id
+                                       LEFT JOIN branches b ON b.id = o.branch_id
+                                       ORDER BY o.created_at DESC, o.id DESC");
             $orders = [];
             $itemsStmt = $connect->prepare('SELECT product_name, quantity, unit_price, line_total, milk, addons, notes FROM order_items WHERE order_id = ? ORDER BY id');
             while ($order = $result->fetch_assoc()) {

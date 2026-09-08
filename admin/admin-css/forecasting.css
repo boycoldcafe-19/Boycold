@@ -557,6 +557,25 @@ button {
     background: var(--bg);
 }
 
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    transition: background .15s;
+    cursor: pointer;
+}
+
+.export-btn:hover {
+    background: #fbf1f1;
+}
+
 /* ===== Loading States ===== */
 .demand-loading,
 .peak-loading,

@@ -58,15 +58,6 @@ function pos_require_employee(mysqli $connect, bool $json = false): array
     $employee = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    $valid = $employee
-        && (int) $employee['is_active'] === 1
-        && in_array($employee['role'], ['cashier', 'admin'], true)
-        && ((int) $employee['branch_id'] > 0 && $employee['branch_status'] === 'active'
-            || $employee['role'] === 'admin' && (int) $employee['branch_id'] === 0)
-        && !empty($_SESSION['pos_authenticated'])
-        && !empty($_SESSION['pos_pin_verified'])
-        && (int) ($_SESSION['branch_id'] ?? 0) === (int) $employee['branch_id'];
-
     $accountValid = $employee
         && (int) $employee['is_active'] === 1
         && in_array($employee['role'], ['cashier', 'admin'], true)

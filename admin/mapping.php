@@ -352,7 +352,7 @@
 
         if (logoutYes) {
             logoutYes.addEventListener("click", function () {
-                window.location.href = "adminlogin.html";
+                    window.location.href = "logout.php";
             });
         }
 
@@ -430,7 +430,7 @@
             { id: "biscoff-frappe", name: "Biscoff Frappe", price: 139, category: "Frappe Series", img: "Biscoff frappe.png" },
             { id: "nuttela-hazelnut-frappe", name: "Nuttela Hazelnut Frappe", price: 149, category: "Frappe Series", img: "Nuttela Hazelnut Frappe.png" },
 
-            // Snacks â€” waffles
+            // Snacks - waffles
             { id: "waffle-chocolate", name: "Lolly Waffle Chocolate", price: 69, category: "Snacks", img: "Chocolate waffle.png" },
             { id: "waffle-ube", name: "Lolly Waffle Ube", price: 65, category: "Snacks", img: "ube waffle.png" },
             { id: "waffle-matcha", name: "Lolly Waffle Matcha", price: 69, category: "Snacks", img: "Matcha waffle.png" },
@@ -439,7 +439,7 @@
             { id: "waffle-tiramisu", name: "Lolly Waffle Tiramisu", price: 75, category: "Snacks", img: "tiramisu waffle.png" },
             { id: "waffle-biscoff", name: "Lolly Waffle Biscoff", price: 89, category: "Snacks", img: "Biscoff waffle.png" },
 
-            // Snacks â€” bites & mains
+            // Snacks - bites & mains
             { id: "french-fries", name: "French Fries", price: 69, category: "Snacks", img: "Fries.png" },
             { id: "chicken-poppers", name: "Chicken Poppers", price: 79, category: "Snacks", img: "Chicken Poppers.png" },
             { id: "beef-nachos", name: "Beef Natchos", price: 149, category: "Snacks", img: "Beef Natchos.png" },
@@ -488,7 +488,7 @@
             if (!INGREDIENT_LIBRARY.length) throw new Error('No ingredients found in the database');
         }
 
-        /* Master ingredient list â€” used to populate the "Add Ingredients" dropdown
+        /* Master ingredient list - used to populate the "Add Ingredients" dropdown
         with a known unit + cost per unit, so totals calculate automatically. */
         let INGREDIENT_LIBRARY = [
             { name: "Espresso Shot", unit: "shot", cost: 6 },
@@ -529,17 +529,9 @@
 
         /* In-memory mapping store: { menuItemId: [ {ingredient, unit, qty, cost} ] }
         Pre-seeded for Hershey Delight to mirror the current saved mapping. */
-        const mappingStore = {
-            "hershey-delight": [
-                { ingredient: "Espresso Shot", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Fresh Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Condensed Milk", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Chocolate Syrup", unit: "", qty: "", cost: 6, total: 12 },
-                { ingredient: "Whipped Cream", unit: "", qty: "", cost: 6, total: 12 },
-            ],
-        };
+        const mappingStore = {};
 
-        let selectedItemId = "hershey-delight";
+        let selectedItemId = null;
         let showInactiveOnly = false;
 
         const peso = (n) => `₱ ${Number(n).toFixed(2)}`;
@@ -771,7 +763,10 @@
                 await loadIngredients();
             } catch (error) {
                 console.error('Unable to load products from the database:', error);
-                MENU_ITEMS = FALLBACK_MENU_ITEMS;
+                MENU_ITEMS = [];
+                INGREDIENT_LIBRARY = [];
+                renderMenuList();
+                renderMapPanel();
             }
 
             renderMenuList();
