@@ -332,6 +332,15 @@ switch ($action) {
                 $itemStmt->execute();
             }
 
+            $reservation = boycold_reserve_inventory_for_order_in_transaction(
+                $connect,
+                $orderId,
+                $employeeId > 0 ? $employeeId : null
+            );
+            if (!$reservation['success']) {
+                throw new RuntimeException((string) ($reservation['error'] ?? 'Inventory is no longer available.'));
+            }
+
             $fromCart = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
             if ($fromCart) {
                 $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
@@ -355,6 +364,7 @@ switch ($action) {
                 $fail->bind_param('i', $orderId);
                 $fail->execute();
                 $fail->close();
+                boycold_restore_reserved_inventory_for_order($connect, $orderId);
                 echo json_encode(['success' => false, 'error' => $e->getMessage(), 'order_id' => $orderId]);
                 break;
             }
@@ -566,41 +576,49 @@ switch ($action) {
             }
         }
 
-        if ($isAdmin) {
-            $stmt = $connect->prepare(
-                "UPDATE orders
-                 SET status = 'cancelled',
-                     payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
-                 WHERE id = ?
-                   AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
-            );
-            $stmt->bind_param("i", $orderId);
-        } else {
-            // Matched by user_id directly — no join through user_name needed,
-            // and no risk of a stale/changed name ever blocking a cancel.
-            // Legacy orders placed before user_id existed (NULL) still fall
-            // back to a name match.
-            $stmt = $connect->prepare(
-                "UPDATE orders
-                 SET status = 'cancelled',
-                     payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
-                 WHERE id = ?
-                   AND (user_id = ? OR (user_id IS NULL AND user_name = ?))
-                   AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
-            );
-            $stmt->bind_param("iis", $orderId, $userId, $userName);
-        }
-        $stmt->execute();
+        $connect->begin_transaction();
+        try {
+            if ($isAdmin) {
+                $stmt = $connect->prepare(
+                    "UPDATE orders
+                     SET status = 'cancelled',
+                         payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
+                     WHERE id = ?
+                       AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
+                );
+                $stmt->bind_param("i", $orderId);
+            } else {
+                $stmt = $connect->prepare(
+                    "UPDATE orders
+                     SET status = 'cancelled',
+                         payment_status = IF(payment_method = 'qrph' AND payment_status <> 'paid', 'cancelled', payment_status)
+                     WHERE id = ?
+                       AND (user_id = ? OR (user_id IS NULL AND user_name = ?))
+                       AND status NOT IN ('ready', 'delivered', 'completed', 'cancelled')"
+                );
+                $stmt->bind_param("iis", $orderId, $userId, $userName);
+            }
+            $stmt->execute();
 
-        if ($stmt->affected_rows === 0) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Cannot cancel: order not found, not yours, or already in a final state.'
-            ]);
-            break;
-        }
+            if ($stmt->affected_rows === 0) {
+                $connect->rollback();
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Cannot cancel: order not found, not yours, or already in a final state.'
+                ]);
+                break;
+            }
 
-        echo json_encode(['success' => true, 'message' => 'Order cancelled.']);
+            $restore = boycold_restore_reserved_inventory_for_order_in_transaction($connect, $orderId);
+            if (!$restore['success']) {
+                throw new RuntimeException((string) ($restore['error'] ?? 'Unable to restore reserved inventory.'));
+            }
+            $connect->commit();
+            echo json_encode(['success' => true, 'message' => 'Order cancelled.']);
+        } catch (Throwable $e) {
+            $connect->rollback();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
         break;
 
     case 'payment_status':
@@ -639,6 +657,7 @@ switch ($action) {
             $expireStmt->bind_param('i', $orderId);
             $expireStmt->execute();
             $expireStmt->close();
+            boycold_restore_reserved_inventory_for_order($connect, $orderId);
             $order['payment_status'] = 'expired';
             if ($order['status'] === 'pending') $order['status'] = 'cancelled';
         }

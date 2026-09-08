@@ -178,29 +178,7 @@ $_SESSION['user_email'] = $user['email'];
                     <div class="info-row hours-row">
                         <i class="fa-regular fa-clock clock-icon"></i>
                         <span class="open-badge">Open</span>
-                        <span id="storeHours" class="info-text">14:00 – 1:00</span>
-                        <div class="day-select-wrapper">
-                            <select id="daySelect" class="day-select">
-                                <option>Today</option>
-                                <option>Mon</option>
-                                <option>Tue</option>
-                                <option>Wed</option>
-                                <option>Thu</option>
-                                <option>Fri</option>
-                                <option>Sat</option>
-                                <option>Sun</option>
-                            </select>
-                            <i class="fa-solid fa-chevron-down day-arrow"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Phone -->
-                <div class="store-info-block">
-                    <span class="info-label">Phone number:</span>
-                    <div class="info-row">
-                        <span id="phoneNum" class="info-text">0911-222-3333</span>
-                        <i class="fa-solid fa-pencil edit-icon"></i>
+                        <span id="storeHours" class="info-text">8:00 AM – 1:00 AM</span>
                     </div>
                 </div>
 

@@ -215,6 +215,11 @@ foreach ($items as $item) {
     $itemStmt->execute();
 }
 
+            $reservation = boycold_reserve_inventory_for_order_in_transaction($connect, $orderId);
+            if (!$reservation['success']) {
+                throw new RuntimeException((string) ($reservation['error'] ?? 'Inventory is no longer available.'));
+            }
+
 $connect->commit();
 
 $qrPayload = null;
@@ -225,6 +230,8 @@ if ($paymentMethod === 'qrph') {
         $fail = $connect->prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?");
         $fail->bind_param('i', $orderId);
         $fail->execute();
+        $fail->close();
+        boycold_restore_reserved_inventory_for_order($connect, $orderId);
         echo json_encode(['success' => false, 'error' => $e->getMessage(), 'order_id' => $orderId]);
         exit;
     }

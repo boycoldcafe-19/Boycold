@@ -147,6 +147,7 @@ function boycold_ensure_inventory_schema(mysqli $connect): void
 
     if (boycold_inventory_table_exists($connect, 'orders')) {
         boycold_inventory_add_column_if_missing($connect, 'orders', 'inventory_deducted_at', 'DATETIME NULL DEFAULT NULL');
+        boycold_inventory_add_column_if_missing($connect, 'orders', 'inventory_restored_at', 'DATETIME NULL DEFAULT NULL');
         boycold_inventory_add_column_if_missing($connect, 'orders', 'inventory_deduction_source', 'VARCHAR(30) NULL DEFAULT NULL');
         boycold_inventory_add_column_if_missing($connect, 'orders', 'inventory_deduction_error', 'VARCHAR(255) NULL DEFAULT NULL');
         boycold_inventory_add_index_if_missing($connect, 'orders', 'idx_orders_inventory_deducted_at', '`inventory_deducted_at`');
@@ -267,6 +268,13 @@ function boycold_inventory_resolve_ingredient_for_branch(mysqli $connect, array 
     }
 
     if (!$cache[$cacheKey]) {
+        // Never use another branch's stock as a fallback. A missing branch
+        // record means this recipe cannot be produced at the requested branch.
+        if ($mappedBranchId > 0) {
+            $ingredient['stock'] = 0.0;
+            $ingredient['branch_id'] = $branchId;
+            $ingredient['branch_available'] = false;
+        }
         return $ingredient;
     }
 
@@ -278,7 +286,19 @@ function boycold_inventory_resolve_ingredient_for_branch(mysqli $connect, array 
         'branch_id' => isset($row['branch_id']) ? (int) $row['branch_id'] : null,
         'stock' => (float) ($row['stock'] ?? 0),
         'min_stock' => (float) ($row['min_stock'] ?? 0),
+        'branch_available' => true,
     ];
+}
+
+function boycold_inventory_ingredient_status(float $stock, float $minStock, float $required = 0): string
+{
+    if ($stock <= 0 || ($required > 0 && $stock + 0.0001 < $required)) {
+        return 'insufficient';
+    }
+    if ($stock <= $minStock) {
+        return 'low';
+    }
+    return 'sufficient';
 }
 
 function boycold_inventory_add_requirement(array &$requirements, array $ingredient, float $amount, string $sourceName): void
@@ -616,13 +636,13 @@ function boycold_get_product_inventory_availability(
         $availableServings = null;
         $canOrder = (int) ($product['is_available'] ?? 0) === 1;
         $isLow = false;
-        $reason = '';
+        $reasons = [];
 
         if (!$canOrder) {
-            $reason = 'Disabled in Menu Management';
+            $reasons[] = 'Disabled in Menu Management';
         } elseif (!$rows) {
             $canOrder = false;
-            $reason = 'No ingredient mapping';
+            $reasons[] = 'No ingredient mapping';
         }
 
         foreach ($rows as $row) {
@@ -638,8 +658,8 @@ function boycold_get_product_inventory_availability(
 
             if ($amount <= 0 || $stock + 0.0001 < $amount) {
                 $canOrder = false;
-                $reason = $ingredient['name'] . ' is insufficient';
-            } elseif ($stock <= $minStock || ($stock - $amount) <= $minStock) {
+                $reasons[] = $ingredient['name'] . ($stock <= 0 ? ' is out of stock' : ' is insufficient');
+            } elseif ($stock <= $minStock) {
                 $isLow = true;
             }
 
@@ -651,6 +671,7 @@ function boycold_get_product_inventory_availability(
                 'stock' => $stock,
                 'min_stock' => $minStock,
                 'servings' => $servings,
+                'status' => boycold_inventory_ingredient_status($stock, $minStock, $amount),
             ];
         }
 
@@ -677,7 +698,7 @@ function boycold_get_product_inventory_availability(
             'ingredient_status' => $ingredientLabel,
             'can_order' => $canOrder,
             'available_servings' => $availableServings,
-            'reason' => $reason,
+            'reason' => implode('; ', array_unique($reasons)),
             'ingredients' => $details,
         ];
     }
@@ -851,6 +872,153 @@ function boycold_deduct_inventory_for_order(
     $connect->begin_transaction();
     try {
         $result = boycold_deduct_inventory_for_order_in_transaction($connect, $orderId, $source, $actorId);
+        if (!$result['success']) {
+            $connect->rollback();
+            return $result;
+        }
+        $connect->commit();
+        return $result;
+    } catch (Throwable $e) {
+        $connect->rollback();
+        throw $e;
+    }
+}
+
+function boycold_reserve_inventory_for_order_in_transaction(
+    mysqli $connect,
+    int $orderId,
+    ?int $actorId = null
+): array {
+    boycold_ensure_inventory_schema($connect);
+
+    $orderStmt = $connect->prepare(
+        "SELECT id, branch_id, inventory_deducted_at, inventory_restored_at
+         FROM orders WHERE id = ? LIMIT 1 FOR UPDATE"
+    );
+    $orderStmt->bind_param('i', $orderId);
+    $orderStmt->execute();
+    $order = $orderStmt->get_result()->fetch_assoc();
+    $orderStmt->close();
+
+    if (!$order) {
+        return ['success' => false, 'error' => 'Order not found.'];
+    }
+    if (!empty($order['inventory_deducted_at'])) {
+        return ['success' => true, 'reserved' => false, 'already_reserved' => true];
+    }
+
+    $itemsStmt = $connect->prepare(
+        'SELECT product_name AS name, quantity AS qty, milk, addons FROM order_items WHERE order_id = ? ORDER BY id'
+    );
+    $itemsStmt->bind_param('i', $orderId);
+    $itemsStmt->execute();
+    $items = $itemsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $itemsStmt->close();
+
+    $validation = boycold_validate_inventory_for_items($connect, $items, (int) $order['branch_id'], true, true);
+    if (!$validation['success']) {
+        return $validation + ['reserved' => false];
+    }
+
+    $updateStock = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ?');
+    $insertMovement = $connect->prepare(
+        "INSERT INTO ingredient_stock_movements
+            (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, product_name, reference, created_by)
+         VALUES (?, 'deduction', ?, ?, ?, 'online_reservation', ?, ?, ?)"
+    );
+    $reference = 'Online reservation #' . $orderId;
+    foreach ($validation['requirements'] as $requirement) {
+        $ingredientId = (int) $requirement['ingredient_id'];
+        $required = (float) $requirement['required'];
+        if ($ingredientId <= 0 || $required <= 0) continue;
+        $newStock = max(0.0, (float) $requirement['stock'] - $required);
+        $productNames = boycold_inventory_format_requirement_products((array) $requirement['products']);
+        $actor = $actorId && $actorId > 0 ? $actorId : null;
+        $updateStock->bind_param('di', $newStock, $ingredientId);
+        $updateStock->execute();
+        $insertMovement->bind_param('iddissi', $ingredientId, $required, $newStock, $orderId, $productNames, $reference, $actor);
+        $insertMovement->execute();
+    }
+    $updateStock->close();
+    $insertMovement->close();
+
+    $mark = $connect->prepare(
+        "UPDATE orders SET inventory_deducted_at = NOW(), inventory_deduction_source = 'online_reservation'
+         WHERE id = ? AND inventory_deducted_at IS NULL"
+    );
+    $mark->bind_param('i', $orderId);
+    $mark->execute();
+    $mark->close();
+
+    return ['success' => true, 'reserved' => true, 'requirements' => $validation['requirements']];
+}
+
+function boycold_restore_reserved_inventory_for_order_in_transaction(mysqli $connect, int $orderId): array
+{
+    boycold_ensure_inventory_schema($connect);
+
+    $orderStmt = $connect->prepare(
+        "SELECT inventory_deducted_at, inventory_deduction_source, inventory_restored_at
+         FROM orders WHERE id = ? LIMIT 1 FOR UPDATE"
+    );
+    $orderStmt->bind_param('i', $orderId);
+    $orderStmt->execute();
+    $order = $orderStmt->get_result()->fetch_assoc();
+    $orderStmt->close();
+
+    if (!$order || $order['inventory_deduction_source'] !== 'online_reservation' || !empty($order['inventory_restored_at'])) {
+        return ['success' => true, 'restored' => false];
+    }
+
+    $movementStmt = $connect->prepare(
+        "SELECT ingredient_id, SUM(quantity) AS quantity
+         FROM ingredient_stock_movements
+         WHERE order_id = ? AND source = 'online_reservation' AND movement_type = 'deduction'
+         GROUP BY ingredient_id"
+    );
+    $movementStmt->bind_param('i', $orderId);
+    $movementStmt->execute();
+    $movements = $movementStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $movementStmt->close();
+
+    $stockStmt = $connect->prepare('SELECT stock FROM ingredients WHERE id = ? FOR UPDATE');
+    $updateStmt = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ?');
+    $insertStmt = $connect->prepare(
+        "INSERT INTO ingredient_stock_movements
+            (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, reference)
+         VALUES (?, 'adjustment', ?, ?, ?, 'online_restore', ? )"
+    );
+    $reference = 'Online reservation restore #' . $orderId;
+    foreach ($movements as $movement) {
+        $ingredientId = (int) $movement['ingredient_id'];
+        $quantity = (float) $movement['quantity'];
+        $stockStmt->bind_param('i', $ingredientId);
+        $stockStmt->execute();
+        $stockRow = $stockStmt->get_result()->fetch_assoc();
+        if (!$stockRow) continue;
+        $newStock = (float) $stockRow['stock'] + $quantity;
+        $updateStmt->bind_param('di', $newStock, $ingredientId);
+        $updateStmt->execute();
+        $insertStmt->bind_param('iddis', $ingredientId, $quantity, $newStock, $orderId, $reference);
+        $insertStmt->execute();
+    }
+    $stockStmt->close();
+    $updateStmt->close();
+    $insertStmt->close();
+
+    $restore = $connect->prepare('UPDATE orders SET inventory_restored_at = NOW() WHERE id = ? AND inventory_restored_at IS NULL');
+    $restore->bind_param('i', $orderId);
+    $restore->execute();
+    $restore->close();
+
+    return ['success' => true, 'restored' => true];
+}
+
+function boycold_restore_reserved_inventory_for_order(mysqli $connect, int $orderId): array
+{
+    $connect->begin_transaction();
+    try {
+        $result = boycold_restore_reserved_inventory_for_order_in_transaction($connect, $orderId);
         if (!$result['success']) {
             $connect->rollback();
             return $result;

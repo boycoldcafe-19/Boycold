@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/paymongo.php';
+require_once __DIR__ . '/inventory_service.php';
 
 function boycold_payment_label(string $method, string $status): string
 {
@@ -137,6 +138,7 @@ function boycold_apply_qrph_result(mysqli $connect, string $paymentIntentId, int
                 $expired->bind_param('i', $orderId);
                 $expired->execute();
                 $expired->close();
+                boycold_restore_reserved_inventory_for_order_in_transaction($connect, $orderId);
                 $connect->commit();
                 return true;
             }
@@ -177,6 +179,7 @@ function boycold_apply_qrph_result(mysqli $connect, string $paymentIntentId, int
                 $upd->bind_param('ssi', $resultStatus, $resultStatus, $orderId);
                 $upd->execute();
                 $upd->close();
+                boycold_restore_reserved_inventory_for_order_in_transaction($connect, $orderId);
             }
         }
 

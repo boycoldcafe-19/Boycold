@@ -401,70 +401,91 @@ $trendingItems = array_slice($trendingItems, 0, 6);
 
 // ==========================================
 // 6. INGREDIENT RESTOCK PREDICTIONS
+// Uses historical product demand and ingredient mappings to project stock.
 // ==========================================
+$orderBranchJoin = $branchId !== 'all' ? ' AND o.branch_id = ?' : '';
 $restockQuery = "SELECT
     i.id,
     i.name,
     i.stock,
     i.min_stock,
     i.unit,
-    COALESCE(SUM(ism.quantity), 0) AS total_used,
-    COUNT(DISTINCT DATE(ism.created_at)) AS days_used
+    pi.product_name,
+    pi.amount,
+    COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS historical_quantity
 FROM ingredients i
-LEFT JOIN ingredient_stock_movements ism
-    ON i.id = ism.ingredient_id
-    AND ism.movement_type = 'deduction'
-    AND ism.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+LEFT JOIN product_ingredients pi ON pi.ingredient_id = i.id
+LEFT JOIN order_items oi ON LOWER(oi.product_name) = LOWER(pi.product_name)
+LEFT JOIN orders o
+    ON o.id = oi.order_id
+    AND o.status NOT IN ('cancelled')
+    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+    $orderBranchJoin";
 
 $restockParams = [$histDaysParam];
 $restockTypes = 'i';
 if ($branchId !== 'all') {
+    $restockParams[] = intval($branchId);
+    $restockTypes .= 'i';
     $restockQuery .= ' WHERE i.branch_id = ?';
     $restockParams[] = intval($branchId);
     $restockTypes .= 'i';
 }
-$restockQuery .= ' GROUP BY i.id, i.name, i.stock, i.min_stock, i.unit ORDER BY i.name';
+$restockQuery .= ' GROUP BY i.id, i.name, i.stock, i.min_stock, i.unit, pi.product_name, pi.amount ORDER BY i.name';
 
 $stmt = $connect->prepare($restockQuery);
 boycold_inventory_bind($stmt, $restockTypes, $restockParams);
 $stmt->execute();
 $result = $stmt->get_result();
 
+$restockByIngredient = [];
+while ($row = $result->fetch_assoc()) {
+    $ingredientId = (int) $row['id'];
+    if (!isset($restockByIngredient[$ingredientId])) {
+        $restockByIngredient[$ingredientId] = [
+            'name' => $row['name'],
+            'stock' => (float) $row['stock'],
+            'min_stock' => (float) $row['min_stock'],
+            'unit' => $row['unit'],
+            'historical_usage' => 0
+        ];
+    }
+
+    $amount = (float) $row['amount'];
+    $historicalQuantity = (float) $row['historical_quantity'];
+    $restockByIngredient[$ingredientId]['historical_usage'] += $historicalQuantity * $amount;
+}
+
 $restockItems = [];
 $criticalCount = 0;
 $soonCount = 0;
-while ($row = $result->fetch_assoc()) {
-    $stock = floatval($row['stock']);
-    $minStock = floatval($row['min_stock']);
-    $totalUsed = floatval($row['total_used']);
-    $daysUsed = intval($row['days_used']);
-    
-    $dailyUsage = $daysUsed > 0 ? $totalUsed / $daysUsed : 0;
-    $daysRemaining = $dailyUsage > 0 ? $stock / $dailyUsage : 999;
-    
+foreach ($restockByIngredient as $ingredient) {
+    $stock = $ingredient['stock'];
+    $minStock = $ingredient['min_stock'];
+    $dailyUsage = $historicalDays > 0 ? $ingredient['historical_usage'] / $historicalDays : 0;
+    $forecastedUsage = $dailyUsage * $forecastDays * $salesGrowthFactor;
+    $projectedStock = $stock - $forecastedUsage;
+    $daysRemaining = $dailyUsage > 0 ? max(0, ($stock - $minStock) / $dailyUsage) : 999;
+
     $status = 'ok';
-    if ($stock <= 0) {
+    if ($stock <= 0 || $projectedStock <= 0) {
         $status = 'critical';
         $criticalCount++;
-    } elseif ($stock <= $minStock) {
-        $status = 'soon';
-        $soonCount++;
-    } elseif ($daysRemaining <= 3) {
-        $status = 'critical';
-        $criticalCount++;
-    } elseif ($daysRemaining <= 7) {
+    } elseif ($stock <= $minStock || $projectedStock <= $minStock || $daysRemaining <= $forecastDays) {
         $status = 'soon';
         $soonCount++;
     }
-    
+
     $restockItems[] = [
-        'name' => $row['name'],
-        'stock' => $stock,
-        'min_stock' => $minStock,
-        'unit' => $row['unit'],
+        'name' => $ingredient['name'],
+        'stock' => round($stock, 3),
+        'min_stock' => round($minStock, 3),
+        'unit' => $ingredient['unit'],
         'daily_usage' => round($dailyUsage, 2),
+        'forecasted_usage' => round($forecastedUsage, 2),
+        'projected_stock' => round($projectedStock, 2),
         'days_remaining' => round($daysRemaining, 1),
-        'recommended_restock' => round(max(0, ($minStock * 2) - $stock), 2),
+        'recommended_restock' => round(max(0, $minStock + $forecastedUsage - $stock), 2),
         'status' => $status
     ];
 }

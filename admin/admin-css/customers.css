@@ -170,6 +170,10 @@ button {
     background:#692727;
 }
 
+.sidebar-nav ul li a:not(.active):hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .nav-icon,
 .nav-icon1,
 .nav-icon2 {
@@ -1026,6 +1030,7 @@ button {
     font-weight: 700;
     font-size: 15px;
     flex-shrink: 0;
+    object-fit: cover;
 }
 
 .customer-cell-text {

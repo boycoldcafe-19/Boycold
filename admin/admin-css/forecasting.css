@@ -160,6 +160,10 @@ button {
     background:#692727;
 }
 
+.sidebar-nav ul li a:not(.active):hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .nav-icon,
 .nav-icon1,
 .nav-icon2 {

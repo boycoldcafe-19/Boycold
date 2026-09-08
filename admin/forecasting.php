@@ -245,7 +245,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 <div class="chart-card restock-list-card" id="restockListCard">
                     <div class="chart-card-header">
                         <h2 class="chart-card-title">Ingredients to Restock</h2>
-                        <span class="restock-list-caption" id="restockListCaption">Based on stock level and recent usage</span>
+                        <span class="restock-list-caption" id="restockListCaption">Based on mapped recipes and forecasted demand</span>
                     </div>
                     <div class="restock-list" id="restockList">
                         <div class="restock-list-empty">Loading restock recommendations...</div>

@@ -726,6 +726,13 @@
 
         statusFilter.addEventListener('change', applyFilters);
 
+        function getCustomerAvatar(avatar) {
+            const value = String(avatar || '').trim();
+            if (!value) return '../img/LOGO.png';
+            if (/^(https?:\/\/|\/)/i.test(value)) return value;
+            return '../User/' + value.replace(/^\/+/, '');
+        }
+
         const customerTableBody = document.getElementById('customerTableBody');
         customerTableBody.innerHTML = '';
 
@@ -740,8 +747,9 @@
                     const active = customer.account_status === 'active';
                     const orderCount = Number(customer.order_count || 0);
                     const member = orderCount > 0 && Boolean(customer.card_no);
+                    const avatar = getCustomerAvatar(customer.avatar);
                     return `<tr data-id="${customer.id}" data-status="${customer.account_status}">
-                        <td><div class="customer-cell"><span class="avatar">${initials}</span><span class="customer-cell-text"><span class="customer-name">${name}</span><span class="customer-joined">Joined ${new Date(customer.created_at).toLocaleDateString()}</span></span></div></td>
+                        <td><div class="customer-cell"><img class="avatar" src="${avatar}" alt="${name} profile picture" onerror="this.onerror=null;this.src='../img/LOGO.png';"><span class="customer-cell-text"><span class="customer-name">${name}</span><span class="customer-joined">Joined ${new Date(customer.created_at).toLocaleDateString()}</span></span></div></td>
                         <td><span class="cell-stack"><span>${customer.email}</span><span class="badge badge-verified">${Number(customer.is_verified) ? 'Verified' : 'Unverified'}</span></span></td>
                         <td><span>${customer.phone || '-'}</span></td><td>${orderCount}</td>
                         <td><span class="cell-stack">${member ? `<span class="badge badge-loyalty"><i class="fa-solid fa-star"></i> Member</span><span class="loyalty-card-no">Card #${customer.card_no}</span>` : '<span class="badge badge-not-member">Not a Member</span>'}</span></td>

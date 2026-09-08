@@ -201,7 +201,7 @@
                                     <th>Current Stock</th>
                                     <th>Unit</th>
                                     <th>Minimum Stock</th>
-                                    <th>Status</th>
+                                    <th>Ingredient Sufficiency</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -607,7 +607,7 @@
             function updateStockWarning(items) {
                 const warning = document.getElementById("inventoryStockWarning");
                 const warningText = document.getElementById("inventoryStockWarningText");
-                const lowStockItems = (items || []).filter((item) => Number(item.stock || 0) <= Number(item.min_stock || 0));
+                const lowStockItems = (items || []).filter((item) => item.sufficiency_status !== 'sufficient');
 
                 warning.hidden = lowStockItems.length === 0;
                 if (!lowStockItems.length) return;
@@ -633,8 +633,9 @@
                     const unit = item.unit || "pcs";
                     const stock = Number(item.stock || 0);
                     const minStock = Number(item.min_stock || 0);
-                    const statusClass = stock <= 0 ? "out-of-stock" : stock <= minStock ? "low-stock" : "in-stock";
-                    const statusLabel = stock <= 0 ? "Out of Stock" : stock <= minStock ? "Low Stock" : "In Stock";
+                    const sufficiency = item.sufficiency_status || (stock <= 0 ? "insufficient" : stock <= minStock ? "low" : "sufficient");
+                    const statusClass = sufficiency === "insufficient" ? "out-of-stock" : sufficiency === "low" ? "low-stock" : "in-stock";
+                    const statusLabel = sufficiency === "insufficient" ? "INSUFFICIENT" : sufficiency === "low" ? "LOW" : "SUFFICIENT";
 
                     const row = document.createElement("tr");
                     row.innerHTML = `
@@ -761,13 +762,13 @@
                     if (!result.success) throw new Error(result.error || 'Ingredient could not be saved');
 
                     let statusClass = "in-stock";
-                let statusLabel = "In Stock";
+                let statusLabel = "SUFFICIENT";
                 if (currentStock <= 0) {
                     statusClass = "out-of-stock";
-                    statusLabel = "Out of Stock";
+                    statusLabel = "INSUFFICIENT";
                 } else if (currentStock <= minStock) {
                     statusClass = "low-stock";
-                    statusLabel = "Low Stock";
+                    statusLabel = "LOW";
                 }
 
                     const row = document.createElement("tr");

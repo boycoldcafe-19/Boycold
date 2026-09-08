@@ -11,7 +11,7 @@
                         id: Number(branchByCode.BAL?.id || branchByCode.MAIN?.id || branchByCode[1]?.id || 1),
                         label: "BoyCold Cafe Baliwag",
                         address: branchByCode.BAL?.address || branchByCode.MAIN?.address || "40 Calle Rizal, Baliwag, 3006 Bulacan",
-                        hours: "14:00 – 1:00",
+                        hours: "8:00 AM – 1:00 AM",
                         phone: "0923-421-6448",
                         lat: 14.93564,
                         lng: 120.88853
@@ -24,7 +24,7 @@
                         id: Number(branchByCode.BUS?.id || branchByCode.BUSTOS?.id || branchByCode[2]?.id || 2),
                         label: "BoyCold Cafe Bustos",
                         address: branchByCode.BUS?.address || branchByCode.BUSTOS?.address || "Petron C.L. Hilario St., Tanawan, Bustos, Bulacan",
-                        hours: "13:00 – 24:00",
+                        hours: "1:00 PM – 12:00 MN",
                         phone: "0923-421-6448",
                         lat: 14.95409,
                         lng: 120.92060

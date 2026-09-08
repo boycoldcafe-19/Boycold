@@ -4533,8 +4533,16 @@
                     const name = escapeProductText(product.product_name);
                     const category = escapeProductText(normalizeProductCategory(product.category || 'uncategorized'));
                     const image = escapeProductText(product.image || '');
-                    const status = Number(product.is_available) ? 'available' : 'unavailable';
-                    const statusLabel = Number(product.is_available) ? 'Available' : 'Unavailable';
+                    const manuallyActive = Number(product.is_available) === 1;
+                    const inventoryStatus = String(product.inventory_status || 'unavailable');
+                    const status = manuallyActive ? inventoryStatus : 'unavailable';
+                    const statusLabel = manuallyActive
+                        ? String(product.inventory_label || 'Unavailable')
+                        : 'Inactive';
+                    const ingredientStatus = manuallyActive
+                        ? String(product.ingredient_status || 'No mapping')
+                        : 'Manual inactive';
+                    const reason = escapeProductText(product.inventory_reason || '');
                     return `<div class="product-card" data-category="${category}" data-id="${Number(product.id)}">
                         <div class="card-actions">
                             <button type="button" class="grid-action-btn" aria-label="More actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
@@ -4546,7 +4554,8 @@
                         <div class="card-info"><div class="card-mid"><p class="card-name">${name}</p></div>
                             <div class="card-footer"><p class="card-price">₱${Number(product.price).toFixed(2)}</p><div class="drink-stock">
                                 <p class="drink-status ${status}"><span class="status-dot"></span> ${statusLabel}</p>
-                                <p class="drink-ingredient">Ingredients: <span>${escapeProductText(product.ingredient_status || 'Not mapped')}</span></p>
+                                <p class="drink-ingredient">Ingredients: <span>${escapeProductText(ingredientStatus)}</span></p>
+                                ${reason ? `<p class="drink-ingredient">Reason: <span>${reason}</span></p>` : ''}
                             </div></div>
                         </div>
                     </div>`;
@@ -4924,7 +4933,13 @@
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: productId, product_name: newName, category: newCategory, price: priceValue, is_available: newStatus === 'unavailable' ? 0 : 1 })
                     }).then(response => response.json()).then(result => {
-                        if (!result.success) throw new Error(result.error || 'Product could not be updated');
+                        if (!result.success) {
+                            const insufficient = (result.ingredients || [])
+                                .filter(ingredient => ingredient.status === 'insufficient')
+                                .map(ingredient => `${ingredient.name}: ${ingredient.stock <= 0 ? 'out of stock' : 'insufficient stock'}`);
+                            const details = insufficient.length ? `\n\nInsufficient ingredients:\n- ${insufficient.join('\n- ')}` : '';
+                            throw new Error((result.error || 'Product could not be updated') + details);
+                        }
                         window.location.reload();
                     }).catch(error => alert(error.message));
                     return;

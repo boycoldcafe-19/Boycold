@@ -116,12 +116,12 @@ try {
 
         case 'customers':
             $sql = "SELECT u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
-                           u.account_status, u.card_no, u.created_at, u.loyalty_card_status,
+                           u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar,
                            COUNT(DISTINCT o.id) AS order_count
                     FROM users u
                     LEFT JOIN orders o ON o.user_id = u.id OR (o.user_id IS NULL AND o.user_name = u.user_name)
                     GROUP BY u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
-                             u.account_status, u.card_no, u.created_at, u.loyalty_card_status
+                             u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar
                     ORDER BY u.created_at DESC";
             $result = $connect->query($sql);
             $customers = [];
@@ -190,26 +190,44 @@ try {
                  ORDER BY i.name'
             );
             $ingredients = [];
-            while ($row = $result->fetch_assoc()) $ingredients[] = $row;
+            while ($row = $result->fetch_assoc()) {
+                $row['sufficiency_status'] = boycold_inventory_ingredient_status(
+                    (float) $row['stock'],
+                    (float) $row['min_stock']
+                );
+                $row['sufficiency_label'] = ucfirst($row['sufficiency_status']);
+                $ingredients[] = $row;
+            }
             response(['success' => true, 'ingredients' => $ingredients]);
 
         case 'products':
             $result = $connect->query(
                 "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available,
-                        COUNT(pi.id) AS mapping_count,
-                        CASE
-                            WHEN COUNT(pi.id) = 0 THEN 'Not mapped'
-                            WHEN SUM(CASE WHEN i.stock < pi.amount THEN 1 ELSE 0 END) > 0 THEN 'Low stock'
-                            ELSE 'Sufficient'
-                        END AS ingredient_status
+                        COUNT(pi.id) AS mapping_count
                  FROM products p
                  LEFT JOIN product_ingredients pi ON pi.product_name = p.product_name
-                 LEFT JOIN ingredients i ON i.id = pi.ingredient_id
                  GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available
                  ORDER BY p.category, p.product_name"
             );
             $products = [];
             while ($row = $result->fetch_assoc()) $products[] = $row;
+            $branchId = isset($_GET['branch_id']) ? (int) $_GET['branch_id'] : 0;
+            $availability = boycold_get_product_inventory_availability(
+                $connect,
+                $branchId,
+                array_column($products, 'product_name')
+            );
+            foreach ($products as &$product) {
+                $info = $availability[boycold_inventory_normalize_name((string) $product['product_name'])] ?? [];
+                $product['inventory_status'] = $info['status'] ?? 'unavailable';
+                $product['inventory_label'] = $info['status_label'] ?? 'Unavailable';
+                $product['ingredient_status'] = $info['ingredient_status'] ?? 'No mapping';
+                $product['inventory_reason'] = $info['reason'] ?? '';
+                $product['available_servings'] = $info['available_servings'] ?? 0;
+                $product['inventory_can_order'] = !empty($info['can_order']);
+                $product['ingredient_details'] = $info['ingredients'] ?? [];
+            }
+            unset($product);
             response(['success' => true, 'products' => $products]);
 
         case 'orders':
@@ -258,6 +276,23 @@ try {
             $category = requireValue($data, 'category');
             $price = max(0, (float)($data['price'] ?? 0));
             $available = !empty($data['is_available']) ? 1 : 0;
+            $currentStmt = $connect->prepare('SELECT is_available FROM products WHERE id = ? LIMIT 1');
+            $currentStmt->bind_param('i', $id);
+            $currentStmt->execute();
+            $currentProduct = $currentStmt->get_result()->fetch_assoc();
+            $currentStmt->close();
+            if ($available === 1 && (int) ($currentProduct['is_available'] ?? 0) !== 1) {
+                $availability = boycold_get_product_inventory_availability($connect, 0, [$name]);
+                $info = $availability[boycold_inventory_normalize_name($name)] ?? null;
+                if ($info && empty($info['can_order'])) {
+                    response([
+                        'success' => false,
+                        'error' => 'Cannot activate this menu item. One or more required ingredients are insufficient.',
+                        'inventory_reason' => $info['reason'],
+                        'ingredients' => $info['ingredients'],
+                    ], 422);
+                }
+            }
             $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, is_available = ? WHERE id = ?');
             $stmt->bind_param('ssdii', $name, $category, $price, $available, $id);
             $stmt->execute();
