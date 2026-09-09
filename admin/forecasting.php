@@ -298,51 +298,55 @@ while ($row = $branchesResult->fetch_assoc()) {
                 </div>
                 <div class="secondary-grid">
 
-                    <div class="chart-card demand-forecast-card">
-                        <div class="chart-card-header">
-                            <h2 class="chart-card-title">Demand Forecast (Top Menu Items)</h2>
-                            <a href="#" class="view-all-link">View All</a>
-                        </div>
-
-                        <div class="demand-table" id="demandTable">
-                            <div class="demand-table-head">
-                                <span class="demand-col-item">Menu Items</span>
-                                <span class="demand-col-orders">Predicted Orders</span>
-                                <span class="demand-col-trend">Trend</span>
+                    <div class="forecast-left-stack">
+                        <div class="chart-card demand-forecast-card">
+                            <div class="chart-card-header">
+                                <h2 class="chart-card-title">Demand Forecast (Top Menu Items)</h2>
+                                <a href="#" class="view-all-link">View All</a>
                             </div>
-                            <div class="demand-loading">Loading demand data...</div>
-                        </div>
-                    </div>
-                    <div class="chart-card peak-hours-forecast-card">
-                        <div class="chart-card-header">
-                            <h2 class="chart-card-title">Predicted Peak Hours</h2>
-                        </div>
 
-                        <div class="peak-table" id="peakHoursTable">
-                            <div class="peak-table-head">
-                                <span class="peak-col-time">Time</span>
-                                <span class="peak-col-traffic">Expected Traffic</span>
+                            <div class="demand-table" id="demandTable">
+                                <div class="demand-table-head">
+                                    <span class="demand-col-item">Menu Items</span>
+                                    <span class="demand-col-orders">Predicted Orders</span>
+                                    <span class="demand-col-trend">Trend</span>
+                                </div>
+                                <div class="demand-loading">Loading demand data...</div>
                             </div>
-                            <div class="peak-loading">Loading peak hours data...</div>
+                        </div>
+
+                        <div class="insights-card">
+                            <h2 class="insights-title">Insights</h2>
+                            <div class="insights-grid" id="insightsGrid">
+                                <div class="insight-loading">Loading insights...</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-card trending-drinks-card">
-                        <div class="chart-card-header">
-                            <h2 class="chart-card-title">Trending Drinks Prediction</h2>
-                            <a href="#" class="view-all-link">View All</a>
+                    <div class="forecast-side-stack">
+                        <div class="chart-card peak-hours-forecast-card">
+                            <div class="chart-card-header">
+                                <h2 class="chart-card-title">Predicted Peak Hours</h2>
+                            </div>
+
+                            <div class="peak-table" id="peakHoursTable">
+                                <div class="peak-table-head">
+                                    <span class="peak-col-time">Time</span>
+                                    <span class="peak-col-traffic">Expected Traffic</span>
+                                </div>
+                                <div class="peak-loading">Loading peak hours data...</div>
+                            </div>
                         </div>
 
-                        <div class="trending-list" id="trendingList">
-                            <div class="trending-loading">Loading trending data...</div>
+                        <div class="chart-card trending-drinks-card">
+                            <div class="chart-card-header">
+                                <h2 class="chart-card-title">Trending Drinks Prediction</h2>
+                                <a href="#" class="view-all-link">View All</a>
+                            </div>
+
+                            <div class="trending-list" id="trendingList">
+                                <div class="trending-loading">Loading trending data...</div>
+                            </div>
                         </div>
-                    </div>
-
-                </div>
-                <div class="insights-card">
-                    <h2 class="insights-title">Insights</h2>
-
-                    <div class="insights-grid" id="insightsGrid">
-                        <div class="insight-loading">Loading insights...</div>
                     </div>
                 </div>
             </div>

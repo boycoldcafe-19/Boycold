@@ -1357,6 +1357,58 @@ button {
     width:100%;
 }
 
+.quick-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+    margin: 2px 0 22px;
+}
+
+.quick-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    min-height: 58px;
+}
+
+.quick-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    font-size: 17px;
+}
+
+.quick-stat-item > div {
+    min-width: 0;
+}
+
+.quick-stat-label,
+.quick-stat-value {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quick-stat-label {
+    color: var(--text-light);
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.quick-stat-value {
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-top: 2px;
+}
+
 .peak-list {
     list-style: none;
     display: flex;
@@ -1666,6 +1718,11 @@ button {
 
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .quick-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
 
     .trending-item {

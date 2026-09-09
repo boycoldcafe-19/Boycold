@@ -230,8 +230,8 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                             Milk Choice
                         </div>
                         <div class="option-group">
-                            <button class="option active">Original</button>
-                            <button class="option">Oat Milk +₱15</button>
+                            <button class="option active" data-price="0">Original</button>
+                            <button class="option" data-price="15">Oat Milk +₱15</button>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -383,6 +383,22 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
             const qty = parseInt(document.getElementById('qtyValue').textContent) || 1;
             const total = (basePrice + addOnTotal) * qty;
             document.getElementById('totalPrice').textContent = '₱' + total.toFixed(2);
+        }
+
+        function getOptionPrice(button) {
+            const dataPrice = Number(button.dataset.price);
+            if (Number.isFinite(dataPrice)) return dataPrice;
+            const match = button.textContent.match(/\+₱([\d.]+)/);
+            return match ? parseFloat(match[1]) : 0;
+        }
+
+        function recalculateOptionSurcharges() {
+            const milkPrice = document.querySelector('#section-milk .option.active')
+                ? getOptionPrice(document.querySelector('#section-milk .option.active'))
+                : 0;
+            const addonPrice = [...document.querySelectorAll('#section-addons .option.active')]
+                .reduce((total, button) => total + getOptionPrice(button), 0);
+            addOnTotal = milkPrice + addonPrice;
         }
 
         function updateMiniCard() {
@@ -548,11 +564,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                         group.querySelectorAll('.option').forEach(b => b.classList.remove('active'));
                         this.classList.add('active');
                     }
-                    addOnTotal = 0;
-                    document.querySelectorAll('#section-addons .option.active').forEach(b => {
-                        const match = b.textContent.match(/\+₱(\d+)/);
-                        if (match) addOnTotal += parseInt(match[1]);
-                    });
+                    recalculateOptionSurcharges();
                     recalcTotal();
                     updateMiniCard();
                 });
