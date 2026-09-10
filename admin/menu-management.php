@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/menu-management.css">
+    <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -22,7 +23,7 @@
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="/public/assets/icons/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">B<span class="special-letter">o</span><span
@@ -128,6 +129,7 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+
                         <li>
                             <a href="loyalty-card.php">
                                 <span class="nav-icon"><svg width="22" height="18" viewBox="0 0 22 18" fill="none"
@@ -164,7 +166,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="logout-link" id="logoutBtn">
+                            <a href="logout.php" class="logout-link" id="logoutBtn">
                                 <span class="nav-icon">
                                     <i class="fa-solid fa-right-from-bracket"></i>
                                 </span>

@@ -56,6 +56,7 @@ if ($reportQuery) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/feedback.css">
+    <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -66,8 +67,8 @@ if ($reportQuery) {
     <div class="feedback-shell">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <span class="brand-mark" aria-hidden="true"><img src="/public/assets/icons/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt=""></span>
-                <span class="brand-text"><span class="brand-name">BoyCold Cafe</span><span class="brand-sub">Administration Panel</span></span>
+                <span class="brand-mark" aria-hidden="true"><img src="../img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt=""></span>
+                <span class="brand-text"><span class="brand-name">B<span class="special-letter">o</span><span class="special-letter-2">y</span>C<span class="special-letter">o</span>LD CAFE</span><span class="brand-sub">Administration Panel</span></span>
             </div>
             <nav class="sidebar-nav" aria-label="Admin navigation">
                 <div class="nav-top">
@@ -83,6 +84,7 @@ if ($reportQuery) {
                     <ul>
                         <li><a href="menu-management.php"><span class="nav-icon"><i class="fa-solid fa-bars"></i></span><span class="nav-label">Menu Management</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li><a href="customers.php"><span class="nav-icon"><i class="fa-solid fa-users"></i></span><span class="nav-label">Customers</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
+
                         <li><a href="loyalty-card.php"><span class="nav-icon"><i class="fa-solid fa-id-card"></i></span><span class="nav-label">Loyalty Card</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li><a href="feedback.php" class="active"><span class="nav-icon"><i class="fa-solid fa-star"></i></span><span class="nav-label">Feedback &amp; Reviews</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                     </ul>
@@ -177,6 +179,7 @@ if ($reportQuery) {
         <img id="reportPhotoModalImage" alt="Customer report attachment preview">
     </div>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/logout-modal.js"></script>
     <script>
         const reportPhotoModal = document.getElementById('reportPhotoModal');
         const reportPhotoModalImage = document.getElementById('reportPhotoModalImage');

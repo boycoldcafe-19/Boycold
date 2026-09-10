@@ -1,10 +1,6 @@
 <?php
-header('Location: ../User/login.php');
-exit;
-
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../config/session_config.php';
+boycold_start_session();
 require_once __DIR__ . '/../config/db_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {

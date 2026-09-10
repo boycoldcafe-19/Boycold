@@ -8,6 +8,7 @@ require_once __DIR__ . '/admin_guard.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/adminsettings.css">
+    <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -26,7 +27,7 @@ require_once __DIR__ . '/admin_guard.php';
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="/public/assets/icons/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
                     <span class="brand-name">B<span class="special-letter">o</span><span
@@ -132,6 +133,7 @@ require_once __DIR__ . '/admin_guard.php';
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+
                         <li>
                             <a href="loyalty-card.php">
                                 <span class="nav-icon"><svg width="22" height="18" viewBox="0 0 22 18" fill="none"
@@ -143,6 +145,13 @@ require_once __DIR__ . '/admin_guard.php';
                                             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                                     </svg></span>
                                 <span class="nav-label">Loyalty Card</span>
+                                <i class="fa-solid fa-chevron-right nav-chevron"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="feedback.php">
+                                <span class="nav-icon"><i class="fa-solid fa-star"></i></span>
+                                <span class="nav-label">Feedback &amp; Reviews</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
@@ -161,7 +170,7 @@ require_once __DIR__ . '/admin_guard.php';
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="logout-link" id="logoutBtn">
+                            <a href="logout.php" class="logout-link" id="logoutBtn">
                                 <span class="nav-icon">
                                     <i class="fa-solid fa-right-from-bracket"></i>
                                 </span>
@@ -181,7 +190,7 @@ require_once __DIR__ . '/admin_guard.php';
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z" fill="black"/>
+                            <path d="M8.75737 25.5989C10.0298 24.6259 11.452 23.8589 13.0238 23.298C14.5957 22.7372 16.2424 22.4562 17.964 22.4552C19.6855 22.4542 21.3322 22.7352 22.9041 23.298C24.4759 23.8609 25.8981 24.6279 27.1705 25.5989C28.0438 24.576 28.7239 23.4158 29.211 22.1184C29.698 20.821 29.941 19.4363 29.94 17.9642C29.94 14.6458 28.7738 11.82 26.4415 9.48666C24.1092 7.15332 21.2833 5.98715 17.964 5.98815C14.6446 5.98915 11.8187 7.15582 9.48641 9.48815C7.15408 11.8205 5.98791 14.6458 5.98791 17.9642C5.98791 19.4363 6.23142 20.821 6.71845 22.1184C7.20547 23.4158 7.88512 24.576 8.75737 25.5989ZM14.2409 17.9447C13.2299 16.9358 12.7244 15.6947 12.7244 14.2217C12.7244 12.7486 13.2299 11.5071 14.2409 10.4971C15.2519 9.48715 16.4929 8.98216 17.964 8.98216C19.435 8.98216 20.6765 9.48765 21.6885 10.4986C22.7005 11.5096 23.2055 12.7506 23.2035 14.2217C23.2015 15.6927 22.6965 16.9343 21.6885 17.9462C20.6805 18.9582 19.439 19.4632 17.964 19.4612C16.4889 19.4592 15.2474 18.9542 14.2394 17.9462M17.964 32.9343C15.8931 32.9343 13.947 32.541 12.1256 31.7546C10.3043 30.9682 8.71995 29.9018 7.37264 28.5555C6.02534 27.2092 4.95897 25.6249 4.17354 23.8025C3.38811 21.9802 2.9949 20.0341 2.9939 17.9642C2.9929 15.8943 3.38611 13.9482 4.17354 12.1259C4.96096 10.3035 6.02733 8.71919 7.37264 7.37288C8.71795 6.02658 10.3023 4.96021 12.1256 4.17378C13.949 3.38735 15.8951 2.99414 17.964 2.99414C20.0328 2.99414 21.9789 3.38735 23.8023 4.17378C25.6256 4.96021 27.21 6.02658 28.5553 7.37288C29.9006 8.71919 30.9675 10.3035 31.7559 12.1259C32.5443 13.9482 32.937 15.8943 32.934 17.9642C32.931 20.0341 32.5378 21.9802 31.7544 23.8025C30.9709 25.6249 29.9046 27.2092 28.5553 28.5555C27.206 29.9018 25.6216 30.9687 23.8023 31.7561C21.9829 32.5435 20.0368 32.9363 17.964 32.9343Z" fill="black" />
                         </svg>
                     </div>
                     <div class="profile-info">
@@ -206,18 +215,7 @@ require_once __DIR__ . '/admin_guard.php';
                     </div>
 
                     <div class="profile-section-body">
-                        <!-- Upload Image Box -->
-                        <div class="upload-box">
-                            <img id="profileImagePreview" class="preview-img" alt="Profile Preview">
-                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                            <span class="upload-title">Upload Image</span>
-                            <span class="upload-sub">PNG, JPG, WEBP up to 5mb</span>
-                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp"
-                                style="display: none;">
-                            <button class="choose-btn" onclick="document.getElementById('imageInput').click()">
-                                <i class="fa-regular fa-image"></i> Choose Image
-                            </button>
-                        </div>
+
 
                         <!-- Info Fields -->
                         <div class="profile-info-fields">
@@ -295,7 +293,7 @@ require_once __DIR__ . '/admin_guard.php';
                     </button>
 
                     <div class="logout-logo">
-                        <img src="/public/assets/icons/LOGO.png" alt="BoyCold Cafe">
+                        <img src="../img/LOGO.png" alt="BoyCold Cafe">
                     </div>
 
                     <h2>
@@ -324,8 +322,6 @@ require_once __DIR__ . '/admin_guard.php';
 
     <!-- SCRIPT FOR DROPDOWNS AND INTERACTIVE FORM ACTIONS -->
     <script>
-
-
         const logoutBtn = document.getElementById("logoutBtn");
         const logoutModal = document.getElementById("logoutModal");
         const logoutNo = document.getElementById("logoutNo");
@@ -344,7 +340,7 @@ require_once __DIR__ . '/admin_guard.php';
         }
 
         if (logoutBtn) {
-            logoutBtn.addEventListener("click", function (e) {
+            logoutBtn.addEventListener("click", function(e) {
                 e.preventDefault();
                 // Optionally toggle visual highlight only while modal is active:
                 // logoutBtn.classList.add("active");
@@ -355,26 +351,26 @@ require_once __DIR__ . '/admin_guard.php';
         }
 
         if (logoutNo) {
-            logoutNo.addEventListener("click", function () {
+            logoutNo.addEventListener("click", function() {
                 closeLogoutModal();
             });
         }
 
         if (logoutClose) {
-            logoutClose.addEventListener("click", function () {
+            logoutClose.addEventListener("click", function() {
                 closeLogoutModal();
             });
         }
 
         if (logoutYes) {
-            logoutYes.addEventListener("click", function () {
-                    window.location.href = "logout.php";
+            logoutYes.addEventListener("click", function() {
+                window.location.href = "logout.php";
             });
         }
 
         /* Close when clicking outside the popup modal */
         if (logoutModal) {
-            logoutModal.addEventListener("click", function (e) {
+            logoutModal.addEventListener("click", function(e) {
                 if (e.target === logoutModal) {
                     closeLogoutModal();
                 }
@@ -385,7 +381,7 @@ require_once __DIR__ . '/admin_guard.php';
         const imageInput = document.getElementById('imageInput');
         const profileImagePreview = document.getElementById('profileImagePreview');
 
-        imageInput.addEventListener('change', function (e) {
+        imageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 if (file.size > 5 * 1024 * 1024) {
@@ -393,7 +389,7 @@ require_once __DIR__ . '/admin_guard.php';
                     return;
                 }
                 const reader = new FileReader();
-                reader.onload = function (event) {
+                reader.onload = function(event) {
                     profileImagePreview.src = event.target.result;
                     profileImagePreview.style.display = 'block';
                 };
@@ -420,7 +416,7 @@ require_once __DIR__ . '/admin_guard.php';
                 if (result.settings.avatar) profileImagePreview.src = result.settings.avatar;
             });
 
-        editProfileBtn.addEventListener('click', function () {
+        editProfileBtn.addEventListener('click', function() {
             isEditingProfile = !isEditingProfile;
             if (isEditingProfile) {
                 editProfileBtn.innerText = 'Save Profile';
@@ -435,10 +431,15 @@ require_once __DIR__ . '/admin_guard.php';
                     return;
                 }
                 fetch('admin_data_api.php?action=settings_profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ full_name: nameInput.value, email: emailInput.value })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            full_name: nameInput.value,
+                            email: emailInput.value
+                        })
+                    })
                     .then(response => response.json())
                     .then(result => {
                         if (!result.success) throw new Error(result.error || 'Profile update failed');
@@ -465,7 +466,7 @@ require_once __DIR__ . '/admin_guard.php';
         const newPassword = document.getElementById('newPassword');
         const confirmPassword = document.getElementById('confirmPassword');
 
-        changePasswordBtn.addEventListener('click', function () {
+        changePasswordBtn.addEventListener('click', function() {
             const currVal = currentPassword.value.trim();
             const newVal = newPassword.value.trim();
             const confirmVal = confirmPassword.value.trim();
@@ -481,13 +482,15 @@ require_once __DIR__ . '/admin_guard.php';
             }
 
             fetch('admin_data_api.php?action=settings_password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    current_password: currVal,
-                    new_password: newVal
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currVal,
+                        new_password: newVal
+                    })
                 })
-            })
                 .then(response => response.json())
                 .then(result => {
                     if (!result.success) throw new Error(result.error || 'Password update failed');

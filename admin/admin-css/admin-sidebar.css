@@ -1,0 +1,173 @@
+/* Shared admin sidebar: keeps every admin page on the same navigation design. */
+.sidebar {
+    width: 300px;
+    height: 100vh;
+    flex: 0 0 300px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: #000;
+    color: #fff;
+    border-right: 1px solid #c4c1c1;
+    overflow: hidden;
+    transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+}
+
+.sidebar-brand {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    height: 110px;
+    padding: 18px 20px;
+}
+
+.brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 74px;
+    height: 70px;
+    overflow: hidden;
+}
+
+.brand-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.brand-name {
+    color: #fff;
+    font-family: 'Gaegu', cursive;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.brand-sub {
+    color: #fff;
+    font-family: 'Gaegu', cursive;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+}
+
+.special-letter {
+    position: relative;
+    top: -2px;
+}
+
+.special-letter-2 {
+    position: relative;
+    top: -7px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px 10px;
+    overflow-y: auto;
+}
+
+.nav-top {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.sidebar-nav ul,
+.sidebar-nav ul li {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar-nav ul li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 20px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.sidebar-nav ul li a.active {
+    background: #692727;
+}
+
+.sidebar-nav ul li a:not(.active):hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-icon,
+.nav-icon1,
+.nav-icon2 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.nav-icon svg {
+    width: 25px;
+    height: 25px;
+}
+
+.nav-icon1 svg {
+    width: 23px;
+    height: 23px;
+}
+
+.nav-icon2 svg {
+    width: 24px;
+    height: 24px;
+}
+
+.nav-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-chevron {
+    flex-shrink: 0;
+    font-size: 11px;
+    opacity: 0.55;
+}
+
+.sidebar-divider {
+    height: 1px;
+    margin: 14px 20px;
+    background: #726969;
+}
+
+.sidebar-nav ul li a.logout-link,
+.logout-link {
+    color: #e53935 !important;
+}

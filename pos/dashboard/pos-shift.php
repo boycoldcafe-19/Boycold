@@ -67,22 +67,6 @@ if ($shiftResult) {
   $currentShift = $shiftResult;
 }
 
-$historyStmt = $connect->prepare(
-  "SELECT s.shift_date, s.opened_at, s.closed_at, s.status, s.total_sales, s.total_orders,
-      s.open_reason, s.close_reason,
-      GROUP_CONCAT(DISTINCT e.event_type ORDER BY e.created_at SEPARATOR ', ') AS events
-   FROM shift_logs s
-   LEFT JOIN shift_events e ON e.shift_id = s.id
-   WHERE s.branch_id = ?
-   GROUP BY s.id
-   ORDER BY s.shift_date DESC, s.id DESC
-   LIMIT 20"
-);
-$historyStmt->bind_param('i', $branchId);
-$historyStmt->execute();
-$shiftHistory = $historyStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$historyStmt->close();
-
 // Handle API requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   header('Content-Type: application/json');
@@ -564,45 +548,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <button class="btn-primary danger" id="closeShiftBtn">Close Shift</button>
         </section>
 
-        <section class="shift-history" aria-labelledby="shiftHistoryTitle">
-          <div class="shift-history-header">
-            <h2 id="shiftHistoryTitle">Shift History</h2>
-            <span><?= count($shiftHistory) ?> recorded shifts</span>
-          </div>
-          <div class="shift-history-table-wrap">
-            <table class="shift-history-table">
-              <thead>
-                <tr>
-                  <th>Sales Day</th>
-                  <th>Opened</th>
-                  <th>Closed</th>
-                  <th>Status</th>
-                  <th>Total Sales</th>
-                  <th>Orders</th>
-                  <th>Audit Event</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($shiftHistory as $history): ?>
-                  <tr>
-                    <td><?= htmlspecialchars((string) $history['shift_date']) ?></td>
-                    <td><?= htmlspecialchars((string) $history['opened_at']) ?></td>
-                    <td><?= htmlspecialchars((string) ($history['closed_at'] ?? '—')) ?></td>
-                    <td><?= htmlspecialchars(strtoupper((string) $history['status'])) ?></td>
-                    <td>₱<?= number_format((float) $history['total_sales'], 2) ?></td>
-                    <td><?= (int) $history['total_orders'] ?></td>
-                    <td><?= htmlspecialchars((string) ($history['events'] ?? '—')) ?></td>
-                  </tr>
-                <?php endforeach; ?>
-                <?php if (!$shiftHistory): ?>
-                  <tr>
-                    <td colspan="7">No shift history yet.</td>
-                  </tr>
-                <?php endif; ?>
-              </tbody>
-            </table>
-          </div>
-        </section>
       </main>
     </div>
   </div>
@@ -1301,6 +1246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       Notifications.init();
       Shift.init();
       Clock.init();
+
     });
   </script>
   <script src="inventory-warning.js"></script>

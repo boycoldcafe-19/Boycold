@@ -475,6 +475,7 @@ button {
     display:flex;
     flex-direction:column;
     position: relative;
+    padding: 32px;
 }
 
 .top-header {
@@ -913,6 +914,7 @@ button {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 24px;
+    margin-top: 16px;
 }
 
 .page-title h1 {
@@ -930,6 +932,7 @@ button {
 .search-box {
     position: relative;
     width: 320px;
+    margin-top: 8px;
 }
 
 .search-box i {

@@ -51,7 +51,7 @@ document.addEventListener('click', function(e) {
 });
 
 // ── CATEGORY FILTER + SEARCH ──────────────────────────────────
-let activeCategory = 'popular'; // tracks the currently active tab
+let activeCategory = 'coffee'; // tracks the currently active tab
 
 function applyFilters(query, category) {
     const q = query.trim().toLowerCase();

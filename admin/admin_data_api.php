@@ -119,11 +119,14 @@ try {
                            u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar,
                            COUNT(DISTINCT o.id) AS order_count
                     FROM users u
-                    LEFT JOIN orders o ON o.user_id = u.id OR (o.user_id IS NULL AND o.user_name = u.user_name)
+                    LEFT JOIN orders o ON o.user_id = u.id
                     GROUP BY u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
                              u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar
                     ORDER BY u.created_at DESC";
             $result = $connect->query($sql);
+            if (!$result) {
+                response(['success' => false, 'error' => 'Database query failed: ' . $connect->error], 500);
+            }
             $customers = [];
             while ($row = $result->fetch_assoc()) $customers[] = $row;
             response(['success' => true, 'customers' => $customers]);

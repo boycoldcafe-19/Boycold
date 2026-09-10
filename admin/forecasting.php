@@ -19,6 +19,7 @@ while ($row = $branchesResult->fetch_assoc()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/forecasting.css">
+    <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../pos/img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -39,10 +40,10 @@ while ($row = $branchesResult->fetch_assoc()) {
 
             <div class="sidebar-brand">
                 <span class="brand-mark" aria-hidden="true">
-                    <img src="../pos/img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
+                    <img src="../img/ChatGPT Image Jun 23, 2026, 09_22_57 PM 1.png" alt="">
                 </span>
                 <span class="brand-text">
-                    <span class="brand-name">BoyCold Cafe</span>
+                    <span class="brand-name">B<span class="special-letter">o</span><span class="special-letter-2">y</span>C<span class="special-letter">o</span>LD CAFE</span>
                     <span class="brand-sub">Administration Panel</span>
                 </span>
             </div>
@@ -111,6 +112,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+
                         <li>
                             <a href="loyalty-card.php">
                                 <span class="nav-icon"><svg width="22" height="18" viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.75 8.75C0.75 4.979 0.75 3.093 1.922 1.922C3.094 0.751 4.979 0.75 8.75 0.75H12.75C16.521 0.75 18.407 0.75 19.578 1.922C20.749 3.094 20.75 4.979 20.75 8.75C20.75 12.521 20.75 14.407 19.578 15.578C18.406 16.749 16.521 16.75 12.75 16.75H8.75C4.979 16.75 3.093 16.75 1.922 15.578C0.751 14.406 0.75 12.521 0.75 8.75Z" stroke="currentColor" stroke-width="1.5"/><path d="M8.75 12.75H4.75M12.75 12.75H11.25M0.75 6.75H20.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -140,7 +142,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="logout-link">
+                            <a href="logout.php" class="logout-link">
                                 <span class="nav-icon">
                                     <i class="fa-solid fa-right-from-bracket"></i>
                                 </span>
@@ -1189,6 +1191,7 @@ while ($row = $branchesResult->fetch_assoc()) {
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/logout-modal.js"></script>
 </body>
 </html>
 

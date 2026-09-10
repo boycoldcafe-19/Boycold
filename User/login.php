@@ -2,6 +2,7 @@
 require_once '../config/google.php';
 require_once '../config/db_config.php';
 require_once __DIR__ . '/../config/session_config.php';
+boycold_start_session('PHPSESSID');
 require_once __DIR__ . '/../pos/auth/guard.php';
 
 function clearPosSessionIfPresent(): void
@@ -122,6 +123,55 @@ function authenticateAdminEmployee(mysqli $connect, string $email, string $passw
     return $admin;
 }
 
+function recordEmployeeLogin(mysqli $connect, array $employee): void
+{
+    $tableCheck = $connect->query("SHOW TABLES LIKE 'login_logs'");
+    if (!$tableCheck || $tableCheck->num_rows === 0) {
+        return;
+    }
+
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown device';
+    $browser = 'Unknown browser';
+    $operatingSystem = 'Unknown OS';
+
+    if (preg_match('/Edg\/([\d.]+)/i', $userAgent)) {
+        $browser = 'Microsoft Edge';
+    } elseif (preg_match('/Chrome\/([\d.]+)/i', $userAgent)) {
+        $browser = 'Google Chrome';
+    } elseif (preg_match('/Firefox\/([\d.]+)/i', $userAgent)) {
+        $browser = 'Mozilla Firefox';
+    } elseif (preg_match('/Safari\/([\d.]+)/i', $userAgent)) {
+        $browser = 'Safari';
+    }
+
+    if (preg_match('/Windows NT/i', $userAgent)) {
+        $operatingSystem = 'Windows';
+    } elseif (preg_match('/Android/i', $userAgent)) {
+        $operatingSystem = 'Android';
+    } elseif (preg_match('/iPhone|iPad/i', $userAgent)) {
+        $operatingSystem = 'iOS';
+    } elseif (preg_match('/Mac OS X/i', $userAgent)) {
+        $operatingSystem = 'macOS';
+    } elseif (preg_match('/Linux/i', $userAgent)) {
+        $operatingSystem = 'Linux';
+    }
+
+    $stmt = $connect->prepare(
+        'INSERT INTO login_logs (employee_id, branch_id, ip_address, browser, operating_system, login_status)
+            VALUES (?, NULLIF(?, 0), ?, ?, ?, \'success\')'
+    );
+    if (!$stmt) {
+        return;
+    }
+
+    $employeeId = (int) ($employee['id'] ?? 0);
+    $branchId = (int) ($employee['branch_id'] ?? 0);
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+    $stmt->bind_param('iisss', $employeeId, $branchId, $ipAddress, $browser, $operatingSystem);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function startUnifiedAdminSession(array $admin): void
 {
     clearPosSessionIfPresent();
@@ -157,8 +207,14 @@ function hasActiveAdminSession(mysqli $connect): bool
     return $active;
 }
 
-$error = $_SESSION['google_error'] ?? '';
-unset($_SESSION['google_error']);
+function usersHasAccountStatusColumn(mysqli $connect): bool
+{
+    $result = $connect->query("SHOW COLUMNS FROM users LIKE 'account_status'");
+    return $result instanceof mysqli_result && $result->num_rows > 0;
+}
+
+$error = $_SESSION['google_error'] ?? $_SESSION['login_error'] ?? '';
+unset($_SESSION['google_error'], $_SESSION['login_error']);
 $verified = isset($_GET['verified']);
 $reset    = isset($_GET['reset']);
 
@@ -182,6 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sendAuthResponse(false, 'login.php', 'This admin account has been deactivated.');
             }
 
+            recordEmployeeLogin($connect, $admin);
             startUnifiedAdminSession($admin);
             sendAuthResponse(true, '../admin/dashboard.php');
         }
@@ -193,12 +250,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sendAuthResponse(false, '../pos/auth/flashscreen.php', 'This POS account has been deactivated.');
             }
 
+            recordEmployeeLogin($connect, $employee);
             startUnifiedPosSession($employee);
             sendAuthResponse(true, '../pos/auth/flashscreen.php');
         }
 
         if ($error === '') {
-            $stmt = $connect->prepare("SELECT id, firstname, lastname, user_name, password, account_status FROM users WHERE email=? AND is_verified=1");
+            $hasAccountStatus = usersHasAccountStatusColumn($connect);
+            $userFields = $hasAccountStatus
+                ? 'id, firstname, lastname, user_name, password, account_status'
+                : 'id, firstname, lastname, user_name, password';
+            $stmt = $connect->prepare("SELECT $userFields FROM users WHERE email=? AND is_verified=1");
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $user = $stmt->get_result()->fetch_assoc();
@@ -294,7 +356,7 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
 
         <div class="remember-row">
             <label class="remember-label" for="Remember">
-                <input type="checkbox" id="Remember" name="remember" <?= $savedEmail ? 'checked' : '' ?> required>
+                <input type="checkbox" id="Remember" name="remember" <?= $savedEmail ? 'checked' : '' ?>>
                 Remember me</label>
             <a href="forgotpass.php" class="forgot">Forgot Password?</a>
         </div>

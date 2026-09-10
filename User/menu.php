@@ -135,8 +135,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
         <div class="background"></div>
         <div class="box">
             <ul>
-                <li><a href="#" data-filter="popular" class="active">Popular</a></li>
-                <li><a href="#" data-filter="coffee">Coffee</a></li>
+                <li><a href="#" data-filter="coffee" class="active">Coffee</a></li>
                 <li><a href="#" data-filter="non-coffee">Non-Coffee</a></li>
                 <li><a href="#" data-filter="matcha-fusion">Matcha Fusion</a></li>
                 <li><a href="#" data-filter="smoothie">Smoothie</a></li>
@@ -159,7 +158,6 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                 </div>
                 <div class="product-grid" id="productGrid">
                     <?php
-                    $popularProducts = ['americano', 'cafe latte', 'spanish latte', 'sea salt latte', 'french vanilla', 'white mocha', 'mont blanc', 'horchata', 'ocean mist', 'cheesecake latte', 'dark mocha', 'biscoff creamy latte', 'caramel macchiato', 'salted caramel', 'einspanner latte', 'strawberry milk', 'blueberry milk', 'milky oreo', 'choco berry', 'choco banana pudding', 'choco vanilla cookie', 'strawberry matcha', 'matcha banana pudding', 'biscoff matcha', 'mango matcha', 'sea salt matcha', 'matcha freddo', 'matcha latte', 'ube matcha', 'cheesecake matcha', 'strawberry smoothie', 'berry mango', 'tropical matcha yogurt', 'ube yogurt', 'blueberry', 'mango graham', 'hershey delight', 'ube frappe', 'oreo frappe', 'matcha frappe', 'java chips', 'cheesecake frappe', 'black forrest', 'biscoff frappe', 'honey gochujang katsu', 'dak galbi', 'salted egg fish fillet', 'cheezy fries', 'fries and chicken tenders', 'onion rings', 'nachos', 'chicken alfredo', 'chicken pesto', 'aglio olio', 'carbonara', 'lolly waffle biscoff', 'lolly waffle chocolate', 'lolly waffle matcha', 'lolly waffle strawberry', 'lolly waffle oreo', 'lolly waffle tiramisu', 'chicken quesadilla', 'beef quesadilla']; // Add more popular product names here (lowercase)
                     if (!empty($productsList)) {
                         foreach ($productsList as $product) {
                             $id    = htmlspecialchars($product['id']);
@@ -180,15 +178,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                             };
                             $category = htmlspecialchars($categoryValue);
 
-                            // Normalize for comparison: trim whitespace, lowercase
-                            $normalizedName = strtolower(trim($product['product_name']));
-                            $isPopular = in_array($normalizedName, $popularProducts, true);
-
-                            // Add "popular" to category if product is in popular list
                             $dataCategory = $category;
-                            if ($isPopular) {
-                                $dataCategory .= ' popular';
-                            }
                     ?>
 
                             <div class="product-card"
@@ -205,11 +195,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                                 <div class="card-image">
                                     <div class="card-image-placeholder">
                                         <div class="card-top">
-                                            <?php if ($isPopular): ?>
-                                                <span class="card-badge">Popular<i class="fa-solid fa-star"></i></span>
-                                            <?php else: ?>
-                                                <span></span>
-                                            <?php endif; ?>
+                                            <span></span>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
                                         <?php if (strpos($image, '/public/') === 0): ?>

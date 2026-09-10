@@ -2,14 +2,18 @@
 require_once '../config/db_config.php';
 
 $reviews = [];
-$reviewQuery = $connect->query("SELECT r.rating, r.review, r.created_at,
-                                       CONCAT(u.firstname, ' ', u.lastname) AS customer_name
-                                FROM order_reviews r
-                                INNER JOIN users u ON u.id = r.user_id
-                                ORDER BY r.created_at DESC, r.id DESC
-                                LIMIT 12");
-if ($reviewQuery) {
-    while ($row = $reviewQuery->fetch_assoc()) $reviews[] = $row;
+if ($reviewTable = $connect->query("SHOW TABLES LIKE 'order_reviews'")) {
+    if ($reviewTable->num_rows > 0) {
+        $reviewQuery = $connect->query("SELECT r.rating, r.review, r.created_at,
+                                               CONCAT(u.firstname, ' ', u.lastname) AS customer_name
+                                        FROM order_reviews r
+                                        INNER JOIN users u ON u.id = r.user_id
+                                        ORDER BY r.created_at DESC, r.id DESC
+                                        LIMIT 12");
+        if ($reviewQuery) {
+            while ($row = $reviewQuery->fetch_assoc()) $reviews[] = $row;
+        }
+    }
 }
 ?>
 <html lang="en">

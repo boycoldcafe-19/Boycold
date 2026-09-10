@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once '../config/session_config.php';
+boycold_start_session();
 header('Content-Type: application/json');
 
 // ── 1. Auth guard ──────────────────────────────────────────
@@ -52,7 +53,15 @@ if ($file['size'] > $maxSize) {
 // ── 6. Ensure upload directory exists ──────────────────────
 $uploadDir = __DIR__ . '/uploads/avatars/';
 if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
+    if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        echo json_encode(['success' => false, 'error' => 'Upload directory could not be created. Check Hostinger folder permissions.']);
+        exit;
+    }
+}
+
+if (!is_writable($uploadDir)) {
+    echo json_encode(['success' => false, 'error' => 'Upload directory is not writable. Set the User/uploads/avatars folder permission to 755 or 775.']);
+    exit;
 }
 
 // ── 7. Generate safe unique filename ───────────────────────
@@ -70,6 +79,11 @@ if (!move_uploaded_file($file['tmp_name'], $destPath)) {
 $webPath = 'uploads/avatars/' . $filename;
 
 $stmt = $connect->prepare("UPDATE users SET avatar = ? WHERE id = ?");
+if (!$stmt) {
+    @unlink($destPath);
+    echo json_encode(['success' => false, 'error' => 'Could not prepare the profile update.']);
+    exit;
+}
 $stmt->bind_param("si", $webPath, $userId);
 $success = $stmt->execute();
 

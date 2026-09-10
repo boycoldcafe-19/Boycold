@@ -14,7 +14,7 @@ if (!isset($_SESSION['employee_id'])) {
 $employeeId = (int) $_SESSION['employee_id'];
 
 // Fetch fresh employee data from DB to validate session
-$stmt = $connect->prepare("SELECT id, employee_name, email, pin, is_active, branch_id FROM employees WHERE id=?");
+$stmt = $connect->prepare("SELECT id, employee_name, email, password, pin, is_active, branch_id FROM employees WHERE id=?");
 $stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $employee = $stmt->get_result()->fetch_assoc();
@@ -67,6 +67,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_password') {
+    header('Content-Type: application/json');
+
+    $currentPassword = (string) ($_POST['current_password'] ?? '');
+    $newPassword = (string) ($_POST['new_password'] ?? '');
+    $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+    $errors = [];
+
+    if ($currentPassword === '' || !password_verify($currentPassword, $employee['password'])) {
+        $errors['current_password'] = 'Current password is incorrect.';
+    }
+    if (strlen($newPassword) < 8) {
+        $errors['new_password'] = 'New password must be at least 8 characters.';
+    }
+    if ($newPassword !== $confirmPassword) {
+        $errors['confirm_password'] = 'Password confirmation does not match.';
+    }
+    if (!$errors && password_verify($newPassword, $employee['password'])) {
+        $errors['new_password'] = 'New password must be different from your current password.';
+    }
+
+    if ($errors) {
+        echo json_encode(['success' => false, 'errors' => $errors]);
+        exit;
+    }
+
+    $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+    $passwordStmt = $connect->prepare('UPDATE employees SET password = ? WHERE id = ? AND is_active = 1');
+    $passwordStmt->bind_param('si', $hashedPassword, $employeeId);
+    $updated = $passwordStmt->execute();
+    $passwordStmt->close();
+
+    echo json_encode($updated
+        ? ['success' => true, 'message' => 'Password changed successfully.']
+        : ['success' => false, 'errors' => ['form' => 'Unable to change password. Please try again.']]
+    );
+    exit;
+}
+
 // Reconcile missed 2:00 AM boundaries and use the shared branch shift.
 $branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
 pos_reconcile_branch_shift($connect, $branchId, $employeeId);
@@ -92,6 +131,29 @@ $branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
 
 // Get employee name for display
 $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] : 'Cashier';
+
+$lastLoginText = 'No recorded login';
+$deviceText = 'Unknown device';
+$loginTableCheck = $connect->query("SHOW TABLES LIKE 'login_logs'");
+if ($loginTableCheck && $loginTableCheck->num_rows > 0) {
+    $loginStmt = $connect->prepare(
+        'SELECT login_datetime, browser, operating_system
+         FROM login_logs
+         WHERE employee_id = ? AND login_status = \'success\'
+         ORDER BY login_datetime DESC, id DESC
+         LIMIT 1'
+    );
+    $loginStmt->bind_param('i', $employeeId);
+    $loginStmt->execute();
+    $lastLogin = $loginStmt->get_result()->fetch_assoc();
+    $loginStmt->close();
+
+    if ($lastLogin) {
+        $lastLoginDate = new DateTimeImmutable($lastLogin['login_datetime'], new DateTimeZone('Asia/Manila'));
+        $lastLoginText = $lastLoginDate->format('M j, Y g:i A');
+        $deviceText = trim(($lastLogin['browser'] ?? '') . ' on ' . ($lastLogin['operating_system'] ?? ''));
+    }
+}
 
 if ($branchId > 0) {
     $branchStmt = $connect->prepare("SELECT branch_name FROM branches WHERE id = ?");
@@ -310,33 +372,17 @@ if ($branchId > 0) {
 
                 <div class="settings-grid">
 
-                    <!-- Profile -->
-                    <section class="settings-card">
-                        <div class="settings-card-header">
-                            <h2>Profile</h2>
-                            <p>Upload your profile picture</p>
-                        </div>
-                        <div class="avatar-upload">
-                            <div class="avatar-circle">
-                                <i class="fa-solid fa-user"></i>
-                                <span class="avatar-camera"><i class="fa-solid fa-camera"></i></span>
-                            </div>
-                            <button type="button" class="btn-outline">Change Picture</button>
-                            <p class="avatar-hint">JPG, PNG or WEBP, Max size of 2MB.</p>
-                        </div>
-                    </section>
-
                     <!-- Change Password -->
                     <section class="settings-card">
                         <div class="settings-card-header">
                             <h2>Change Password</h2>
                             <p>Update your account password</p>
                         </div>
-                        <form class="password-form">
+                        <form class="password-form" id="passwordForm" novalidate>
                             <div class="password-group">
                                 <label for="currentPassword">Current Password</label>
                                 <div class="password-field">
-                                    <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter your current password">
+                                    <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" placeholder="Enter your current password" required>
                                     <button type="button" class="toggle-visibility" aria-label="Show password">
                                         <i class="fa-regular fa-eye"></i>
                                     </button>
@@ -346,7 +392,7 @@ if ($branchId > 0) {
                             <div class="password-group">
                                 <label for="newPassword">New Password</label>
                                 <div class="password-field">
-                                    <input type="password" id="newPassword" name="newPassword" placeholder="Enter your new password">
+                                    <input type="password" id="newPassword" name="new_password" autocomplete="new-password" minlength="8" placeholder="Enter your new password" required>
                                     <button type="button" class="toggle-visibility" aria-label="Show password">
                                         <i class="fa-regular fa-eye"></i>
                                     </button>
@@ -356,14 +402,15 @@ if ($branchId > 0) {
                             <div class="password-group">
                                 <label for="confirmPassword">Confirm New Password</label>
                                 <div class="password-field">
-                                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your new password">
+                                    <input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="8" placeholder="Confirm your new password" required>
                                     <button type="button" class="toggle-visibility" aria-label="Show password">
                                         <i class="fa-regular fa-eye"></i>
                                     </button>
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-solid">Update Password</button>
+                            <p class="form-message" id="passwordMessage" role="status" aria-live="polite"></p>
+                            <button type="submit" class="btn-solid" id="changePasswordBtn">Update Password</button>
                         </form>
                     </section>
 
@@ -442,14 +489,13 @@ if ($branchId > 0) {
                         <dl class="settings-info-list">
                             <div>
                                 <dt>Last Log In</dt>
-                                <dd>May 25, 2026 &nbsp; 10:10 AM</dd>
+                                <dd><?= htmlspecialchars($lastLoginText) ?></dd>
                             </div>
                             <div>
                                 <dt>Device</dt>
-                                <dd>Chrome on Windows</dd>
+                                <dd><?= htmlspecialchars($deviceText) ?></dd>
                             </div>
                         </dl>
-                        <button type="button" class="btn-danger-outline">Log out from this device</button>
                     </section>
 
                     <!-- About -->
@@ -527,6 +573,43 @@ if ($branchId > 0) {
                 pinMessage.classList.add('error');
             } finally {
                 submitButton.disabled = false;
+            }
+        });
+
+        const passwordForm = document.getElementById('passwordForm');
+        const passwordMessage = document.getElementById('passwordMessage');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+        passwordForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            passwordMessage.textContent = '';
+            passwordMessage.className = 'form-message';
+            changePasswordBtn.disabled = true;
+
+            try {
+                const formData = new FormData(passwordForm);
+                formData.append('action', 'change_password');
+                const response = await fetch('pos-settings.php', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    passwordMessage.textContent = Object.values(data.errors || {})[0] || 'Unable to change password.';
+                    passwordMessage.classList.add('error');
+                    return;
+                }
+
+                passwordMessage.textContent = data.message;
+                passwordMessage.classList.add('success');
+                passwordForm.reset();
+            } catch (error) {
+                passwordMessage.textContent = 'Unable to change password. Please try again.';
+                passwordMessage.classList.add('error');
+            } finally {
+                changePasswordBtn.disabled = false;
             }
         });
         

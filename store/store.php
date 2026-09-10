@@ -22,8 +22,7 @@ if ($avatarRaw !== '' && !preg_match('#^(https?://|/)#', $avatarRaw)) {
 }
 $avatar    = $avatarRaw !== '' ? htmlspecialchars($avatarRaw) : '';
 
-$branchResult = $connect->query("SELECT id, branch_code, branch_name, address FROM branches WHERE status = 'active' ORDER BY branch_name");
-$branchData = $branchResult ? $branchResult->fetch_all(MYSQLI_ASSOC) : [];
+
 
 $_SESSION['user_name']  = $user['Firstname'] . ' ' . $user['Lastname'];
 $_SESSION['user_email'] = $user['email'];
@@ -137,8 +136,7 @@ $_SESSION['user_email'] = $user['email'];
                     <label for="citySelect">Choose your city</label>
                     <div class="select-wrapper">
                         <select id="citySelect" onchange="onCityChange()">
-                            <option value="baliwag">Baliwag</option>
-                            <option value="bustos">Bustos</option>
+                            <!-- Options will be populated dynamically -->
                         </select>
                         <i class="fa-solid fa-chevron-down select-arrow"></i>
                     </div>
@@ -149,7 +147,7 @@ $_SESSION['user_email'] = $user['email'];
                     <label for="shopSelect">Choose shop address</label>
                     <div class="select-wrapper">
                         <select id="shopSelect" onchange="onShopChange()">
-                            <option value="0">BoyCold Cafe Baliwag</option>
+                            <!-- Options will be populated dynamically -->
                         </select>
                         <i class="fa-solid fa-chevron-down select-arrow"></i>
                     </div>
@@ -215,7 +213,6 @@ $_SESSION['user_email'] = $user['email'];
             </div>
         </footer>
 
-    <script>window.BOYCOLD_BRANCHES = <?= json_encode($branchData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../store/location.js"></script>
 </body>

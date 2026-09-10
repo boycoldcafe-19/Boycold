@@ -562,6 +562,7 @@ CREATE TABLE `users` (
   `google_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `auth_provider` enum('local','google') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'local',
   `is_verified` tinyint NOT NULL DEFAULT '0',
+  `account_status` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
   `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -569,7 +570,8 @@ CREATE TABLE `users` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `loyalty_beans` int NOT NULL DEFAULT '0',
-  `loyalty_stamps` int NOT NULL DEFAULT '0'
+  `loyalty_stamps` int NOT NULL DEFAULT '0',
+  `loyalty_card_status` enum('active','inactive','completed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
