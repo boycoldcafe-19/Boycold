@@ -3882,10 +3882,6 @@
                                 <option value="quesadilla">Quesadilla</option>
                             </select>
                         </div>
-                        <div class="field">
-                            <label>Product Code / SKU <span class="optional">(Optional)</span></label>
-                            <input type="text" id="productCode" placeholder="e.g. COF-001">
-                        </div>
                     </div>
 
                     <div class="panel">
@@ -3945,7 +3941,7 @@
 
                     <div class="panel">
                         <div class="panel-header-row">
-                            <h3>Add-ons / Modifiers</h3>
+                            <h3>Add-ons / Modifiers <span class="optional">(Optional)</span></h3>
                             <button type="button" class="btn-addon" id="addAddonBtn">
                                 <i class="fa-solid fa-plus"></i> Add
                             </button>
@@ -3955,16 +3951,7 @@
                             <span>Price</span>
                         </div>
                         <div class="addon-list" id="addonList">
-                            <div class="addon-row">
-                                <input type="text" class="addon-name" placeholder="e.g. Extra Espresso Shot"
-                                    value="Extra Espresso Shot">
-                                <div class="addon-price-wrap">
-                                    <div class="price-input"><span>₱</span><input type="number" class="addon-price"
-                                            value="30.00" step="0.01"></div>
-                                    <button class="addon-remove" type="button" aria-label="Remove add-on"><i
-                                            class="fa-solid fa-xmark"></i></button>
-                                </div>
-                            </div>
+                            <!-- Add-ons will be populated based on category -->
                         </div>
                     </div>
 
@@ -4644,6 +4631,126 @@
             const imagePreview = document.getElementById('imagePreview');
             const imagePreviewBox = document.getElementById('imagePreviewBox');
             const imageDeleteBtn = document.getElementById('imageDeleteBtn');
+
+            // Category-specific add-ons
+            const categoryAddons = {
+                'coffee': [
+                    { name: 'Extra Espresso Shot', price: '30.00' },
+                    { name: 'Extra Shot', price: '30.00' },
+                    { name: 'Whipped Cream', price: '20.00' },
+                    { name: 'Oat Milk', price: '15.00' },
+                    { name: 'Almond Milk', price: '15.00' },
+                    { name: 'Soy Milk', price: '15.00' }
+                ],
+                'non-coffee': [
+                    { name: 'Whipped Cream', price: '20.00' },
+                    { name: 'Extra Syrup', price: '15.00' },
+                    { name: 'Chocolate Drizzle', price: '25.00' }
+                ],
+                'matcha-fusion': [
+                    { name: 'Extra Matcha', price: '30.00' },
+                    { name: 'Whipped Cream', price: '20.00' },
+                    { name: 'Red Bean', price: '25.00' }
+                ],
+                'smoothie': [
+                    { name: 'Extra Protein', price: '35.00' },
+                    { name: 'Chia Seeds', price: '15.00' },
+                    { name: 'Honey', price: '10.00' }
+                ],
+                'frappe-series': [
+                    { name: 'Extra Blend', price: '30.00' },
+                    { name: 'Whipped Cream', price: '20.00' },
+                    { name: 'Oreo Crumble', price: '25.00' }
+                ],
+                'rice-meal': [
+                    { name: 'Extra Rice', price: '25.00' },
+                    { name: 'Egg', price: '20.00' },
+                    { name: 'Sauce', price: '10.00' }
+                ],
+                'light-snack': [
+                    { name: 'Extra Cheese', price: '20.00' },
+                    { name: 'Bacon', price: '30.00' }
+                ],
+                'pasta': [
+                    { name: 'Extra Pasta', price: '35.00' },
+                    { name: 'Extra Sauce', price: '20.00' },
+                    { name: 'Garlic Bread', price: '25.00' }
+                ],
+                'waffle': [
+                    { name: 'Ice Cream', price: '30.00' },
+                    { name: 'Chocolate Syrup', price: '15.00' },
+                    { name: 'Whipped Cream', price: '20.00' }
+                ],
+                'quesadilla': [
+                    { name: 'Extra Cheese', price: '25.00' },
+                    { name: 'Guacamole', price: '20.00' },
+                    { name: 'Sour Cream', price: '15.00' }
+                ]
+            };
+
+            // Function to populate add-ons based on category
+            function populateAddons(category) {
+                const addonList = document.getElementById('addonList');
+                if (!addonList) return;
+
+                addonList.innerHTML = '';
+                const addons = categoryAddons[category] || [];
+
+                addons.forEach(addon => {
+                    const addonRow = document.createElement('div');
+                    addonRow.className = 'addon-row';
+                    addonRow.innerHTML = `
+                        <input type="text" class="addon-name" placeholder="Add-on name" value="${addon.name}">
+                        <div class="addon-price-wrap">
+                            <div class="price-input"><span>₱</span><input type="number" class="addon-price" value="${addon.price}" step="0.01"></div>
+                            <button class="addon-remove" type="button" aria-label="Remove add-on"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    `;
+                    addonList.appendChild(addonRow);
+                });
+
+                // Add remove button functionality
+                addonList.querySelectorAll('.addon-remove').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        this.closest('.addon-row').remove();
+                    });
+                });
+            }
+
+            // Populate add-ons when category changes
+            const productCategory = document.getElementById('productCategory');
+            if (productCategory) {
+                productCategory.addEventListener('change', function() {
+                    populateAddons(this.value);
+                });
+                // Initial population
+                populateAddons(productCategory.value);
+            }
+
+            // Add new add-on button
+            const addAddonBtn = document.getElementById('addAddonBtn');
+            if (addAddonBtn) {
+                addAddonBtn.addEventListener('click', function() {
+                    const addonList = document.getElementById('addonList');
+                    if (!addonList) return;
+
+                    const addonRow = document.createElement('div');
+                    addonRow.className = 'addon-row';
+                    addonRow.innerHTML = `
+                        <input type="text" class="addon-name" placeholder="Add-on name">
+                        <div class="addon-price-wrap">
+                            <div class="price-input"><span>₱</span><input type="number" class="addon-price" placeholder="0.00" step="0.01"></div>
+                            <button class="addon-remove" type="button" aria-label="Remove add-on"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    `;
+                    addonList.appendChild(addonRow);
+
+                    // Add remove functionality to new button
+                    addonRow.querySelector('.addon-remove').addEventListener('click', function() {
+                        addonRow.remove();
+                    });
+                });
+            }
 
             if (productImageInput && imagePreview && imagePreviewBox) {
                 productImageInput.addEventListener('change', (e) => {

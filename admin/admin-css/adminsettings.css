@@ -636,7 +636,7 @@ button {
 
 /* PAGE SPECIFIC STYLES MATCHING THE REFERENCE IMAGE */
 .settings-content-wrapper {
-    padding: 10px 40px;
+    padding: 8px 40px;
     display: flex;
     flex-direction: column;
     gap: 10px;

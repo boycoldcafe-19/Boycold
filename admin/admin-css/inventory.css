@@ -471,7 +471,7 @@ button {
    ========================================================== */
 
 .inventory-content {
-    padding: 32px;
+    padding: 8px 32px;
     display: flex;
     flex-direction: column;
     gap: 22px;

@@ -301,6 +301,131 @@ function boycold_inventory_ingredient_status(float $stock, float $minStock, floa
     return 'sufficient';
 }
 
+/**
+ * Return the number of complete servings an ingredient can still make.
+ *
+ * Stock is always read from the inventory record.  Invalid or negative stock
+ * cannot produce a serving, so it is deliberately treated as zero here.
+ * A non-positive recipe amount is not a valid serving calculation and returns
+ * null instead of incorrectly reporting an out-of-stock ingredient.
+ */
+function boycold_inventory_remaining_servings(float $stock, float $requiredPerServing): ?int
+{
+    if (!is_finite($requiredPerServing) || $requiredPerServing <= 0) {
+        return null;
+    }
+
+    $availableStock = is_finite($stock) && $stock > 0 ? $stock : 0.0;
+    return max(0, (int) floor($availableStock / $requiredPerServing));
+}
+
+/**
+ * Forecasting uses one serving threshold everywhere: no warning above 25,
+ * restock at 10-25, and critical at 0-9 complete servings remaining.
+ */
+function boycold_inventory_restock_status(?int $remainingServings): string
+{
+    if ($remainingServings === null || $remainingServings > 25) {
+        return 'ok';
+    }
+
+    return $remainingServings <= 9 ? 'critical' : 'soon';
+}
+
+/**
+ * Build ingredient serving capacities from the live Inventory stock and the
+ * existing product_ingredients recipe quantities.  When one ingredient is
+ * used by more than one recipe, the largest quantity used by a single serving
+ * is used so the displayed capacity never overstates what can be produced.
+ */
+function boycold_get_ingredient_restock_capacities(mysqli $connect, int $branchId = 0): array
+{
+    boycold_ensure_inventory_schema($connect);
+
+    $mappingResult = $connect->query(
+        "SELECT i.name AS ingredient_name, pi.amount
+         FROM product_ingredients pi
+         INNER JOIN ingredients i ON i.id = pi.ingredient_id
+         WHERE pi.amount > 0"
+    );
+
+    $requiredByIngredientName = [];
+    while ($mappingResult && ($row = $mappingResult->fetch_assoc())) {
+        $name = (string) ($row['ingredient_name'] ?? '');
+        $key = boycold_inventory_normalize_name($name);
+        $amount = (float) ($row['amount'] ?? 0);
+        if ($key === '' || !is_finite($amount) || $amount <= 0) {
+            continue;
+        }
+
+        // A shared ingredient has no single product mix.  Use the most
+        // demanding mapped serving as the safe, recipe-based capacity.
+        if (!isset($requiredByIngredientName[$key]) || $amount > $requiredByIngredientName[$key]['amount']) {
+            $requiredByIngredientName[$key] = [
+                'name' => $name,
+                'amount' => $amount,
+            ];
+        }
+    }
+
+    if (!$requiredByIngredientName) {
+        return [];
+    }
+
+    if ($branchId > 0) {
+        $ingredientStmt = $connect->prepare(
+            'SELECT id, name, unit, branch_id, stock FROM ingredients WHERE branch_id = ? ORDER BY name, id'
+        );
+        $ingredientStmt->bind_param('i', $branchId);
+        $ingredientStmt->execute();
+        $ingredientResult = $ingredientStmt->get_result();
+    } else {
+        $ingredientResult = $connect->query(
+            'SELECT id, name, unit, branch_id, stock FROM ingredients ORDER BY name, branch_id, id'
+        );
+    }
+
+    $capacities = [];
+    while ($ingredientResult && ($row = $ingredientResult->fetch_assoc())) {
+        $key = boycold_inventory_normalize_name((string) ($row['name'] ?? ''));
+        $recipe = $requiredByIngredientName[$key] ?? null;
+        if (!$recipe) {
+            // There is no mapped per-serving quantity, so a serving capacity
+            // cannot be calculated from the inventory data.
+            continue;
+        }
+
+        $rawStock = (float) ($row['stock'] ?? 0);
+        $availableStock = is_finite($rawStock) && $rawStock > 0 ? $rawStock : 0.0;
+        $remainingServings = boycold_inventory_remaining_servings($rawStock, (float) $recipe['amount']);
+        if ($remainingServings === null) {
+            continue;
+        }
+
+        $capacities[] = [
+            'ingredient_id' => (int) $row['id'],
+            'name' => (string) $row['name'],
+            'unit' => (string) ($row['unit'] ?? ''),
+            'branch_id' => isset($row['branch_id']) ? (int) $row['branch_id'] : null,
+            'stock' => round($availableStock, 3),
+            'required_per_serving' => round((float) $recipe['amount'], 3),
+            'remaining_servings' => $remainingServings,
+            'status' => boycold_inventory_restock_status($remainingServings),
+        ];
+    }
+
+    if (isset($ingredientStmt)) {
+        $ingredientStmt->close();
+    }
+
+    usort($capacities, static function (array $a, array $b): int {
+        $servingComparison = $a['remaining_servings'] <=> $b['remaining_servings'];
+        return $servingComparison !== 0 ? $servingComparison : strcasecmp($a['name'], $b['name']);
+    });
+
+    return $capacities;
+}
+
 function boycold_inventory_add_requirement(array &$requirements, array $ingredient, float $amount, string $sourceName): void
 {
     if ($amount <= 0 || empty($ingredient['id'])) {
@@ -650,7 +775,7 @@ function boycold_get_product_inventory_availability(
             $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
             $stock = (float) ($ingredient['stock'] ?? 0);
             $minStock = (float) ($ingredient['min_stock'] ?? 0);
-            $servings = $amount > 0 ? (int) floor($stock / $amount) : 0;
+            $servings = boycold_inventory_remaining_servings($stock, $amount) ?? 0;
 
             if ($availableServings === null || $servings < $availableServings) {
                 $availableServings = $servings;

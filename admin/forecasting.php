@@ -247,7 +247,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 <div class="chart-card restock-list-card" id="restockListCard">
                     <div class="chart-card-header">
                         <h2 class="chart-card-title">Ingredients to Restock</h2>
-                        <span class="restock-list-caption" id="restockListCaption">Based on mapped recipes and forecasted demand</span>
+                        <span class="restock-list-caption" id="restockListCaption">Live Inventory capacity from mapped recipes (25 servings or fewer)</span>
                     </div>
                     <div class="restock-list" id="restockList">
                         <div class="restock-list-empty">Loading restock recommendations...</div>
@@ -541,17 +541,13 @@ while ($row = $branchesResult->fetch_assoc()) {
                 ['Branch', branchLabel.trim()]
             ];
 
-            const restockRows = ((exportData.restock_items || []).map(item => [
+            const restockRows = (exportData.restock_items || []).map(item => [
                 item.name,
-                item.status,
+                item.status === 'critical' ? 'Critical' : 'Restock',
+                `${Math.max(0, Math.floor(Number(item.remaining_servings) || 0)).toLocaleString('en-US')} servings`,
                 `${Number(item.stock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim(),
-                `${Number(item.recommended_restock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim()
-            ])).length ? ((exportData.restock_items || []).map(item => [
-                item.name,
-                item.status,
-                `${Number(item.stock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim(),
-                `${Number(item.recommended_restock || 0).toLocaleString('en-US')} ${item.unit || ''}`.trim()
-            ])) : [['No restock needs', '-', '-', '-']];
+            ]);
+            const restockTableRows = restockRows.length ? restockRows : [['No restock needs', '-', '-', '-']];
 
             const demandRows = ((exportData.demand_forecast || []).map(item => [
                 item.product_name,
@@ -609,8 +605,8 @@ while ($row = $branchesResult->fetch_assoc()) {
             doc.autoTable({
                 startY: restockStartY + 4,
                 margin: { left: marginX, right: marginX },
-                head: [['Item', 'Status', 'Stock', 'Recommended Restock']],
-                body: restockRows,
+                head: [['Item', 'Status', 'Servings Left', 'Available Stock']],
+                body: restockTableRows,
                 styles: { font: 'helvetica', fontSize: 7.8, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
                 headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
                 alternateRowStyles: { fillColor: [247, 245, 243] }
@@ -691,7 +687,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
         function updateRestockList(items) {
             const list = document.getElementById('restockList');
-            const restockItems = (items || []).filter(item => item.status !== 'ok');
+            const restockItems = (items || []).filter(item => Number(item.remaining_servings) <= 25 && item.status !== 'ok');
             list.innerHTML = '';
 
             if (!restockItems.length) {
@@ -702,12 +698,14 @@ while ($row = $branchesResult->fetch_assoc()) {
             restockItems.forEach(item => {
                 const row = document.createElement('div');
                 row.className = `restock-list-row restock-list-${item.status}`;
-                const days = Number(item.days_remaining) >= 999 ? 'No recent usage' : `${item.days_remaining} days left`;
-                const quantity = Number(item.recommended_restock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+                const servings = Math.max(0, Math.floor(Number(item.remaining_servings) || 0));
+                const status = item.status === 'critical'
+                    ? (servings === 0 ? 'Critical / Insufficient' : 'Critical Restock')
+                    : 'Restock';
                 row.innerHTML = `
-                    <div class="restock-list-name"><i class="fa-solid fa-triangle-exclamation"></i><strong>${item.name}</strong><span>${item.stock.toLocaleString()} ${item.unit} remaining</span></div>
-                    <span class="restock-list-days">${days}</span>
-                    <span class="restock-list-quantity">Restock ${quantity} ${item.unit}</span>
+                    <div class="restock-list-name"><i class="fa-solid fa-triangle-exclamation"></i><strong>${item.name}</strong><span>${servings} serving${servings === 1 ? '' : 's'} left</span></div>
+                    <span class="restock-list-days">${status}</span>
+                    <span class="restock-list-quantity">${Number(item.stock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${item.unit || ''} available</span>
                 `;
                 list.appendChild(row);
             });

@@ -29,7 +29,7 @@ a { color: inherit; text-decoration: none; }
 .nav-chevron { font-size: 11px; opacity: .55; flex-shrink: 0; }
 .sidebar-divider { height: 1px; margin: 14px 20px; background: #726969; }
 .logout-link { color: #e53935 !important; }
-.feedback-main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 64px) 42px; }
+.feedback-main { flex: 1; min-width: 0; padding: 8px clamp(20px, 4vw, 64px) 42px; }
 .feedback-main.top-header { padding: 0 clamp(20px, 4vw, 64px) 42px; height: auto; min-height: 80px; justify-content: space-between; }
 .feedback-header, .section-heading, .review-card-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 h1, h2, p { margin: 0; }

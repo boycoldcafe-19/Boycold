@@ -475,7 +475,7 @@ button {
     display:flex;
     flex-direction:column;
     position: relative;
-    padding: 32px;
+    padding: 8px 32px 32px;
 }
 
 .top-header {

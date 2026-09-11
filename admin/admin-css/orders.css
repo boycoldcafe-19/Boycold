@@ -840,7 +840,7 @@ button {
    ========================================================== */
 
 .orders-content {
-    padding: 32px 36px;
+    padding: 8px 36px;
     display: flex;
     flex-direction: column;
     gap: 20px;

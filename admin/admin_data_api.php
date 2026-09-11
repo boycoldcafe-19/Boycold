@@ -177,8 +177,21 @@ try {
             $id = (int)($data['id'] ?? 0);
             $status = $data['status'] ?? '';
             if ($id < 1 || !in_array($status, ['active', 'inactive', 'completed'], true)) response(['success' => false, 'error' => 'Invalid loyalty update'], 422);
-            $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ? WHERE id = ?');
-            $stmt->bind_param('si', $status, $id);
+            
+            // Check if users table has account_status column
+            $columnCheck = $connect->query("SHOW COLUMNS FROM users LIKE 'account_status'");
+            $hasAccountStatus = $columnCheck && $columnCheck->num_rows > 0;
+            
+            if ($hasAccountStatus) {
+                // Update both loyalty card status and account status
+                $accountStatus = ($status === 'active') ? 'active' : 'inactive';
+                $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ?, account_status = ? WHERE id = ?');
+                $stmt->bind_param('ssi', $status, $accountStatus, $id);
+            } else {
+                // Only update loyalty card status
+                $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ? WHERE id = ?');
+                $stmt->bind_param('si', $status, $id);
+            }
             $stmt->execute();
             response(['success' => true]);
 
