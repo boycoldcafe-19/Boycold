@@ -26,7 +26,7 @@ if (!isset($_SESSION['branch_id'])) {
 // Fetch all products from DB
 boycold_ensure_inventory_schema($connect);
 $branchId = (int) $_SESSION['branch_id'];
-$productsResult = $connect->query("SELECT id, product_name, price, image, category FROM products WHERE is_available = 1 ORDER BY category, product_name");
+$productsResult = $connect->query("SELECT id, product_name, price, image, category, popular_category FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsList = [];
 while ($productsResult && ($row = $productsResult->fetch_assoc())) {
     $productsList[] = $row;
@@ -135,7 +135,8 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
         <div class="background"></div>
         <div class="box">
             <ul>
-                <li><a href="#" data-filter="coffee" class="active">Coffee</a></li>
+                <li><a href="#" data-filter="popular" class="active">Popular</a></li>
+                <li><a href="#" data-filter="coffee">Coffee</a></li>
                 <li><a href="#" data-filter="non-coffee">Non-Coffee</a></li>
                 <li><a href="#" data-filter="matcha-fusion">Matcha Fusion</a></li>
                 <li><a href="#" data-filter="smoothie">Smoothie</a></li>
@@ -177,12 +178,15 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                                 default => $categoryValue,
                             };
                             $category = htmlspecialchars($categoryValue);
+                            $popularCategory = strtolower(trim((string) ($product['popular_category'] ?? '')));
+                            $popularCategory = htmlspecialchars($popularCategory);
 
                             $dataCategory = $category;
                     ?>
 
                             <div class="product-card"
                                 data-category="<?= $dataCategory ?>"
+                                data-popular-category="<?= $popularCategory ?>"
                                 data-id="<?= strtolower(str_replace(' ', '-', $name)) ?>"
                                 data-product-id="<?= $id ?>"
                                 data-product-name="<?= $name ?>"
@@ -195,7 +199,11 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                                 <div class="card-image">
                                     <div class="card-image-placeholder">
                                         <div class="card-top">
-                                            <span></span>
+                                            <?php if ($popularCategory !== ''): ?>
+                                                <span class="card-badge">Popular</span>
+                                            <?php else: ?>
+                                                <span></span>
+                                            <?php endif; ?>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
                                         <?php if (strpos($image, '/public/') === 0): ?>

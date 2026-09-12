@@ -46,9 +46,10 @@ if (!$hasRequestedDateRange) {
     }
 }
 
+$defaultStartDate = date('Y-m-d', strtotime($defaultEndDate . ' -6 days'));
 $startDate = analyticsDateOrDefault(
     $_GET['start_date'] ?? null,
-    date('Y-m-d', strtotime($defaultEndDate . ' -6 days'))
+    $defaultStartDate
 );
 $endDate = analyticsDateOrDefault($_GET['end_date'] ?? null, $defaultEndDate);
 if ($startDate > $endDate) {
@@ -64,6 +65,38 @@ $prevStartDate = $previousPeriodEnd->modify('-' . max(0, $periodDays - 1) . ' da
 $selectedPeriodLabel = $startDate === $endDate
     ? date('M j, Y', strtotime($startDate))
     : date('M j', strtotime($startDate)) . ' - ' . date('M j, Y', strtotime($endDate));
+
+function analyticsPreviousRange(string $rangeStart, string $rangeEnd): array
+{
+    $periodDays = (int) ((strtotime($rangeEnd) - strtotime($rangeStart)) / 86400) + 1;
+    $previousEnd = (new DateTimeImmutable($rangeStart))->modify('-1 day');
+    return [
+        $previousEnd->modify('-' . max(0, $periodDays - 1) . ' days')->format('Y-m-d'),
+        $previousEnd->format('Y-m-d'),
+    ];
+}
+
+function analyticsRangeLabel(string $rangeStart, string $rangeEnd): string
+{
+    return $rangeStart === $rangeEnd
+        ? date('M j, Y', strtotime($rangeStart))
+        : date('M j', strtotime($rangeStart)) . ' - ' . date('M j, Y', strtotime($rangeEnd));
+}
+
+$timeStartDate = analyticsDateOrDefault($_GET['time_start_date'] ?? null, $defaultStartDate);
+$timeEndDate = analyticsDateOrDefault($_GET['time_end_date'] ?? null, $defaultEndDate);
+if ($timeStartDate > $timeEndDate) {
+    [$timeStartDate, $timeEndDate] = [$timeEndDate, $timeStartDate];
+}
+$peakStartDate = analyticsDateOrDefault($_GET['peak_start_date'] ?? null, $defaultStartDate);
+$peakEndDate = analyticsDateOrDefault($_GET['peak_end_date'] ?? null, $defaultEndDate);
+if ($peakStartDate > $peakEndDate) {
+    [$peakStartDate, $peakEndDate] = [$peakEndDate, $peakStartDate];
+}
+$timeRangeLabel = analyticsRangeLabel($timeStartDate, $timeEndDate);
+$peakRangeLabel = analyticsRangeLabel($peakStartDate, $peakEndDate);
+[$timePrevStartDate, $timePrevEndDate] = analyticsPreviousRange($timeStartDate, $timeEndDate);
+[$peakPrevStartDate, $peakPrevEndDate] = analyticsPreviousRange($peakStartDate, $peakEndDate);
 
 // Fetch available branches
 $branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";
@@ -264,6 +297,8 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
 }
 
 $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $prevEndDate, $branchId);
+$timeAnalytics = getAnalyticsData($connect, $timeStartDate, $timeEndDate, $timePrevStartDate, $timePrevEndDate, $branchId);
+$peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakPrevStartDate, $peakPrevEndDate, $branchId);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -511,7 +546,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             <h2 class="chart-card-title">Sales Overview</h2>
                             <div class="chart-period-select">
                                 <div class="date-range-picker">
-                                    <div class="period-dropdown">
+                                    <div class="period-dropdown" data-range-key="sales">
                                         <button type="button" class="period-trigger">
                                             <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
                                             <i class="fa-solid fa-chevron-down"></i>
@@ -622,9 +657,9 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             <h2 class="chart-card-title">Sales by Time of Day</h2>
                             <div class="chart-period-select">
                                 <div class="date-range-picker">
-                                <div class="period-dropdown">
+                                <div class="period-dropdown" data-range-key="time">
                                     <button type="button" class="period-trigger">
-                                        <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
+                                        <span class="period-trigger-label"><?php echo htmlspecialchars($timeRangeLabel, ENT_QUOTES); ?></span>
                                         <i class="fa-solid fa-chevron-down"></i>
                                     </button>
                                     <div class="period-menu">
@@ -679,9 +714,9 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             <h2 class="chart-card-title">Peak Hours (Orders)</h2>
                             <div class="chart-period-select">
                                 <div class="date-range-picker">
-                                    <div class="period-dropdown">
+                                    <div class="period-dropdown" data-range-key="peak">
                                         <button type="button" class="period-trigger">
-                                            <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
+                                            <span class="period-trigger-label"><?php echo htmlspecialchars($peakRangeLabel, ENT_QUOTES); ?></span>
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </button>
                                         <div class="period-menu">
@@ -727,7 +762,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             if (!empty($analytics['time_of_day'])) {
                                 // Keep the chronological chart dataset intact; Peak Hours gets
                                 // a sorted copy of those same database results.
-                                $peakHours = $analytics['time_of_day'];
+                                $peakHours = $peakAnalytics['time_of_day'];
                                 usort($peakHours, function($a, $b) {
                                     return $b['orders'] - $a['orders'];
                                 });
@@ -799,7 +834,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                                 <i class="fa-regular fa-clock"></i>
                             </span>
                             <div class="insight-content">
-                                <p class="insight-heading">Peak hours at <?php echo !empty($analytics['time_of_day']) ? sprintf('%02d:00', $analytics['time_of_day'][0]['hour']) : 'N/A'; ?></p>
+                                <p class="insight-heading">Peak hours at <?php echo !empty($peakAnalytics['time_of_day']) ? sprintf('%02d:00', $peakAnalytics['time_of_day'][0]['hour']) : 'N/A'; ?></p>
                                 <p class="insight-desc">Prepare your team and stocks before the rush.</p>
                             </div>
                         </div>
@@ -991,6 +1026,9 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
         const endDate = <?php echo json_encode($endDate); ?>;
         const previousStartDate = <?php echo json_encode($prevStartDate); ?>;
         const previousEndDate = <?php echo json_encode($prevEndDate); ?>;
+        const timeAnalyticsData = <?php echo json_encode($timeAnalytics); ?>;
+        const timeStartDate = <?php echo json_encode($timeStartDate); ?>;
+        const timeEndDate = <?php echo json_encode($timeEndDate); ?>;
 
         // Branch dropdown functionality
         const branchTrigger = document.querySelector('.branch-trigger');
@@ -1193,11 +1231,11 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
             const ctx2 = canvas2.getContext('2d');
 
             // Use actual time of day data from analytics
-            const timeLabels = analyticsData.time_of_day.map(t => {
+            const timeLabels = timeAnalyticsData.time_of_day.map(t => {
                 const hour = t.hour;
                 return `${hour}:00 - ${(hour + 1) % 24}:00`;
             });
-            const timeData = analyticsData.time_of_day.map(t => t.orders);
+            const timeData = timeAnalyticsData.time_of_day.map(t => t.orders);
 
             new Chart(ctx2, {
                 type: 'bar',
@@ -1272,10 +1310,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                 // Hook up real data swapping per period here later
             });
         }
-        // ---- Period dropdown (Today / This Week / Custom Range) ----
-        // Each selection updates the URL, which runs the PHP queries again so
-        // Sales Overview, Sales by Time of Day, and Peak Hours stay in sync
-        // with the selected database range and branch.
+        // ---- Independent period dropdowns for each chart ----
         function formatDateParameter(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1312,10 +1347,11 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
             return { start: formatDateParameter(start), end: formatDateParameter(end) };
         }
 
-        function reloadAnalyticsRange(rangeStart, rangeEnd) {
+        function reloadAnalyticsRange(rangeStart, rangeEnd, rangeKey) {
             const url = new URL(window.location.href);
-            url.searchParams.set('start_date', rangeStart);
-            url.searchParams.set('end_date', rangeEnd);
+            const prefix = rangeKey === 'sales' ? '' : `${rangeKey}_`;
+            url.searchParams.set(`${prefix}start_date`, rangeStart);
+            url.searchParams.set(`${prefix}end_date`, rangeEnd);
             window.location.assign(url.toString());
         }
 
@@ -1337,6 +1373,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
         }
 
         document.querySelectorAll('.period-dropdown').forEach(dropdown => {
+            const rangeKey = dropdown.dataset.rangeKey || 'sales';
             const trigger = dropdown.querySelector('.period-trigger');
             const triggerLabel = dropdown.querySelector('.period-trigger-label');
             const menu = dropdown.querySelector('.period-menu');
@@ -1363,7 +1400,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                         return;
                     }
                     const range = analyticsPeriodRange(option.dataset.value);
-                    reloadAnalyticsRange(range.start, range.end);
+                    reloadAnalyticsRange(range.start, range.end, rangeKey);
                 });
             });
         });
@@ -1462,7 +1499,8 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                     const label = dropdown.querySelector('.period-trigger-label');
                     const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     label.textContent = `${fmt(rangeStart)} - ${fmt(rangeEnd)}`;
-                    reloadAnalyticsRange(formatDateParameter(rangeStart), formatDateParameter(rangeEnd));
+                    const rangeKey = dropdown.dataset.rangeKey || 'sales';
+                    reloadAnalyticsRange(formatDateParameter(rangeStart), formatDateParameter(rangeEnd), rangeKey);
                     return;
                 }
                 calendarEl.classList.remove('show', 'align-left', 'drop-up');

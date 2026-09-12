@@ -385,6 +385,7 @@ CREATE TABLE `products` (
   `price` decimal(10,2) NOT NULL DEFAULT '0.00',
   `image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `category` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `popular_category` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_available` tinyint DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -467,7 +468,40 @@ INSERT INTO `products` (`id`, `product_name`, `description`, `price`, `image`, `
 (70, 'Salted Egg Fish Fillet', 'Salted Egg Fish Fillet rice meal', 229.00, '/picture/Salted egg Fish fillet.png', 'rice-meal', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 (71, 'Fries & Chicken Tenders', 'Fries and Chicken tenders', 219.00, '/picture/Fries and Chicken tenders.png', 'light-snack', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 (72, 'Nachos', 'Nachos', 179.00, '/picture/Nachos.png', 'light-snack', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-(73, 'Aglio Olio', 'Aglio Olio pasta', 239.00, '/picture/Aglio olio sardines 1.png', 'pasta', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+(73, 'Aglio Olio', 'Aglio Olio pasta', 239.00, '/picture/Aglio olio sardines 1.png', 'pasta', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(74, 'Biscoff Matcha', 'Biscoff matcha fusion', 205.00, '/picture/Biscoff Matcha 1.png', 'matcha-fusion', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(75, 'Black Forrest', 'Black Forrest frappe', 169.00, '/picture/blackforest.png', 'frappe-series', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+UPDATE products
+SET popular_category = CASE LOWER(TRIM(product_name))
+  WHEN 'spanish latte' THEN 'coffee'
+  WHEN 'sea salt latte' THEN 'coffee'
+  WHEN 'caramel macchiato' THEN 'coffee'
+  WHEN 'salted caramel' THEN 'coffee'
+  WHEN 'horchata' THEN 'coffee'
+  WHEN 'ocean mist' THEN 'coffee'
+  WHEN 'creme brulee' THEN 'coffee'
+  WHEN 'biscoff creamy latte' THEN 'coffee'
+  WHEN 'choco vanilla cookie' THEN 'non-coffee'
+  WHEN 'choco banana pudding' THEN 'non-coffee'
+  WHEN 'sea salt matcha' THEN 'matcha-fusion'
+  WHEN 'seasalt matcha' THEN 'matcha-fusion'
+  WHEN 'matcha freddo' THEN 'matcha-fusion'
+  WHEN 'cheesecake matcha' THEN 'matcha-fusion'
+  WHEN 'biscoff matcha' THEN 'matcha-fusion'
+  WHEN 'matcha banana pudding' THEN 'matcha-fusion'
+  WHEN 'hershey delight' THEN 'frappe-series'
+  WHEN 'java chips' THEN 'frappe-series'
+  WHEN 'black forrest' THEN 'frappe-series'
+  ELSE popular_category
+END
+WHERE LOWER(TRIM(product_name)) IN (
+  'spanish latte', 'sea salt latte', 'caramel macchiato', 'salted caramel',
+  'horchata', 'ocean mist', 'creme brulee', 'biscoff creamy latte',
+  'choco vanilla cookie', 'choco banana pudding', 'sea salt matcha',
+  'seasalt matcha', 'matcha freddo', 'cheesecake matcha', 'biscoff matcha',
+  'matcha banana pudding', 'hershey delight', 'java chips', 'black forrest'
+);
 
 -- --------------------------------------------------------
 

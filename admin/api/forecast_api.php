@@ -21,6 +21,8 @@ boycold_ensure_inventory_schema($connect);
 $branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
 $forecastDays = isset($_GET['forecast_days']) ? intval($_GET['forecast_days']) : 14;
 $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_days']) : 28;
+$forecastDays = max(1, min($forecastDays, 90));
+$historicalDays = max(3, min($historicalDays, 365));
 
 // Branch filter
 $branchCondition = '';
@@ -32,6 +34,25 @@ if ($branchId !== 'all') {
     $types .= 'i';
 }
 
+// Use the newest stored order as the forecast anchor when the database is
+// behind the server date. This keeps historical forecasts useful in local and
+// deployed databases that do not receive orders every calendar day.
+$latestOrderQuery = "SELECT MAX(DATE(o.created_at)) AS latest_order_date
+    FROM orders o
+    WHERE o.status NOT IN ('cancelled')
+    $branchCondition";
+$latestStmt = $connect->prepare($latestOrderQuery);
+if ($branchId !== 'all') {
+    $latestStmt->bind_param($types, ...$params);
+}
+$latestStmt->execute();
+$latestOrderDate = (string) ($latestStmt->get_result()->fetch_assoc()['latest_order_date'] ?? '');
+$latestStmt->close();
+$forecastAnchorDate = $latestOrderDate !== '' && $latestOrderDate < date('Y-m-d')
+    ? $latestOrderDate
+    : date('Y-m-d');
+$forecastAnchorSql = "'" . $connect->real_escape_string($forecastAnchorDate) . "'";
+
 // ==========================================
 // 1. DAILY SALES HISTORY (last N days)
 // ==========================================
@@ -41,7 +62,7 @@ $dailySalesQuery = "SELECT
     COUNT(o.id) as total_orders
 FROM orders o
 WHERE o.status NOT IN ('cancelled')
-    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY DATE(o.created_at)
 ORDER BY sale_date ASC";
@@ -67,6 +88,24 @@ while ($row = $result->fetch_assoc()) {
     $historicalDates[] = $row['sale_date'];
 }
 $stmt->close();
+
+// Keep zero-sales days in the series so the regression and chart use a real
+// contiguous database date range instead of only dates that had an order.
+$historicalByDate = [];
+foreach ($historicalSales as $sale) {
+    $historicalByDate[$sale['date']] = $sale;
+}
+$historicalSales = [];
+$historicalStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-' . ($historicalDays - 1) . ' days');
+for ($offset = 0; $offset < $historicalDays; $offset++) {
+    $date = $historicalStart->modify('+' . $offset . ' days')->format('Y-m-d');
+    $historicalSales[] = $historicalByDate[$date] ?? [
+        'date' => $date,
+        'sales' => 0.0,
+        'orders' => 0,
+    ];
+}
+$historicalDates = array_column($historicalSales, 'date');
 
 // ==========================================
 // 2. FORECAST SALES (next N days)
@@ -109,6 +148,9 @@ function computeForecast(array $historicalSales, int $forecastDays): array {
     }
     
     $overallAvg = $sumY / $n;
+    if ($overallAvg <= 0) {
+        return array_fill(0, $forecastDays, 0.0);
+    }
     for ($i = 0; $i < 7; $i++) {
         if ($dayOfWeekCount[$i] > 0) {
             $dayOfWeekPattern[$i] = ($dayOfWeekPattern[$i] / $dayOfWeekCount[$i]) / $overallAvg;
@@ -152,7 +194,7 @@ $demandQuery = "SELECT
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
 WHERE o.status NOT IN ('cancelled')
-    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY oi.product_name
 ORDER BY total_orders DESC
@@ -203,13 +245,13 @@ foreach ($demandItems as $item) {
     
     // Check if this item was in the last 7 days vs the 7 days before that
     $trendQuery = "SELECT 
-        SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent,
-        SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND o.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as previous
+        SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent,
+        SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as previous
     FROM order_items oi
     INNER JOIN orders o ON oi.order_id = o.id
     WHERE o.status NOT IN ('cancelled')
         AND oi.product_name = ?
-        AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+        AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
         $branchCondition";
     
     $stmt = $connect->prepare(str_replace('$branchCondition', $branchCondition, $trendQuery));
@@ -253,7 +295,7 @@ $peakHoursQuery = "SELECT
     COUNT(DISTINCT DATE(o.created_at)) as days_active
 FROM orders o
 WHERE o.status NOT IN ('cancelled')
-    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY HOUR(o.created_at)
 ORDER BY order_count DESC";
@@ -352,12 +394,12 @@ usort($peakHours, function($a, $b) {
 // ==========================================
 $trendingQuery = "SELECT 
     oi.product_name,
-    SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent_7,
-    SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND o.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as prev_7
+    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent_7,
+    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as prev_7
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
 WHERE o.status NOT IN ('cancelled')
-    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
     $branchCondition
 GROUP BY oi.product_name
 HAVING recent_7 > 0 OR prev_7 > 0
@@ -430,14 +472,14 @@ foreach (boycold_get_ingredient_restock_capacities($connect, $branchId === 'all'
 
 // Current week vs previous week comparison
 $weekComparisonQuery = "SELECT 
-    SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN o.total ELSE 0 END) as this_week,
-    SUM(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND o.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN o.total ELSE 0 END) as last_week,
-    COUNT(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week_orders,
-    COUNT(CASE WHEN o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND o.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as last_week_orders
+    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN o.total ELSE 0 END) as this_week,
+    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN o.total ELSE 0 END) as last_week,
+    COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as this_week_orders,
+    COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as last_week_orders
 FROM orders o
 WHERE o.status NOT IN ('cancelled')
     $branchCondition
-    AND o.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)";
+    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)";
 
 $stmt = $connect->prepare($weekComparisonQuery);
 if ($branchId !== 'all') {

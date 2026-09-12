@@ -51,7 +51,7 @@ document.addEventListener('click', function(e) {
 });
 
 // ── CATEGORY FILTER + SEARCH ──────────────────────────────────
-let activeCategory = 'coffee'; // tracks the currently active tab
+let activeCategory = 'popular'; // tracks the currently active tab
 
 function applyFilters(query, category) {
     const q = query.trim().toLowerCase();
@@ -59,8 +59,9 @@ function applyFilters(query, category) {
 
     document.querySelectorAll('.product-card').forEach(card => {
         const cats     = (card.getAttribute('data-category') || '').trim().split(/\s+/).filter(Boolean);
+        const popular  = (card.getAttribute('data-popular-category') || '').trim();
         const name     = (card.getAttribute('data-product-name') || '').toLowerCase();
-        const matchCat = !category || cats.includes(category);
+        const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
         const show     = matchCat && matchQ;
         card.style.display = show ? '' : 'none';
@@ -104,7 +105,10 @@ document.querySelectorAll('.box ul li a').forEach(link => {
         } else {
             // Cleared: restore active category
             const activeLink = document.querySelector('.box ul li a.active');
-            if (activeLink) activeLink.classList.add('active');
+            if (activeLink) {
+                activeCategory = activeLink.getAttribute('data-filter') || 'coffee';
+                activeLink.classList.add('active');
+            }
             applyFilters('', activeCategory);
         }
     });
