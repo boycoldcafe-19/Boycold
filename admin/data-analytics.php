@@ -2,6 +2,9 @@
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
+/**
+ * @param mixed $value
+ */
 function analyticsDateOrDefault($value, string $fallback): string
 {
     if (!is_string($value)) {

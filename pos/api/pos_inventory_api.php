@@ -84,6 +84,9 @@ function getInventory(mysqli $connect, int $branchId): array {
     return ['success' => true, 'inventory' => $inventory];
 }
 
+/**
+ * @param mixed $input
+ */
 function updateInventory(mysqli $connect, int $branchId, $input): array {
     if (!is_array($input)) {
         return ['success' => false, 'error' => 'Invalid inventory data'];
