@@ -129,14 +129,19 @@ $typeCodes = [
 // remains under All, and cancelled has its own tab.
 // "completed" is the final settled state, while cancelled has its own tab.
 function posonline_status_filter(string $status): ?string {
-    return match ($status) {
-        'confirmed' => 'confirmed',
-        'preparing' => 'preparing',
-        'ready', 'delivered' => 'delivery',
-        'completed' => 'completed',
-        'cancelled' => 'cancelled',
-        default => null,
-    };
+    if ($status === 'confirmed') {
+        return 'confirmed';
+    } elseif ($status === 'preparing') {
+        return 'preparing';
+    } elseif ($status === 'ready' || $status === 'delivered') {
+        return 'delivery';
+    } elseif ($status === 'completed') {
+        return 'completed';
+    } elseif ($status === 'cancelled') {
+        return 'cancelled';
+    }
+
+    return null;
 }
 
 function posonline_status_label(string $status): string {

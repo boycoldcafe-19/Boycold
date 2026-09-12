@@ -41,11 +41,11 @@ $categoryStmt->execute();
 $categoryRow = $categoryStmt->get_result()->fetch_assoc();
 $categoryStmt->close();
 $productCategory = strtolower(trim((string) ($categoryRow['category'] ?? '')));
-$productCategory = match ($productCategory) {
-    'bites' => 'light-snack',
-    'waffle' => 'waffles',
-    default => $productCategory,
-};
+if ($productCategory === 'bites') {
+    $productCategory = 'light-snack';
+} elseif ($productCategory === 'waffle') {
+    $productCategory = 'waffles';
+}
 $simpleCategories = ['rice-meal', 'light-snack', 'pasta'];
 $isSimpleCategory = in_array($productCategory, $simpleCategories, true);
 

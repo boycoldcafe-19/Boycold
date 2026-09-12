@@ -67,13 +67,17 @@ function ensureBranches(mysqli $connect): void
 
     foreach (['branch_code', 'branch_name', 'address', 'status'] as $column) {
         if (!columnExists($connect, 'branches', $column)) {
-            $sql = match ($column) {
-                'branch_code' => "ALTER TABLE `branches` ADD COLUMN `branch_code` varchar(20) NOT NULL DEFAULT 'MAIN' AFTER `id`",
-                'branch_name' => "ALTER TABLE `branches` ADD COLUMN `branch_name` varchar(100) NOT NULL DEFAULT 'Main Branch' AFTER `branch_code`",
-                'address' => "ALTER TABLE `branches` ADD COLUMN `address` text DEFAULT NULL AFTER `branch_name`",
-                'status' => "ALTER TABLE `branches` ADD COLUMN `status` enum('active','inactive') NOT NULL DEFAULT 'active' AFTER `address`",
-                default => ''
-            };
+            if ($column === 'branch_code') {
+                $sql = "ALTER TABLE `branches` ADD COLUMN `branch_code` varchar(20) NOT NULL DEFAULT 'MAIN' AFTER `id`";
+            } elseif ($column === 'branch_name') {
+                $sql = "ALTER TABLE `branches` ADD COLUMN `branch_name` varchar(100) NOT NULL DEFAULT 'Main Branch' AFTER `branch_code`";
+            } elseif ($column === 'address') {
+                $sql = "ALTER TABLE `branches` ADD COLUMN `address` text DEFAULT NULL AFTER `branch_name`";
+            } elseif ($column === 'status') {
+                $sql = "ALTER TABLE `branches` ADD COLUMN `status` enum('active','inactive') NOT NULL DEFAULT 'active' AFTER `address`";
+            } else {
+                $sql = '';
+            }
 
             if ($sql !== '') {
                 runSql($connect, $sql, "Added branches.$column");
@@ -122,20 +126,31 @@ function ensureEmployees(mysqli $connect): void
 
     foreach (['firstname', 'lastname', 'employee_name', 'email', 'password', 'pin', 'role', 'is_active', 'branch_id', 'current_device_id', 'last_login_device_id'] as $column) {
         if (!columnExists($connect, 'employees', $column)) {
-            $sql = match ($column) {
-                'firstname' => "ALTER TABLE `employees` ADD COLUMN `firstname` varchar(100) DEFAULT NULL AFTER `id`",
-                'lastname' => "ALTER TABLE `employees` ADD COLUMN `lastname` varchar(100) DEFAULT NULL AFTER `firstname`",
-                'employee_name' => "ALTER TABLE `employees` ADD COLUMN `employee_name` varchar(255) DEFAULT NULL AFTER `lastname`",
-                'email' => "ALTER TABLE `employees` ADD COLUMN `email` varchar(255) NOT NULL AFTER `employee_name`",
-                'password' => "ALTER TABLE `employees` ADD COLUMN `password` varchar(255) NOT NULL AFTER `email`",
-                'pin' => "ALTER TABLE `employees` ADD COLUMN `pin` varchar(255) DEFAULT NULL AFTER `password`",
-                'role' => "ALTER TABLE `employees` ADD COLUMN `role` enum('cashier','admin') NOT NULL DEFAULT 'cashier' AFTER `pin`",
-                'is_active' => "ALTER TABLE `employees` ADD COLUMN `is_active` tinyint NOT NULL DEFAULT 1 AFTER `role`",
-                'branch_id' => "ALTER TABLE `employees` ADD COLUMN `branch_id` int DEFAULT NULL AFTER `updated_at`",
-                'current_device_id' => "ALTER TABLE `employees` ADD COLUMN `current_device_id` int DEFAULT NULL AFTER `branch_id`",
-                'last_login_device_id' => "ALTER TABLE `employees` ADD COLUMN `last_login_device_id` int DEFAULT NULL AFTER `current_device_id`",
-                default => ''
-            };
+            if ($column === 'firstname') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `firstname` varchar(100) DEFAULT NULL AFTER `id`";
+            } elseif ($column === 'lastname') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `lastname` varchar(100) DEFAULT NULL AFTER `firstname`";
+            } elseif ($column === 'employee_name') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `employee_name` varchar(255) DEFAULT NULL AFTER `lastname`";
+            } elseif ($column === 'email') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `email` varchar(255) NOT NULL AFTER `employee_name`";
+            } elseif ($column === 'password') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `password` varchar(255) NOT NULL AFTER `email`";
+            } elseif ($column === 'pin') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `pin` varchar(255) DEFAULT NULL AFTER `password`";
+            } elseif ($column === 'role') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `role` enum('cashier','admin') NOT NULL DEFAULT 'cashier' AFTER `pin`";
+            } elseif ($column === 'is_active') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `is_active` tinyint NOT NULL DEFAULT 1 AFTER `role`";
+            } elseif ($column === 'branch_id') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `branch_id` int DEFAULT NULL AFTER `updated_at`";
+            } elseif ($column === 'current_device_id') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `current_device_id` int DEFAULT NULL AFTER `branch_id`";
+            } elseif ($column === 'last_login_device_id') {
+                $sql = "ALTER TABLE `employees` ADD COLUMN `last_login_device_id` int DEFAULT NULL AFTER `current_device_id`";
+            } else {
+                $sql = '';
+            }
 
             if ($sql !== '') {
                 runSql($connect, $sql, "Added employees.$column");

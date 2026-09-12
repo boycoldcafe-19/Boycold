@@ -172,11 +172,11 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                             $canOrder = !empty($availabilityInfo['can_order']);
                             $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
                             $categoryValue = strtolower(trim((string) ($product['category'] ?? '')));
-                            $categoryValue = match ($categoryValue) {
-                                'bites' => 'light-snack',
-                                'waffle' => 'waffles',
-                                default => $categoryValue,
-                            };
+                            if ($categoryValue === 'bites') {
+                                $categoryValue = 'light-snack';
+                            } elseif ($categoryValue === 'waffle') {
+                                $categoryValue = 'waffles';
+                            }
                             $category = htmlspecialchars($categoryValue);
                             $popularCategory = strtolower(trim((string) ($product['popular_category'] ?? '')));
                             $popularCategory = htmlspecialchars($popularCategory);
