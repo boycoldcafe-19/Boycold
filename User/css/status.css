@@ -86,7 +86,7 @@ html {
 }
 
 .sidebar-nav ul li a:hover {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.4);
 }
@@ -352,6 +352,11 @@ html {
 
 }
 
+.nav-links li a:hover {
+    background: #692727;
+    color: #fff;
+}
+
 
 
 .logo {
@@ -554,7 +559,7 @@ html {
 
 .nav-search:focus-within {
 
-    border-color: #6F4E37;
+    border-color: #692727;
 
     box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.1);
 
@@ -868,7 +873,7 @@ html {
 
 .no-order-banner-btn:hover {
 
-    background: #6F4E37;
+    background: #692727;
 
 }
 
@@ -1362,7 +1367,7 @@ html {
 
 .help-btn:hover {
 
-    border-color: #6F4E37;
+    border-color: #692727;
 
     background: #fdf8f5;
 
@@ -1808,7 +1813,7 @@ html {
 
     outline: none;
 
-    border-color: #6F4E37;
+    border-color: #692727;
 
 }
 
@@ -1914,7 +1919,7 @@ html {
 
     font-weight: 600;
 
-    color: #6F4E37;
+    color: #692727;
 
 }
 
@@ -1940,7 +1945,7 @@ html {
 
 .report-textarea-wrap:focus-within {
 
-    border-color: #6F4E37;
+    border-color: #692727;
 
 }
 
@@ -2023,7 +2028,7 @@ html {
 
 
 .attach-btn:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 
@@ -2469,7 +2474,7 @@ html {
 
     border-radius: 12px;
 
-    background: #6F4E37;
+    background: #692727;
 
     font-family: 'Afacad', sans-serif;
 
@@ -2652,7 +2657,7 @@ footer {
 
 
 .footer-links li a:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 
@@ -2938,7 +2943,7 @@ footer {
     .nav-search.open {
         width: clamp(150px, 55vw, 267px);
         background: #fff;
-        border-color: #6F4E37;
+        border-color: #692727;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         cursor: default;
     }
@@ -2987,7 +2992,7 @@ footer {
 
 
     .nav-search.open i {
-        color: #6F4E37;
+        color: #692727;
     }
 
 

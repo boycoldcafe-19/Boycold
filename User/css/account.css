@@ -78,7 +78,7 @@ html {
 
 .sidebar-nav ul li a:hover,
 .sidebar-nav ul li a.active {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.4);
 }
@@ -214,8 +214,13 @@ html {
     transition: background 0.15s, color 0.15s;
 }
 
+.nav-links li a:hover {
+    background: #692727;
+    color: #fff;
+}
+
 .nav-links li a.active {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .logo {
@@ -280,7 +285,7 @@ html {
 }
 
 .nav-search:focus-within {
-    border-color: #6F4E37;
+    border-color: #692727;
     box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.1);
 }
 
@@ -475,7 +480,7 @@ html {
 }
 
 .edit-inline button.save-btn {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -789,7 +794,7 @@ html {
 }
 
 .card:hover .card-small-icon {
-    color: #6F4E37;
+    color: #692727;
 }
 
 /* ══════════════════════════════
@@ -926,7 +931,7 @@ html {
 
 .s-item:not(.s-logout):hover svg path,
 .s-item:not(.s-logout).s-active svg path {
-    stroke: #6F4E37;
+    stroke: #692727;
 }
 
 .s-item i:first-child {
@@ -948,13 +953,13 @@ html {
 .s-item:not(.s-logout):hover,
 .s-item:not(.s-logout).s-active {
     background: #fdf6ee;
-    border-left-color: #6F4E37;
-    color: #6F4E37;
+    border-left-color: #692727;
+    color: #692727;
 }
 
 .s-item:not(.s-logout):hover i,
 .s-item:not(.s-logout).s-active i {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .s-logout {
@@ -1083,7 +1088,7 @@ html {
 }
 
 .s-fg input:focus {
-    border-color: #6F4E37;
+    border-color: #692727;
 }
 
 .s-frow {
@@ -1097,7 +1102,7 @@ html {
 
 .s-save-btn {
     padding: 10px 24px;
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -1323,7 +1328,7 @@ html {
     }
 
     .nav-search-icon-btn.active {
-        color: #6F4E37;
+        color: #692727;
     }
 
     .nav-search i {
@@ -1340,13 +1345,13 @@ html {
     }
 
     .nav-search.open i {
-        color: #6F4E37;
+        color: #692727;
     }
 
     .nav-search.open {
         width: clamp(150px, 55vw, 267px);
         background: #fff;
-        border-color: #6F4E37;
+        border-color: #692727;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
 
@@ -1469,7 +1474,7 @@ html {
         gap: 8px;
         background: none;
         border: none;
-        color: #6F4E37;
+        color: #692727;
         font-size: 14px;
         font-weight: 700;
         font-family: 'Afacad', sans-serif;

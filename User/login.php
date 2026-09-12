@@ -316,7 +316,7 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
 
 <body>
     <div class="pic1">
-        <img src="../picture/Mask group.png" alt="Sign Up Image" width="690px">
+        <img src="../picture/Mask group.png" alt="Sign Up Image">
     </div>
 
     <div class="hero-banner">

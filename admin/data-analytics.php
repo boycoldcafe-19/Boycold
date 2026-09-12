@@ -2,16 +2,68 @@
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
-// Get date range for analytics (default to the latest rolling seven days)
-$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-6 days'));
-$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
+function analyticsDateOrDefault($value, string $fallback): string
+{
+    if (!is_string($value)) {
+        return $fallback;
+    }
 
-// Get branch filter (default to all branches)
-$branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    return $date && $date->format('Y-m-d') === $value ? $value : $fallback;
+}
 
-// Calculate previous period for comparison
-$prevStartDate = date('Y-m-d', strtotime($startDate . ' -1 week'));
-$prevEndDate = date('Y-m-d', strtotime($endDate . ' -1 week'));
+// Get branch filter (default to all branches).
+$requestedBranchId = $_GET['branch_id'] ?? 'all';
+$branchId = is_string($requestedBranchId) && ctype_digit($requestedBranchId) && (int) $requestedBranchId > 0
+    ? (string) (int) $requestedBranchId
+    : 'all';
+
+// Get date range for analytics. With no user-selected range, show the latest
+// seven-day window that contains sales instead of an empty current-week view
+// when the database's newest order is from an earlier date.
+$today = date('Y-m-d');
+$hasRequestedDateRange = isset($_GET['start_date']) || isset($_GET['end_date']);
+$defaultEndDate = $today;
+if (!$hasRequestedDateRange) {
+    $latestOrderQuery = "SELECT DATE(MAX(created_at)) AS latest_order_date
+                         FROM orders
+                         WHERE status != 'cancelled'";
+    if ($branchId !== 'all') {
+        $latestOrderQuery .= ' AND branch_id = ?';
+    }
+
+    $latestOrderStmt = $connect->prepare($latestOrderQuery);
+    if ($branchId !== 'all') {
+        $branchParam = (int) $branchId;
+        $latestOrderStmt->bind_param('i', $branchParam);
+    }
+    $latestOrderStmt->execute();
+    $latestOrderDate = (string) ($latestOrderStmt->get_result()->fetch_assoc()['latest_order_date'] ?? '');
+    $latestOrderStmt->close();
+
+    if ($latestOrderDate !== '' && $latestOrderDate <= $today) {
+        $defaultEndDate = $latestOrderDate;
+    }
+}
+
+$startDate = analyticsDateOrDefault(
+    $_GET['start_date'] ?? null,
+    date('Y-m-d', strtotime($defaultEndDate . ' -6 days'))
+);
+$endDate = analyticsDateOrDefault($_GET['end_date'] ?? null, $defaultEndDate);
+if ($startDate > $endDate) {
+    [$startDate, $endDate] = [$endDate, $startDate];
+}
+
+// Compare to the immediately preceding range of the same length.  This keeps
+// both the KPI trend and Sales Overview comparison correct for custom ranges.
+$periodDays = (int) ((strtotime($endDate) - strtotime($startDate)) / 86400) + 1;
+$previousPeriodEnd = (new DateTimeImmutable($startDate))->modify('-1 day');
+$prevEndDate = $previousPeriodEnd->format('Y-m-d');
+$prevStartDate = $previousPeriodEnd->modify('-' . max(0, $periodDays - 1) . ' days')->format('Y-m-d');
+$selectedPeriodLabel = $startDate === $endDate
+    ? date('M j, Y', strtotime($startDate))
+    : date('M j', strtotime($startDate)) . ' - ' . date('M j, Y', strtotime($endDate));
 
 // Fetch available branches
 $branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";
@@ -461,7 +513,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                                 <div class="date-range-picker">
                                     <div class="period-dropdown">
                                         <button type="button" class="period-trigger">
-                                            <span class="period-trigger-label">Today</span>
+                                            <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </button>
                                         <div class="period-menu">
@@ -572,7 +624,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                                 <div class="date-range-picker">
                                 <div class="period-dropdown">
                                     <button type="button" class="period-trigger">
-                                        <span class="period-trigger-label">Today</span>
+                                        <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
                                         <i class="fa-solid fa-chevron-down"></i>
                                     </button>
                                     <div class="period-menu">
@@ -629,7 +681,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                                 <div class="date-range-picker">
                                     <div class="period-dropdown">
                                         <button type="button" class="period-trigger">
-                                            <span class="period-trigger-label">Today</span>
+                                            <span class="period-trigger-label"><?php echo htmlspecialchars($selectedPeriodLabel, ENT_QUOTES); ?></span>
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </button>
                                         <div class="period-menu">
@@ -673,20 +725,23 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                         <div class="peak-hours-list">
                             <?php 
                             if (!empty($analytics['time_of_day'])) {
-                                // Sort by orders descending
-                                usort($analytics['time_of_day'], function($a, $b) {
+                                // Keep the chronological chart dataset intact; Peak Hours gets
+                                // a sorted copy of those same database results.
+                                $peakHours = $analytics['time_of_day'];
+                                usort($peakHours, function($a, $b) {
                                     return $b['orders'] - $a['orders'];
                                 });
                                 
-                                $maxOrders = max(array_column($analytics['time_of_day'], 'orders'));
+                                $maxOrders = max(array_column($peakHours, 'orders'));
                                 $colors = ['#E5383B', '#EB5E55', '#F2994A', '#F5A662', '#F2C94C', '#F5D76E', '#F7E088', '#F9E6A3'];
                                 
-                                foreach ($analytics['time_of_day'] as $index => $timeData) {
+                                foreach ($peakHours as $index => $timeData) {
                                     $hour = $timeData['hour'];
                                     $orders = $timeData['orders'];
                                     $progress = $maxOrders > 0 ? ($orders / $maxOrders) * 100 : 0;
                                     $color = $colors[$index % count($colors)];
                                     $label = sprintf('%02d:00 - %02d:00', $hour, ($hour + 1) % 24);
+
                             ?>
                             <div class="peak-hour-item">
                                 <span class="peak-hour-icon"><i class="fa-regular fa-clock"></i></span>
@@ -932,9 +987,11 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
 
         // PHP analytics data passed to JavaScript
         const analyticsData = <?php echo json_encode($analytics); ?>;
-        const startDate = '<?php echo $startDate; ?>';
-        const endDate = '<?php echo $endDate; ?>';
-        
+        const startDate = <?php echo json_encode($startDate); ?>;
+        const endDate = <?php echo json_encode($endDate); ?>;
+        const previousStartDate = <?php echo json_encode($prevStartDate); ?>;
+        const previousEndDate = <?php echo json_encode($prevEndDate); ?>;
+
         // Branch dropdown functionality
         const branchTrigger = document.querySelector('.branch-trigger');
         const branchMenu = document.querySelector('.branch-menu');
@@ -1005,41 +1062,42 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
 
             const ctx = canvas.getContext('2d');
 
-            // Generate date labels for the selected period
-            const labels = [];
-            const thisWeekData = [];
-            const lastWeekData = [];
-            
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const current = new Date(start);
-            
-            // Create date labels array
-            while (current <= end) {
-                labels.push(current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                current.setDate(current.getDate() + 1);
+            // Build both graph lines from their actual database dates.  The
+            // previous period is aligned by day position, not by calendar date.
+            function parseAnalyticsDate(value) {
+                const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+                return new Date(year, month - 1, day);
             }
 
-            // Map database daily sales to the date labels
-            const dailySalesMap = {};
-            analyticsData.daily_sales.forEach(item => {
-                const date = new Date(item.sale_date);
-                const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                dailySalesMap[label] = item.daily_sales;
-            });
+            function formatAnalyticsDateKey(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
 
-            const prevDailySalesMap = {};
-            analyticsData.prev_daily_sales.forEach(item => {
-                const date = new Date(item.sale_date);
-                const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                prevDailySalesMap[label] = item.daily_sales;
-            });
+            function analyticsDateRange(rangeStart, rangeEnd) {
+                const dates = [];
+                const current = parseAnalyticsDate(rangeStart);
+                const end = parseAnalyticsDate(rangeEnd);
+                while (current <= end) {
+                    dates.push(new Date(current));
+                    current.setDate(current.getDate() + 1);
+                }
+                return dates;
+            }
 
-            // Fill data arrays matching the labels
-            labels.forEach(label => {
-                thisWeekData.push(dailySalesMap[label] || 0);
-                lastWeekData.push(prevDailySalesMap[label] || 0);
-            });
+            const currentDates = analyticsDateRange(startDate, endDate);
+            const previousDates = analyticsDateRange(previousStartDate, previousEndDate);
+            const labels = currentDates.map(date => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const dailySalesMap = Object.fromEntries((analyticsData.daily_sales || []).map(item => [
+                String(item.sale_date).slice(0, 10), Number(item.daily_sales) || 0
+            ]));
+            const previousDailySalesMap = Object.fromEntries((analyticsData.prev_daily_sales || []).map(item => [
+                String(item.sale_date).slice(0, 10), Number(item.daily_sales) || 0
+            ]));
+            const thisWeekData = currentDates.map(date => dailySalesMap[formatAnalyticsDateKey(date)] || 0);
+            const lastWeekData = previousDates.map(date => previousDailySalesMap[formatAnalyticsDateKey(date)] || 0);
 
             new Chart(ctx, {
                 type: 'line',
@@ -1107,7 +1165,7 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                             ticks: {
                                 color: '#777',
                                 font: { family: 'Afacad', size: 13 },
-                                callback: (value) => `₱ ${value / 1000}K`
+                                callback: (value) => `₱ ${Number(value).toLocaleString('en-US')}`
                             },
                             grid: { color: '#eee' }
                         },
@@ -1215,6 +1273,52 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
             });
         }
         // ---- Period dropdown (Today / This Week / Custom Range) ----
+        // Each selection updates the URL, which runs the PHP queries again so
+        // Sales Overview, Sales by Time of Day, and Peak Hours stay in sync
+        // with the selected database range and branch.
+        function formatDateParameter(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function analyticsPeriodRange(period) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const start = new Date(today);
+            const end = new Date(today);
+
+            switch (period) {
+                case 'this-week':
+                    start.setDate(today.getDate() - today.getDay());
+                    break;
+                case 'last-week':
+                    start.setDate(today.getDate() - today.getDay() - 7);
+                    end.setDate(today.getDate() - today.getDay() - 1);
+                    break;
+                case 'this-month':
+                    start.setDate(1);
+                    break;
+                case 'last-month':
+                    start.setMonth(today.getMonth() - 1, 1);
+                    end.setDate(0);
+                    break;
+                case 'today':
+                default:
+                    break;
+            }
+
+            return { start: formatDateParameter(start), end: formatDateParameter(end) };
+        }
+
+        function reloadAnalyticsRange(rangeStart, rangeEnd) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('start_date', rangeStart);
+            url.searchParams.set('end_date', rangeEnd);
+            window.location.assign(url.toString());
+        }
+
         function closeAllDropdowns(except) {
             document.querySelectorAll('.period-dropdown').forEach(d => {
                 if (d === except) return;
@@ -1258,8 +1362,8 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                         openCalendar(calendar);
                         return;
                     }
-                    triggerLabel.textContent = option.textContent;
-                    menu.classList.remove('open');
+                    const range = analyticsPeriodRange(option.dataset.value);
+                    reloadAnalyticsRange(range.start, range.end);
                 });
             });
         });
@@ -1358,6 +1462,8 @@ $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $p
                     const label = dropdown.querySelector('.period-trigger-label');
                     const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     label.textContent = `${fmt(rangeStart)} - ${fmt(rangeEnd)}`;
+                    reloadAnalyticsRange(formatDateParameter(rangeStart), formatDateParameter(rangeEnd));
+                    return;
                 }
                 calendarEl.classList.remove('show', 'align-left', 'drop-up');
             });

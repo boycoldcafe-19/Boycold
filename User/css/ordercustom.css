@@ -75,7 +75,7 @@ html {
 }
 
 .sidebar-nav ul li a:hover {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.4);
 }
@@ -213,7 +213,7 @@ html {
 
 .nav-links li a:hover,
 .nav-links li a.active {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
 }
 
@@ -527,7 +527,7 @@ html {
 
 .option:hover:not(.active) {
     background: #f0e8e2;
-    border-color: #6F4E37;
+    border-color: #692727;
 }
 
 
@@ -606,7 +606,7 @@ textarea {
 
 textarea:focus {
     outline: none;
-    border-color: #6F4E37;
+    border-color: #692727;
     box-shadow: 0 0 0 2px rgba(111, 78, 55, 0.1);
 }
 
@@ -705,7 +705,7 @@ footer {
 }
 
 .footer-links a:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .footer-logo {
@@ -728,7 +728,7 @@ footer {
     align-items: center;
     gap: 8px;
     background: rgba(111, 78, 55, 0.18);
-    border: 1.5px solid #6F4E37;
+    border: 1.5px solid #692727;
     color: #fff;
     font-family: 'Afacad', sans-serif;
     font-size: 14px;
@@ -777,11 +777,11 @@ footer {
 
 .sauce-option.selected {
     background: rgba(111, 78, 55, 0.22);
-    border-color: #6F4E37;
+    border-color: #692727;
 }
 
 .sauce-option input[type="radio"] {
-    accent-color: #6F4E37;
+    accent-color: #692727;
     width: 14px;
     height: 14px;
     flex-shrink: 0;

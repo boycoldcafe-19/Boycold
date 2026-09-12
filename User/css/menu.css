@@ -73,7 +73,7 @@ html, body {
 }
 
 .sidebar-nav ul li a:hover {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0,0,0,0.4);
 }
@@ -210,6 +210,11 @@ html, body {
     transition: background 0.15s, color 0.15s;
 }
 
+.nav-links li a:hover {
+    background: #692727;
+    color: #fff;
+}
+
 /* CENTER: logo */
 .logo {
     display: flex;
@@ -273,7 +278,7 @@ html, body {
 }
 
 .nav-search:focus-within {
-    border-color: #6F4E37;
+    border-color: #692727;
     box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.1);
 }
 
@@ -771,7 +776,7 @@ footer {
 }
 
 .footer-links li a:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 /* ══════════════════════════════
@@ -983,7 +988,7 @@ footer {
     .nav-search.open {
         width: clamp(150px, 55vw, 267px);
         background: #fff;
-        border-color: #6F4E37;
+        border-color: #692727;
         box-shadow: 0 4px 16px rgba(0,0,0,0.1);
         cursor: default;
     }
@@ -1031,7 +1036,7 @@ footer {
     }
 
     .nav-search-icon-btn.active {
-        color: #6F4E37;
+        color: #692727;
     }
 
     .nav-search i {
@@ -1048,7 +1053,7 @@ footer {
     }
 
     .nav-search.open i {
-        color: #6F4E37;
+        color: #692727;
     }
 
     .cart-link {

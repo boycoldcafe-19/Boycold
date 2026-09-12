@@ -275,7 +275,7 @@ $_SESSION['user_email'] = $user['email'];
 
         async function loadCart() {
             try {
-                const res = await fetch(`${CART_API}?action=get`);
+                const res = await fetch(`${CART_API}?action=get&branch_id=${encodeURIComponent(getSelectedBranchId())}`);
                 const data = await res.json();
                 if (data.success) {
                     currentCart = data.items;
@@ -292,6 +292,8 @@ $_SESSION['user_email'] = $user['email'];
                         if (selectAllCheckbox) selectAllCheckbox.checked = true;
                         recalcSummary();
                     }, 0);
+                } else {
+                    alert(data.error || 'Could not load cart.');
                 }
             } catch (err) {
                 console.error('Failed to load cart', err);
@@ -344,7 +346,10 @@ $_SESSION['user_email'] = $user['email'];
             </div>
             <div class="cart-item-qty">
                 <button class="qty-btn" onclick="updateQty(${item.cartId}, -1)">−</button>
-                <span class="qty-val">${item.qty}</span>
+                <input class="qty-val" type="number" min="1" max="${item.availableServings || item.qty}" value="${item.qty}"
+                    aria-label="Quantity for ${item.name}"
+                    oninput="resizeQtyInput(this)"
+                    onchange="setQty(${item.cartId}, this.value)">
                 <button class="qty-btn" onclick="updateQty(${item.cartId}, 1)">+</button>
             </div>
             <div class="cart-item-price">₱${item.total.toFixed(2)}</div>
@@ -353,12 +358,32 @@ $_SESSION['user_email'] = $user['email'];
     `).join('');
             
             container.innerHTML = html;
+            container.querySelectorAll('.qty-val').forEach(resizeQtyInput);
+        }
+
+        function resizeQtyInput(input) {
+            const digits = String(input.value || '1').length;
+            input.style.width = `${Math.max(32, digits * 9 + 8)}px`;
         }
 
         async function updateQty(cartId, delta) {
             const item = currentCart.find(i => i.cartId === cartId);
             if (!item) return;
-            const newQty = Math.max(1, item.qty + delta);
+            const maxQty = Number(item.availableServings) > 0 ? Number(item.availableServings) : item.qty;
+            const newQty = Math.min(maxQty, Math.max(1, item.qty + delta));
+            if (newQty === item.qty) return;
+            await saveQty(cartId, newQty);
+        }
+
+        async function setQty(cartId, value) {
+            const item = currentCart.find(i => i.cartId === cartId);
+            if (!item) return;
+            const maxQty = Number(item.availableServings) > 0 ? Number(item.availableServings) : item.qty;
+            const newQty = Math.min(maxQty, Math.max(1, parseInt(value, 10) || 1));
+            await saveQty(cartId, newQty);
+        }
+
+        async function saveQty(cartId, newQty) {
             try {
                 const res = await fetch(CART_API, {
                     method: 'POST',
@@ -376,7 +401,9 @@ $_SESSION['user_email'] = $user['email'];
                 if (data.success) {
                     await loadCart(); // reload whole cart
                 } else {
-                    alert(data.error || 'Could not update quantity.');
+                    alert(data.status === 409 || res.status === 409
+                        ? (data.error || 'The requested quantity is not available.')
+                        : (data.error || 'Could not update quantity.'));
                 }
             } catch (err) {
                 console.error(err);

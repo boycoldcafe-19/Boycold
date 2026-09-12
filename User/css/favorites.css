@@ -71,7 +71,7 @@ html, body {
 }
 
 .sidebar-nav ul li a:hover {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0,0,0,0.4);
 }
@@ -208,6 +208,11 @@ html, body {
     transition: background 0.15s, color 0.15s;
 }
 
+.nav-links li a:hover {
+    background: #692727;
+    color: #fff;
+}
+
 /* CENTER: logo */
 .logo {
     display: flex;
@@ -271,7 +276,7 @@ html, body {
 }
 
 .nav-search:focus-within {
-    border-color: #6F4E37;
+    border-color: #692727;
     box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.1);
 }
 
@@ -657,7 +662,7 @@ header .box {
 }
 
 .btn-order {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
 }
 
@@ -718,12 +723,12 @@ header .box {
     transition: border-color 0.2s;
     
 }
-.fav-sort:focus { border-color: #6F4E37; }
+.fav-sort:focus { border-color: #692727; }
 
 .fav-sort option {
     background: #1e1e1e;
     color: #fff;
-    border-color: #6F4E37;
+    border-color: #692727;
     border-radius: 8px;
 }
 
@@ -767,7 +772,7 @@ header .box {
 }
 .fav-empty-cta {
     display: inline-block; margin-top: 8px;
-    background: #6F4E37; color: #fff;
+    background: #692727; color: #fff;
     font-family: 'Afacad', sans-serif; font-weight: 700; font-size: 14px;
     letter-spacing: 1px; text-transform: uppercase; text-decoration: none;
     padding: 11px 32px; border-radius: 30px;
@@ -853,7 +858,7 @@ footer {
 }
 
 .footer-links li a:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .avatar-dropdown-wrap {
@@ -1111,7 +1116,7 @@ footer {
     .nav-search.open {
         width: clamp(150px, 55vw, 267px);
         background: #fff;
-        border-color: #6F4E37;
+        border-color: #692727;
         box-shadow: 0 4px 16px rgba(0,0,0,0.1);
         cursor: default;
     }
@@ -1159,7 +1164,7 @@ footer {
     }
 
     .nav-search-icon-btn.active {
-        color: #6F4E37;
+        color: #692727;
     }
 
     .nav-search i {
@@ -1176,7 +1181,7 @@ footer {
     }
 
     .nav-search.open i {
-        color: #6F4E37;
+        color: #692727;
     }
 
     header {

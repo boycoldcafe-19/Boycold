@@ -75,7 +75,7 @@ html {
 
 .sidebar-nav ul li a:hover,
 .sidebar-nav ul li a.active {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.4);
 }
@@ -211,8 +211,13 @@ html {
     transition: background 0.15s, color 0.15s;
 }
 
+.nav-links li a:hover {
+    background: #692727;
+    color: #fff;
+}
+
 .nav-links li a.active {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .logo {
@@ -334,7 +339,7 @@ html {
 }
 
 .nav-search:focus-within {
-    border-color: #6F4E37;
+    border-color: #692727;
     box-shadow: 0 0 0 3px rgba(111, 78, 55, 0.1);
 }
 
@@ -747,7 +752,7 @@ html {
 }
 
 .order-card .order-card-actions .order-detail-btn {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     border: none;
     padding: 4px 14px;
@@ -949,11 +954,11 @@ html {
 }
 
 .tab-btn:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 .tab-btn.active {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     font-weight: 600;
 }
@@ -992,7 +997,7 @@ html {
 
 .no-orders-icon-wrap i {
     font-size: 30px;
-    color: #6F4E37;
+    color: #692727;
 }
 
 .no-orders-title {
@@ -1013,7 +1018,7 @@ html {
 .empty-cart-cta {
     display: inline-block;
     margin-top: 8px;
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     font-family: 'Afacad', sans-serif;
     font-weight: 700;
@@ -1091,7 +1096,7 @@ html {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
     font-family: 'Afacad', sans-serif;
     font-size: 12px;
@@ -1183,8 +1188,8 @@ html {
     font-family: 'Afacad', sans-serif;
     font-size: 12px;
     font-weight: 600;
-    color: #6F4E37;
-    border: 1.5px solid #6F4E37;
+    color: #692727;
+    border: 1.5px solid #692727;
     border-radius: 6px;
     padding: 4px 12px;
     background: none;
@@ -1193,7 +1198,7 @@ html {
 }
 
 .order-card-view:hover {
-    background: #6F4E37;
+    background: #692727;
     color: #fff;
 }
 
@@ -1283,7 +1288,7 @@ footer {
 }
 
 .footer-links li a:hover {
-    color: #6F4E37;
+    color: #692727;
 }
 
 /* ══════════════════════════════
@@ -1404,7 +1409,7 @@ footer {
     .nav-search.open {
         width: clamp(150px, 55vw, 267px);
         background: #fff;
-        border-color: #6F4E37;
+        border-color: #692727;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         cursor: default;
         right: 0;
@@ -1434,7 +1439,7 @@ footer {
         z-index: 1;
     }
     .nav-search.open i {
-        color: #6F4E37;
+        color: #692727;
     }
     .order-header,
     .history-box {

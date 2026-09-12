@@ -62,10 +62,19 @@ switch ($action) {
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+        $branchId = isset($_GET['branch_id']) && (int) $_GET['branch_id'] > 0
+            ? (int) $_GET['branch_id']
+            : (int) ($_SESSION['branch_id'] ?? 1);
+        $availability = $rows
+            ? boycold_get_product_inventory_availability($connect, $branchId, array_column($rows, 'product_name'))
+            : [];
+
         // Shape into the same format addtocart.php / cart.php expects
-        $items = array_map(function($r) {
+        $items = array_map(function($r) use ($availability) {
             $unitPrice = (float) $r['price'];
             $qty       = (int)   $r['quantity'];
+            $availabilityKey = boycold_inventory_normalize_name((string) $r['product_name']);
+            $availableServings = (int) ($availability[$availabilityKey]['available_servings'] ?? 0);
             return [
                 'cartId'      => (int) $r['id'],
                 'productName' => $r['product_name'],
@@ -78,6 +87,7 @@ switch ($action) {
                 'addons'      => $r['addons']     ?? '',
                 'orderType'   => $r['order_type'] ?? '',
                 'notes'       => $r['notes']      ?? '',
+                'availableServings' => $availableServings,
             ];
         }, $rows);
 

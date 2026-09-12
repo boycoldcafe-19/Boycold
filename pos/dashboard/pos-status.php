@@ -674,29 +674,16 @@ if ($paymentMethodKey === 'qrph') {
                         </section>
 
                         <footer class="status-actions">
-                            <?php if ($prevStatus): ?>
-                                <button class="status-btn secondary" type="button" data-status="<?= htmlspecialchars($prevStatus['status']) ?>">
-                                    <i class="fa-solid fa-chevron-left"></i>
-                                    <?= htmlspecialchars($prevStatus['label']) ?>
-                                </button>
-                            <?php else: ?>
-                                <button class="status-btn secondary" type="button" disabled>
-                                    <i class="fa-solid fa-chevron-left"></i>
-                                    Previous Status
-                                </button>
-                            <?php endif; ?>
-
                             <?php if ($nextStatus): ?>
                                 <button class="status-btn primary" type="button" data-status="<?= htmlspecialchars($nextStatus['status']) ?>">
                                     <?= htmlspecialchars($nextStatus['label']) ?>
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </button>
-                            <?php else: ?>
-                                <a class="status-btn primary" href="pos-online.php">
-                                    Back to Online Orders
-                                    <i class="fa-solid fa-chevron-right"></i>
-                                </a>
                             <?php endif; ?>
+                            <a class="status-btn secondary" href="pos-online.php">
+                                <i class="fa-solid fa-chevron-left"></i>
+                                Back to Online Orders
+                            </a>
                             <?php if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid' && $orderStatus === 'ready'): ?>
                                 <button class="status-btn primary" type="button" id="confirmCodPayBtn">
                                     Confirm Cash Payment

@@ -844,7 +844,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     <i class="fa-solid fa-rotate"></i>
                 </button>
                 <button id="btnCapture" onclick="capturePhoto()"
-                    style="background:#6F4E37;border:none;color:#fff;border-radius:50px;padding:12px 32px;font-size:.95rem;font-family:'Afacad',sans-serif;font-weight:600;cursor:pointer;letter-spacing:.5px;">
+                    style="background:#692727;border:none;color:#fff;border-radius:50px;padding:12px 32px;font-size:.95rem;font-family:'Afacad',sans-serif;font-weight:600;cursor:pointer;letter-spacing:.5px;">
                     Capture
                 </button>
                 <button id="btnRetake" onclick="retakePhoto()" style="display:none;background:#444;border:none;color:#fff;border-radius:50px;padding:12px 24px;font-size:.95rem;font-family:'Afacad',sans-serif;font-weight:600;cursor:pointer;">
