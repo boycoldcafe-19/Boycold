@@ -356,8 +356,21 @@ $isLoyaltyCardComplete = $loyaltyStamps >= $loyaltyMaxStamps;
 if (!isset($_SESSION['loyalty_popup_last_seen_stamps'])) {
     $_SESSION['loyalty_popup_last_seen_stamps'] = 0;
 }
+
+// Force show modal if card is complete and we haven't shown it for this completion
 $showLoyaltyPopupOnLoad = $isLoyaltyCardComplete
-    && $_SESSION['loyalty_popup_last_seen_stamps'] < $loyaltyMaxStamps;
+    && (!isset($_SESSION['loyalty_popup_shown_for_completion']) || $_SESSION['loyalty_popup_shown_for_completion'] !== true);
+
+// Mark that we've shown the popup for this completion
+if ($showLoyaltyPopupOnLoad) {
+    $_SESSION['loyalty_popup_shown_for_completion'] = true;
+}
+
+// Reset the flag if the card is no longer complete (reward claimed)
+if (!$isLoyaltyCardComplete) {
+    $_SESSION['loyalty_popup_shown_for_completion'] = false;
+}
+
 $_SESSION['loyalty_popup_last_seen_stamps'] = $loyaltyStamps;
 
 // Coffee bean brown color
