@@ -5,7 +5,7 @@
     --surface: #fff;
     --border: #C4C1C1;
     --shadow: rgba(0,0,0,0.08);
-    --primary: #6B4B3E;
+    --primary: #692727;
     --primary-text: #fff;
 }
 
@@ -419,7 +419,7 @@ button {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: var(--primary);
+    background: #692727;
     color: var(--primary-text);
     display: flex;
     align-items: center;
@@ -537,7 +537,7 @@ button {
     padding: 12px 22px;
     border-radius: 8px;
     border: none;
-    background: var(--primary);
+    background: #692727;
     color: #fff;
     font-size: 15px;
     font-weight: 700;
@@ -549,7 +549,7 @@ button {
 }
 
 .add-ingredient-btn:hover {
-    background: #59392e;
+    background: #5a1e1e;
 }
 
 .inventory-tabs {
@@ -559,6 +559,64 @@ button {
     gap: 16px;
     border-bottom: 2px solid var(--border);
     overflow: visible;
+}
+
+.inventory-header-controls {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.inventory-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.inventory-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 170px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.inventory-filter select {
+    min-height: 40px;
+    padding: 8px 30px 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    text-transform: none;
+}
+
+.export-inventory-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    transition: background .15s;
+    cursor: pointer;
+}
+
+.export-inventory-btn:hover {
+    background: #fbf1f1;
+    border-color: #5a1e1e;
+    color: #5a1e1e;
 }
 
 .inventory-tab-group,
@@ -851,7 +909,6 @@ button {
 .stock-in-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
     gap: 12px;
 }
 
@@ -879,16 +936,17 @@ button {
 
 .cancel-btn:hover {
     background: var(--bg);
+    border-color: #692727;
 }
 
 .save-btn {
     border: none;
-    background: var(--primary);
+    background: #692727;
     color: #fff;
 }
 
 .save-btn:hover {
-    background: #59392e;
+    background: #5a1e1e;
 }
 
 /* --- Stock History panel --- */
@@ -1162,6 +1220,10 @@ button {
     .cancel-btn,
     .save-btn {
         flex: 1;
+    }
+
+    .cancel-btn:hover {
+        border-color: #692727;
     }
 }
 

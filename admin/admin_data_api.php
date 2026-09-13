@@ -220,16 +220,54 @@ try {
 
         case 'ingredients':
             ensureProductIngredientsTable($connect);
+            $requestedBranch = filter_input(INPUT_GET, 'branch_id', FILTER_VALIDATE_INT);
+            $branchId = $requestedBranch && $requestedBranch > 0
+                ? $requestedBranch
+                : (int) ($_SESSION['branch_id'] ?? 1);
+            $branchStmt = $connect->prepare('SELECT id FROM branches WHERE id = ? AND status = \'active\' LIMIT 1');
+            $branchStmt->bind_param('i', $branchId);
+            $branchStmt->execute();
+            if (!$branchStmt->get_result()->fetch_assoc()) {
+                $branchStmt->close();
+                response(['success' => false, 'error' => 'Invalid branch selected.'], 422);
+            }
+            $branchStmt->close();
+
+            $view = (string) ($_GET['view'] ?? 'all');
+            if (!in_array($view, ['all', 'analytics', 'forecasting'], true)) {
+                response(['success' => false, 'error' => 'Invalid inventory view.'], 422);
+            }
+            $hasMaxStock = $connect->query("SHOW COLUMNS FROM ingredients LIKE 'max_stock'")->num_rows > 0;
+            $maxStockSelect = $hasMaxStock ? 'i.max_stock' : 'NULL';
+            $maxStockGroup = $hasMaxStock ? ', i.max_stock' : '';
+                        $mappedFilter = $view === 'all' ? '' : "AND EXISTS (
+                                SELECT 1
+                                FROM product_ingredients filter_pi
+                                INNER JOIN ingredients mapped_filter_i ON mapped_filter_i.id = filter_pi.ingredient_id
+                                WHERE LOWER(TRIM(mapped_filter_i.name)) = LOWER(TRIM(i.name))
+                                    AND filter_pi.amount > 0
+                        )";
             $result = $connect->query(
-                'SELECT i.id, i.name, i.category, i.unit, i.stock, i.min_stock, i.branch_id,
-                        COUNT(pi.id) AS mapping_count
+                "SELECT i.id, i.name, i.category, i.unit, i.stock, i.min_stock, {$maxStockSelect} AS max_stock, i.branch_id,
+                        COUNT(DISTINCT pi.id) AS mapping_count,
+                        MAX(pi.amount) AS required_per_serving,
+                        GROUP_CONCAT(DISTINCT pi.product_name ORDER BY pi.product_name SEPARATOR ', ') AS mapped_products
                  FROM ingredients i
-                 LEFT JOIN product_ingredients pi ON pi.ingredient_id = i.id
-                 GROUP BY i.id, i.name, i.category, i.unit, i.stock, i.min_stock, i.branch_id
-                 ORDER BY i.name'
+                                 LEFT JOIN product_ingredients pi ON EXISTS (
+                                         SELECT 1 FROM ingredients mapped_i
+                                         WHERE mapped_i.id = pi.ingredient_id
+                                             AND LOWER(TRIM(mapped_i.name)) = LOWER(TRIM(i.name))
+                                 )
+                 WHERE i.branch_id = {$branchId} {$mappedFilter}
+                 GROUP BY i.id, i.name, i.category, i.unit, i.stock, i.min_stock, i.branch_id {$maxStockGroup}
+                 ORDER BY i.name, i.id"
             );
             $ingredients = [];
             while ($row = $result->fetch_assoc()) {
+                $requiredPerServing = (float) ($row['required_per_serving'] ?? 0);
+                $row['servings_left'] = $requiredPerServing > 0
+                    ? max(0, (int) floor(max(0, (float) $row['stock']) / $requiredPerServing))
+                    : null;
                 $row['sufficiency_status'] = boycold_inventory_ingredient_status(
                     (float) $row['stock'],
                     (float) $row['min_stock']
@@ -237,7 +275,13 @@ try {
                 $row['sufficiency_label'] = ucfirst($row['sufficiency_status']);
                 $ingredients[] = $row;
             }
-            response(['success' => true, 'ingredients' => $ingredients]);
+            response(['success' => true, 'ingredients' => $ingredients, 'branch_id' => $branchId, 'view' => $view]);
+
+        case 'branches':
+            $result = $connect->query("SELECT id, branch_code, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name, id");
+            $branches = [];
+            while ($row = $result->fetch_assoc()) $branches[] = $row;
+            response(['success' => true, 'branches' => $branches]);
 
         case 'products':
             $result = $connect->query(

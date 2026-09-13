@@ -1,4 +1,14 @@
-﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
+﻿<?php
+require_once __DIR__ . '/admin_guard.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/inventory_service.php';
+
+// Get branch ID for inventory status (admin can view all branches by default)
+$branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : 0;
+
+// Ensure inventory schema exists
+boycold_ensure_inventory_schema($connect);
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -202,9 +212,17 @@
                         <h1 class="menu-title">Menu Management</h1>
                         <p class="menu-subtitle">Manage your menu items, prices and availability.</p>
                     </div>
-                    <button type="button" class="add-item-btn" id="addNewItemBtn">
-                        <i class="fa-solid fa-plus"></i> Add New Item
-                    </button>
+                    <div class="menu-header-controls">
+                        <label class="menu-branch-filter">
+                            <span>Branch</span>
+                            <select id="menuBranchSelect" aria-label="Filter menu by branch">
+                                <option value="">Loading branches...</option>
+                            </select>
+                        </label>
+                        <button type="button" class="add-item-btn" id="addNewItemBtn">
+                            <i class="fa-solid fa-plus"></i> Add New Item
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Category Bar (POS-like pill navigation) -->
@@ -4208,11 +4226,13 @@
             const catCancelBtn = document.getElementById('catCancelBtn');
             const menuSearch = document.getElementById('menuSearch');
             const noMenuMessage = document.getElementById('noMenuMessage');
+            const menuBranchSelect = document.getElementById('menuBranchSelect');
 
             let currentCategory = 'coffee';
             let isEditingCategories = false;
             let catPillsSnapshot = null;
             let draggedPill = null;
+            let selectedBranchId = 0;
 
             function getAddCategoryGhost() {
                 return document.getElementById('addCategoryGhost');
@@ -4553,21 +4573,43 @@
                 filterProducts();
             }
 
-            fetch('admin_data_api.php?action=products')
-                .then(response => response.json())
-                .then(result => {
-                    if (!result.success) throw new Error(result.error || 'Products could not be loaded');
-                    renderDatabaseCategories(result.products || []);
-                    renderDatabaseProducts(result.products);
-                })
-                .catch(error => {
-                    if (productGrid) productGrid.innerHTML = '';
-                    if (noMenuMessage) {
-                        noMenuMessage.textContent = error.message || 'Unable to load products from the database.';
-                        noMenuMessage.style.display = 'flex';
-                    }
-                    console.error(error);
+            async function loadBranches() {
+                const response = await fetch('admin_data_api.php?action=branches');
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Branches could not be loaded');
+                menuBranchSelect.innerHTML = '';
+                result.branches.forEach((branch) => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.textContent = `${branch.branch_code} / ${branch.branch_name}`;
+                    menuBranchSelect.appendChild(option);
                 });
+                selectedBranchId = result.branches[0]?.id || 0;
+                menuBranchSelect.value = selectedBranchId;
+                loadProducts();
+            }
+
+            async function loadProducts() {
+                const response = await fetch(`admin_data_api.php?action=products&branch_id=${selectedBranchId}`);
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Products could not be loaded');
+                renderDatabaseCategories(result.products || []);
+                renderDatabaseProducts(result.products);
+            }
+
+            loadBranches().catch(error => {
+                if (productGrid) productGrid.innerHTML = '';
+                if (noMenuMessage) {
+                    noMenuMessage.textContent = error.message || 'Unable to load products from the database.';
+                    noMenuMessage.style.display = 'flex';
+                }
+                console.error(error);
+            });
+
+            menuBranchSelect.addEventListener('change', () => {
+                selectedBranchId = menuBranchSelect.value;
+                loadProducts();
+            });
 
             function syncProductActionVisibility() {
                 const isListView = productGrid.classList.contains("list-view");

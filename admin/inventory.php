@@ -1,4 +1,11 @@
-﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
+﻿<?php
+require_once __DIR__ . '/admin_guard.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/inventory_service.php';
+
+// Ensure inventory schema exists
+boycold_ensure_inventory_schema($connect);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +18,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <title>BoyCold - Inventory</title>
 </head>
 
@@ -159,6 +168,18 @@
                         <h1 class="inventory-title">Ingredients</h1>
                         <p class="inventory-subtitle">Manage all ingredients used in the cafe.</p>
                     </div>
+                    <div class="inventory-header-controls">
+                        <label class="inventory-filter">
+                            <span>Branch</span>
+                            <select id="inventoryBranchSelect" aria-label="Filter inventory by branch">
+                                <option value="">Loading branches...</option>
+                            </select>
+                        </label>
+                        <button type="button" class="export-inventory-btn" id="exportInventoryBtn">
+                            <i class="fa-solid fa-arrow-down-to-line"></i>
+                            Export Report
+                        </button>
+                    </div>
                 </div>
 
                 <div class="inventory-stock-warning" id="inventoryStockWarning" hidden role="status">
@@ -175,23 +196,18 @@
                         <button type="button" class="inventory-tab" data-tab="stock-in" role="tab" aria-selected="false">Stock In</button>
                         <button type="button" class="inventory-tab" data-tab="stock-history" role="tab" aria-selected="false">Stock History</button>
                     </div>
-                    <div class="inventory-tab-actions">
+                </div>
+
+                <div class="inventory-panel" id="ingredients" data-panel="ingredients">
+                    <div class="inventory-search-row">
+                        <div class="inventory-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="ingredientSearch" placeholder="Search ingredients...">
+                        </div>
                         <button type="button" class="add-ingredient-btn" id="addIngredientBtn">
                             <i class="fa-solid fa-plus"></i>
                             Add Ingredients
                         </button>
-                        <div class="stock-in-actions" id="stockInActions" style="display:none;">
-                            <p class="stock-in-status" id="stockInStatus" role="status" hidden>Stock In recorded.</p>
-                            <button type="button" class="cancel-btn" id="cancelStockInBtn">Cancel</button>
-                            <button type="button" class="save-btn" id="saveStockInBtn">Save Stock In</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="inventory-panel" id="ingredients" data-panel="ingredients">
-                    <div class="inventory-search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="ingredientSearch" placeholder="Search ingredients...">
                     </div>
 
                     <div class="table-wrap">
@@ -203,6 +219,7 @@
                                     <th>Current Stock</th>
                                     <th>Unit</th>
                                     <th>Minimum Stock</th>
+                                    <th>Servings Left</th>
                                     <th>Ingredient Sufficiency</th>
                                     <th>Action</th>
                                 </tr>
@@ -214,9 +231,9 @@
                                     <td>5,000</td>
                                     <td>g</td>
                                     <td>1,000</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>25</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Coffee Beans"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Coffee Beans"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -226,9 +243,9 @@
                                     <td>10,000</td>
                                     <td>L</td>
                                     <td>3,000</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>50</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Fresh Milk"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Fresh Milk"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -238,9 +255,9 @@
                                     <td>1,200</td>
                                     <td>g</td>
                                     <td>1,000</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>12</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Matcha Powder"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Matcha Powder"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -250,9 +267,9 @@
                                     <td>100</td>
                                     <td>pcs</td>
                                     <td>50</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>100</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Clear Cup 22 oz"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Clear Cup 22 oz"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -262,9 +279,9 @@
                                     <td>100</td>
                                     <td>pcs</td>
                                     <td>50</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>100</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Clear Cup 16 oz"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Clear Cup 16 oz"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -274,9 +291,9 @@
                                     <td>450</td>
                                     <td>ml</td>
                                     <td>100</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>45</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Chocolate Chips"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Chocolate Chips"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -286,9 +303,9 @@
                                     <td>450</td>
                                     <td>ml</td>
                                     <td>100</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>45</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Chocolate Syrup"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Chocolate Syrup"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -298,9 +315,9 @@
                                     <td>390</td>
                                     <td>g</td>
                                     <td>100</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>39</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Condensed Milk"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Condensed Milk"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -310,9 +327,9 @@
                                     <td>450</td>
                                     <td>ml</td>
                                     <td>100</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>45</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Caramel Syrup"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Caramel Syrup"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -322,9 +339,9 @@
                                     <td>500</td>
                                     <td>g</td>
                                     <td>100</td>
-                                    <td><span class="status-pill in-stock">In Stock</span></td>
+                                    <td>50</td>
+                                    <td><span class="status-pill in-stock">SUFFICIENT</span></td>
                                     <td class="ing-actions">
-                                        <button class="icon-btn edit-btn" aria-label="Edit Waffle Batter"><i class="fa-solid fa-pen"></i></button>
                                         <button class="icon-btn delete-btn" aria-label="Delete Waffle Batter"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -335,9 +352,16 @@
                 </div>
 
                 <div class="inventory-panel" id="stockIn" data-panel="stock-in" hidden>
-                    <div class="inventory-search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="stockInSearch" placeholder="Search ingredients...">
+                    <div class="inventory-search-row">
+                        <div class="inventory-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="stockInSearch" placeholder="Search ingredients...">
+                        </div>
+                        <div class="stock-in-actions">
+                            <p class="stock-in-status" id="stockInStatus" role="status" hidden>Stock In recorded.</p>
+                            <button type="button" class="cancel-btn" id="cancelStockInBtn">Cancel</button>
+                            <button type="button" class="save-btn" id="saveStockInBtn">Save Stock In</button>
+                        </div>
                     </div>
 
                     <div class="table-wrap">
@@ -371,13 +395,6 @@
                             <i class="fa-solid fa-magnifying-glass"></i>
                             <input type="text" id="stockHistorySearch" placeholder="Search transaction type...">
                         </div>
-
-                        <select class="stock-history-filter" id="stockHistoryFilter" aria-label="Filter by ingredient">
-                            <option value="">All Ingredients</option>
-                            <option value="Coffee Beans">Coffee Beans</option>
-                            <option value="Fresh Milk">Fresh Milk</option>
-                            <option value="Matcha Powder">Matcha Powder</option>
-                        </select>
                     </div>
 
                     <div class="table-wrap">
@@ -438,57 +455,6 @@
                         <div class="modal-actions">
                             <button type="button" class="cancel-btn" id="cancelAddIngredientBtn">Cancel</button>
                             <button type="button" class="save-btn" id="saveAddIngredientBtn">Save Ingredients</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edit Ingredient Modal -->
-                <div class="modal-overlay" id="editIngredientModalOverlay" hidden>
-                    <div class="modal-box">
-                        <h2 class="modal-title">Edit Ingredient</h2>
-                        <p class="modal-note" id="editIngredientWarning" hidden>
-                            Changing the unit of measure may affect existing ingredient mappings. Please review the mapped quantities after changing the unit.
-                        </p>
-
-                        <div class="modal-field">
-                            <label for="editIngredientName">Ingredient Name</label>
-                            <input type="text" id="editIngredientName" readonly>
-                        </div>
-                        <div class="modal-field">
-                            <label for="editIngredientCategory">Category</label>
-                            <input type="text" id="editIngredientCategory" readonly>
-                        </div>
-                        <div class="modal-field">
-                            <label for="editIngredientStock">Current Stock</label>
-                            <input type="number" id="editIngredientStock" readonly>
-                        </div>
-                        <div class="modal-field">
-                            <label for="editIngredientUnit">Unit of Measure</label>
-                            <select id="editIngredientUnit">
-                                <option value="g">g</option>
-                                <option value="kg">kg</option>
-                                <option value="mg">mg</option>
-                                <option value="ml">ml</option>
-                                <option value="L">L</option>
-                                <option value="cl">cl</option>
-                                <option value="pcs">pcs</option>
-                                <option value="box">box</option>
-                                <option value="pack">pack</option>
-                                <option value="bottle">bottle</option>
-                                <option value="sachet">sachet</option>
-                                <option value="jar">jar</option>
-                                <option value="can">can</option>
-                                <option value="shot">shot</option>
-                                <option value="unit">unit</option>
-                            </select>
-                        </div>
-                        <div class="modal-field">
-                            <label for="editIngredientMinStock">Minimum Stock</label>
-                            <input type="number" id="editIngredientMinStock" readonly>
-                        </div>
-                        <div class="modal-actions">
-                            <button type="button" class="cancel-btn" id="cancelEditIngredientBtn">Cancel</button>
-                            <button type="button" class="save-btn" id="saveEditIngredientBtn">Save Changes</button>
                         </div>
                     </div>
                 </div>
@@ -573,10 +539,11 @@
             const tabs = document.querySelectorAll(".inventory-tab");
             const panels = document.querySelectorAll(".inventory-panel");
             const addIngredientBtn = document.getElementById("addIngredientBtn");
-            const stockInActions = document.getElementById("stockInActions");
             const searchInput = document.getElementById("ingredientSearch");
-            const rows = document.querySelectorAll("#ingredientsTableBody tr");
             const emptyState = document.getElementById("ingredientsEmpty");
+            const branchSelect = document.getElementById("inventoryBranchSelect");
+            const exportButton = document.getElementById("exportInventoryBtn");
+            let selectedBranchId = "";
 
             // ADD THIS BLOCK - it is missing entirely right now
             tabs.forEach((tab) => {
@@ -594,16 +561,12 @@
                     });
 
                     addIngredientBtn.style.display = target === "ingredients" ? "":"none";
-                    stockInActions.style.display = target === "stock-in" ? "flex" : "none";
                 });
             });
             const addIngredientOverlay = document.getElementById("addIngredientModalOverlay");
             const cancelAddIngredientBtn = document.getElementById("cancelAddIngredientBtn");
             const saveAddIngredientBtn = document.getElementById("saveAddIngredientBtn");
             const ingredientsTableBody = document.getElementById("ingredientsTableBody");
-            const editIngredientOverlay = document.getElementById("editIngredientModalOverlay");
-            const editIngredientWarning = document.getElementById("editIngredientWarning");
-            const editIngredientUnit = document.getElementById("editIngredientUnit");
             let editingIngredient = null;
 
             function updateStockWarning(items) {
@@ -635,6 +598,7 @@
                     const unit = item.unit || "pcs";
                     const stock = Number(item.stock || 0);
                     const minStock = Number(item.min_stock || 0);
+                    const servingsLeft = item.servings_left === null || item.servings_left === undefined ? "-" : Number(item.servings_left).toLocaleString();
                     const sufficiency = item.sufficiency_status || (stock <= 0 ? "insufficient" : stock <= minStock ? "low" : "sufficient");
                     const statusClass = sufficiency === "insufficient" ? "out-of-stock" : sufficiency === "low" ? "low-stock" : "in-stock";
                     const statusLabel = sufficiency === "insufficient" ? "INSUFFICIENT" : sufficiency === "low" ? "LOW" : "SUFFICIENT";
@@ -646,10 +610,10 @@
                         <td>${stock.toLocaleString()}</td>
                         <td>${unit}</td>
                         <td>${minStock.toLocaleString()}</td>
+                        <td>${servingsLeft}</td>
                         <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                         <td class="ing-actions">
-                            <button class="icon-btn edit-btn" data-ingredient-id="${item.id}" aria-label="Edit ${name}"><i class="fa-solid fa-pen"></i></button>
-                            <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
+                            <button class="icon-btn delete-btn" data-ingredient-id="${item.id}" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     `;
                     ingredientsTableBody.appendChild(row);
@@ -658,36 +622,182 @@
                 emptyState.hidden = true;
             }
 
-            function loadIngredients() {
-                fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' })
-                    .then((response) => response.json())
-                    .then((result) => {
-                        if (!result.success) throw new Error(result.error || 'Ingredients could not be loaded');
-                        window.currentIngredients = result.ingredients || [];
-                        renderIngredients(result.ingredients || []);
-                    })
-                    .catch((error) => {
-                        console.error('Unable to load ingredients:', error);
-                        emptyState.hidden = false;
-                        emptyState.textContent = 'Unable to load ingredients from the database.';
-                    });
+            async function loadBranches() {
+                const response = await fetch('admin_data_api.php?action=branches', { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Branches could not be loaded');
+                branchSelect.innerHTML = '';
+                result.branches.forEach((branch) => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.textContent = `${branch.branch_code} / ${branch.branch_name}`;
+                    branchSelect.appendChild(option);
+                });
+                selectedBranchId = String(result.branches[0]?.id || '');
+                branchSelect.value = selectedBranchId;
+                window.currentInventoryBranchId = selectedBranchId;
             }
 
-            loadIngredients();
+            async function loadIngredients() {
+                const params = new URLSearchParams({ action: 'ingredients', branch_id: selectedBranchId, view: 'all' });
+                const response = await fetch(`admin_data_api.php?${params.toString()}`, { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Ingredients could not be loaded');
+                window.currentIngredients = result.ingredients || [];
+                renderIngredients(result.ingredients || []);
+            }
 
+            async function reloadInventoryViews() {
+                await loadIngredients();
+                window.dispatchEvent(new Event("inventoryBranchChanged"));
+            }
+
+            const EXPORT_BRAND_MAROON = [105, 39, 39];
+
+            function loadLogoDataUrl() {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.naturalWidth;
+                            canvas.height = img.naturalHeight;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            resolve(canvas.toDataURL('image/png'));
+                        } catch (err) {
+                            resolve(null);
+                        }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = new URL('../img/LOGO.png', document.baseURI).href;
+                });
+            }
+
+            async function generateInventoryPdfReport() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const marginX = 15;
+                const now = new Date();
+                const generatedOn = now.toLocaleString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+
+                const logoDataUrl = await loadLogoDataUrl();
+                const logoSize = 18;
+                if (logoDataUrl) {
+                    doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
+                }
+
+                doc.setTextColor(20, 20, 20);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.text('BOYCOLD CAFE', marginX + logoSize + 6, 19);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9.5);
+                doc.setTextColor(110, 110, 110);
+                doc.text('Administration Panel', marginX + logoSize + 6, 25);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(...EXPORT_BRAND_MAROON);
+                doc.text('INVENTORY REPORT', pageWidth - marginX, 18, { align: 'right' });
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(110, 110, 110);
+                doc.text(`Generated: ${generatedOn}`, pageWidth - marginX, 24, { align: 'right' });
+
+                doc.setDrawColor(...EXPORT_BRAND_MAROON);
+                doc.setLineWidth(0.8);
+                doc.line(marginX, 34, pageWidth - marginX, 34);
+
+                const branchLabel = branchSelect.selectedOptions[0]?.textContent || 'All Branches';
+                const query = searchInput.value.trim().toLowerCase();
+                const items = (window.currentIngredients || []).filter((item) => (item.name || '').toLowerCase().includes(query));
+
+                doc.setFontSize(9.5);
+                doc.setTextColor(60, 60, 60);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Branch:', marginX, 41);
+                doc.setFont('helvetica', 'normal');
+                doc.text(branchLabel.trim(), marginX + 18, 41);
+
+                doc.setFont('helvetica', 'bold');
+                doc.text('Prepared By:', marginX, 46.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Admin', marginX + 24, 46.5);
+
+                const tableRows = items.map((item) => [
+                    item.name || '',
+                    item.category || 'Uncategorized',
+                    item.stock?.toLocaleString() || '0',
+                    item.unit || 'pcs',
+                    item.min_stock?.toLocaleString() || '0',
+                    item.servings_left === null || item.servings_left === undefined ? '-' : Number(item.servings_left).toLocaleString(),
+                    item.sufficiency_status === 'insufficient' ? 'INSUFFICIENT' : item.sufficiency_status === 'low' ? 'LOW' : 'SUFFICIENT'
+                ]);
+
+                doc.autoTable({
+                    startY: 56,
+                    margin: { left: marginX, right: marginX },
+                    head: [['Ingredient', 'Category', 'Current Stock', 'Unit', 'Min Stock', 'Servings Left', 'Status']],
+                    body: tableRows,
+                    styles: {
+                        font: 'helvetica', fontSize: 7.5, cellPadding: 2.5,
+                        lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                    },
+                    headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
+                    alternateRowStyles: { fillColor: [247, 245, 243] },
+                    didDrawPage: (data) => {
+                        const pageCount = doc.internal.getNumberOfPages();
+                        doc.setFontSize(8);
+                        doc.setTextColor(140, 140, 140);
+                        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} of ${pageCount}`, pageWidth - marginX, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+                        doc.text('BoyCold Cafe - Internal Document', marginX, doc.internal.pageSize.getHeight() - 10);
+                    }
+                });
+
+                const fileDate = now.toISOString().slice(0, 10);
+                doc.save(`inventory-report_${fileDate}.pdf`);
+            }
+
+            exportButton.addEventListener('click', async () => {
+                const btn = exportButton;
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+                try {
+                    await generateInventoryPdfReport();
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+            branchSelect.addEventListener('change', async () => {
+                selectedBranchId = branchSelect.value;
+                window.currentInventoryBranchId = selectedBranchId;
+                await reloadInventoryViews();
+            });
+            loadBranches().then(loadIngredients).catch((error) => {
+                console.error('Unable to load inventory branches:', error);
+                emptyState.hidden = false;
+                emptyState.textContent = 'Unable to load inventory branches from the database.';
+            });
             ingredientsTableBody.addEventListener("click", (event) => {
-                const editButton = event.target.closest(".edit-btn");
-                if (!editButton) return;
-                const ingredient = window.currentIngredients?.find((item) => String(item.id) === editButton.dataset.ingredientId);
+                const deleteButton = event.target.closest(".delete-btn");
+                if (!deleteButton) return;
+                const ingredient = window.currentIngredients?.find((item) => String(item.id) === deleteButton.dataset.ingredientId);
                 if (!ingredient) return;
-                editingIngredient = ingredient;
-                document.getElementById("editIngredientName").value = ingredient.name || "";
-                document.getElementById("editIngredientCategory").value = ingredient.category || "";
-                document.getElementById("editIngredientStock").value = ingredient.stock ?? 0;
-                document.getElementById("editIngredientMinStock").value = ingredient.min_stock ?? 0;
-                editIngredientUnit.value = ingredient.unit || "unit";
-                editIngredientWarning.hidden = Number(ingredient.mapping_count || 0) === 0;
-                editIngredientOverlay.hidden = false;
+                if (confirm(`Are you sure you want to delete "${ingredient.name}"?`)) {
+                    // Handle delete logic here
+                    console.log("Delete ingredient:", ingredient);
+                }
             });
 
             document.getElementById("cancelEditIngredientBtn").addEventListener("click", () => {
@@ -724,7 +834,7 @@
                     editIngredientOverlay.hidden = true;
                     editingIngredient = null;
                     await loadIngredients();
-                    loadStockIngredients();
+                    window.dispatchEvent(new Event("inventoryBranchChanged"));
                 } catch (error) {
                     alert(error.message || "Unable to update the unit of measure. Please try again.");
                 } finally {
@@ -765,6 +875,8 @@
 
                     let statusClass = "in-stock";
                 let statusLabel = "SUFFICIENT";
+                let servingsLeft = "-";
+
                 if (currentStock <= 0) {
                     statusClass = "out-of-stock";
                     statusLabel = "INSUFFICIENT";
@@ -780,9 +892,9 @@
                     <td>${currentStock.toLocaleString()}</td>
                     <td>${unit}</td>
                     <td>${minStock.toLocaleString()}</td>
+                    <td>${servingsLeft}</td>
                     <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                     <td class="ing-actions">
-                        <button class="icon-btn edit-btn" aria-label="Edit ${name}"><i class="fa-solid fa-pen"></i></button>
                         <button class="icon-btn delete-btn" aria-label="Delete ${name}"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
@@ -922,7 +1034,8 @@
             }
 
             function loadStockIngredients() {
-                fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' })
+                const branchId = window.currentInventoryBranchId || '1';
+                fetch(`admin_data_api.php?action=ingredients&branch_id=${encodeURIComponent(branchId)}&view=all`, { cache: 'no-store' })
                     .then((response) => response.json())
                     .then((result) => {
                         if (!result.success) throw new Error(result.error || 'Ingredients could not be loaded');
@@ -941,6 +1054,8 @@
                         emptyState.textContent = 'Unable to load ingredients from the database.';
                     });
             }
+
+            window.addEventListener('inventoryBranchChanged', loadStockIngredients);
 
             // --- Populate Add Stock modal dropdown ---
             addStockIngredientSelect.addEventListener("change", () => {

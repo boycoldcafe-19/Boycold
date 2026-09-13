@@ -1159,10 +1159,10 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                         {
                             label: 'This Week',
                             data: thisWeekData,
-                            borderColor: '#6B4B3E',
-                            backgroundColor: '#6B4B3E',
-                            pointBackgroundColor: '#6B4B3E',
-                            pointBorderColor: '#6B4B3E',
+                            borderColor: '#692727',
+                            backgroundColor: '#692727',
+                            pointBackgroundColor: '#692727',
+                            pointBorderColor: '#692727',
                             borderWidth: 3,
                             pointRadius: 5,
                             pointHoverRadius: 6,
@@ -1257,7 +1257,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                     labels: timeLabels.length ? timeLabels : ['No Data'],
                     datasets: [{
                         data: timeData.length ? timeData : [0],
-                        backgroundColor: '#6B4B3E',
+                        backgroundColor: '#692727',
                         borderRadius: 6,
                         maxBarThickness: 48
                     }]

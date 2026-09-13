@@ -17,7 +17,7 @@ $branch->execute();
 $branch->close();
 
 $source = $connect->prepare(
-        "SELECT name, category, unit, min_stock
+    "SELECT name, category, unit, stock, min_stock
          FROM ingredients
          WHERE branch_id = ?
              AND LOWER(name) NOT IN ('whipping cream', 'condense', 'condensed')
@@ -30,7 +30,7 @@ $source->close();
 
 $insert = $connect->prepare(
     'INSERT INTO ingredients (name, category, unit, branch_id, stock, min_stock)
-     SELECT ?, ?, ?, ?, 0, ?
+     SELECT ?, ?, ?, ?, ?, ?
      WHERE NOT EXISTS (
          SELECT 1 FROM ingredients WHERE branch_id = ? AND LOWER(name) = LOWER(?)
      )'
@@ -41,11 +41,54 @@ foreach ($rows as $row) {
     $name = (string) $row['name'];
     $category = (string) ($row['category'] ?? 'Other');
     $unit = (string) $row['unit'];
+    $stock = (float) ($row['stock'] ?? 0);
     $minStock = (float) ($row['min_stock'] ?? 0);
-    $insert->bind_param('sssidis', $name, $category, $unit, $targetBranchId, $minStock, $targetBranchId, $name);
+    $insert->bind_param('sssiddis', $name, $category, $unit, $targetBranchId, $stock, $minStock, $targetBranchId, $name);
     $insert->execute();
     $created += $insert->affected_rows;
 }
 $insert->close();
 
-echo "Bustos branch inventory ready; created {$created} ingredient records with zero opening stock." . PHP_EOL;
+$sync = $connect->prepare(
+    'UPDATE ingredients target
+     INNER JOIN ingredients source
+         ON LOWER(source.name) = LOWER(target.name)
+        AND source.branch_id = ?
+     SET target.stock = source.stock
+     WHERE target.branch_id = ?
+       AND target.stock = 0
+       AND NOT EXISTS (
+           SELECT 1
+           FROM ingredient_stock_movements movement
+           WHERE movement.ingredient_id = target.id
+       )'
+);
+$sync->bind_param('ii', $sourceBranchId, $targetBranchId);
+$sync->execute();
+$synced = $sync->affected_rows;
+$sync->close();
+
+$movement = $connect->prepare(
+    "INSERT INTO ingredient_stock_movements
+        (ingredient_id, movement_type, quantity, resulting_stock, source, reference)
+     SELECT target.id, 'stock_in', target.stock, target.stock, 'branch_seed', ?
+     FROM ingredients target
+     INNER JOIN ingredients source
+         ON LOWER(source.name) = LOWER(target.name)
+        AND source.branch_id = ?
+     WHERE target.branch_id = ?
+       AND target.stock > 0
+       AND NOT EXISTS (
+           SELECT 1
+           FROM ingredient_stock_movements movement
+           WHERE movement.ingredient_id = target.id
+       )"
+);
+$reference = 'Initial Bustos stock copied from Baliuag';
+$movement->bind_param('sii', $reference, $sourceBranchId, $targetBranchId);
+$movement->execute();
+$movementCount = $movement->affected_rows;
+$movement->close();
+
+echo "Bustos branch inventory ready; created {$created} ingredient records and synced {$synced} stock values." . PHP_EOL;
+echo "Recorded {$movementCount} opening stock movements for Bustos." . PHP_EOL;

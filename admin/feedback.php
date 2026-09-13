@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/admin_guard.php';
 
-function boycold_feedback_photo_url($photo): string
+function boycold_feedback_photo_url(string $photo): string
 {
     $photo = trim((string) $photo);
     if ($photo === '') {
