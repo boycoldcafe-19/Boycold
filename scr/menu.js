@@ -8,11 +8,15 @@ const FREE_DRINK_EXCLUDED_CATEGORIES = new Set([
 ]);
 const isFreeDrinkFlow = sessionStorage.getItem('boycold_free_drink_flow') === '1';
 
+function normalizeMenuCategory(value) {
+    return String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+}
+
 function prepareFreeDrinkMenu() {
     if (!isFreeDrinkFlow) return;
 
     document.querySelectorAll('.product-card').forEach((card) => {
-        const category = (card.dataset.category || '').toLowerCase();
+        const category = normalizeMenuCategory(card.dataset.category);
         const eligible = !FREE_DRINK_EXCLUDED_CATEGORIES.has(category);
         card.style.display = eligible ? '' : 'none';
         if (!eligible) return;
@@ -89,7 +93,7 @@ function applyFilters(query, category) {
         const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
         const rewardEligible = !isFreeDrinkFlow
-            || !FREE_DRINK_EXCLUDED_CATEGORIES.has((card.dataset.category || '').toLowerCase());
+            || !FREE_DRINK_EXCLUDED_CATEGORIES.has(normalizeMenuCategory(card.dataset.category));
         const show     = (isFreeDrinkFlow ? rewardEligible : matchCat && rewardEligible) && matchQ;
         card.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
@@ -203,6 +207,9 @@ async function isStoreOpen(branchId = getSelectedBranchId()) {
 }
 
 function productCanOrder(card) {
+    if (isFreeDrinkFlow && !FREE_DRINK_EXCLUDED_CATEGORIES.has(normalizeMenuCategory(card?.dataset.category))) {
+        return true;
+    }
     if (!card || card.dataset.canOrder === '1') return true;
     alert(card.dataset.stockReason || 'This item is currently unavailable.');
     return false;
@@ -236,7 +243,9 @@ function applyProductAvailability(card, info) {
     const status = info.status || 'unavailable';
     const label = info.status_label || 'Unavailable';
     const servings = Number(info.available_servings || 0);
-    const canOrder = info.can_order ? '1' : '0';
+    const rewardEligible = isFreeDrinkFlow
+        && !FREE_DRINK_EXCLUDED_CATEGORIES.has(normalizeMenuCategory(card.dataset.category));
+    const canOrder = rewardEligible || info.can_order ? '1' : '0';
 
     card.dataset.canOrder = canOrder;
     card.dataset.stockStatus = status;
@@ -375,7 +384,7 @@ document.addEventListener('click', async function(e) {
         const branchId = getSelectedBranchId();
 
         if (isFreeDrinkFlow) {
-            const category = (card.dataset.category || '').toLowerCase();
+            const category = normalizeMenuCategory(card.dataset.category);
             if (FREE_DRINK_EXCLUDED_CATEGORIES.has(category)) {
                 alert('Please select an eligible drink for your free reward.');
                 return;

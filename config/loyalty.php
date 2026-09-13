@@ -23,7 +23,8 @@ function getRedeemableDrinkProducts(mysqli $connect): array
     $stmt = $connect->prepare(
         "SELECT id, product_name, category, price, image
          FROM products
-         WHERE is_available = 1 AND LOWER(TRIM(category)) NOT IN ($placeholders)
+                 WHERE is_available = 1
+                     AND REPLACE(LOWER(TRIM(category)), ' ', '-') NOT IN ($placeholders)
          ORDER BY category, product_name"
     );
     $lowerCategories = array_map('strtolower', $categories);
@@ -49,7 +50,8 @@ function findRedeemableDrinkProduct(mysqli $connect, int $productId): ?array
     $stmt = $connect->prepare(
         "SELECT id, product_name, category, price, image
          FROM products
-         WHERE id = ? AND is_available = 1 AND LOWER(TRIM(category)) NOT IN ($placeholders)
+                 WHERE id = ? AND is_available = 1
+                     AND REPLACE(LOWER(TRIM(category)), ' ', '-') NOT IN ($placeholders)
          LIMIT 1"
     );
     $stmt->bind_param($types, $productId, ...$lowerCategories);

@@ -627,6 +627,7 @@ $branches = $branches ?? [];
         const DELIVERY_FEE = 30;
         const TAX = 5;
         const DIRECT_KEY = 'boycold_direct_order';
+        const FREE_DRINK_MODE = new URLSearchParams(window.location.search).get('mode') === 'free-drink';
         let cartItems = [];
         let isDirectOrder = false; // true = "buy now" from ordercustom.php (single item only)
         let isFreeDrinkClaim = false;
@@ -654,7 +655,7 @@ $branches = $branches ?? [];
                 try {
                     cartItems = [JSON.parse(directRaw)];
                     isDirectOrder = true;
-                    isFreeDrinkClaim = cartItems[0].freeDrinkClaim === true;
+                    isFreeDrinkClaim = cartItems[0].freeDrinkClaim === true || FREE_DRINK_MODE;
                     if (isFreeDrinkClaim) {
                         const pickupButton = [...document.querySelectorAll('.co-toggle-btn')]
                             .find((button) => button.textContent.trim().toLowerCase().includes('pick'));
