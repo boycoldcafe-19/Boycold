@@ -4,18 +4,26 @@ const BOYCOLD_LOYALTY_MAX_STAMPS = 10;
 const BOYCOLD_LOYALTY_RULE = 'item_quantity'; // Change to 'completed_order' for 1 stamp per completed order.
 const BOYCOLD_LOYALTY_STAMPS_PER_QUALIFYING_ITEM = 1;
 const BOYCOLD_LOYALTY_RESET_ON_REWARD = false;
-const BOYCOLD_LOYALTY_DRINK_CATEGORIES = ['coffee', 'matcha-fusion', 'frappe-series', 'non-coffee', 'smoothie'];
+const BOYCOLD_LOYALTY_EXCLUDED_DRINK_CATEGORIES = [
+    'rice-meal',
+    'light-snack',
+    'pasta',
+    'waffles',
+    'quesadilla',
+    'bites',
+    'waffle',
+];
 
 function getRedeemableDrinkProducts(mysqli $connect): array
 {
-    $categories = BOYCOLD_LOYALTY_DRINK_CATEGORIES;
+    $categories = BOYCOLD_LOYALTY_EXCLUDED_DRINK_CATEGORIES;
     $placeholders = implode(',', array_fill(0, count($categories), '?'));
     $types = str_repeat('s', count($categories));
 
     $stmt = $connect->prepare(
         "SELECT id, product_name, category, price, image
          FROM products
-         WHERE is_available = 1 AND LOWER(category) IN ($placeholders)
+         WHERE is_available = 1 AND LOWER(TRIM(category)) NOT IN ($placeholders)
          ORDER BY category, product_name"
     );
     $lowerCategories = array_map('strtolower', $categories);
@@ -33,7 +41,7 @@ function findRedeemableDrinkProduct(mysqli $connect, int $productId): ?array
         return null;
     }
 
-    $categories = BOYCOLD_LOYALTY_DRINK_CATEGORIES;
+    $categories = BOYCOLD_LOYALTY_EXCLUDED_DRINK_CATEGORIES;
     $placeholders = implode(',', array_fill(0, count($categories), '?'));
     $types = 'i' . str_repeat('s', count($categories));
     $lowerCategories = array_map('strtolower', $categories);
@@ -41,7 +49,7 @@ function findRedeemableDrinkProduct(mysqli $connect, int $productId): ?array
     $stmt = $connect->prepare(
         "SELECT id, product_name, category, price, image
          FROM products
-         WHERE id = ? AND is_available = 1 AND LOWER(category) IN ($placeholders)
+         WHERE id = ? AND is_available = 1 AND LOWER(TRIM(category)) NOT IN ($placeholders)
          LIMIT 1"
     );
     $stmt->bind_param($types, $productId, ...$lowerCategories);

@@ -3,7 +3,9 @@
 
 // ── NAV / SIDEBAR ────────────────────────────────────────────
 const nav = document.getElementById('mainNav');
-const FREE_DRINK_CATEGORIES = new Set(['coffee', 'matcha-fusion', 'frappe-series', 'non-coffee', 'smoothie']);
+const FREE_DRINK_EXCLUDED_CATEGORIES = new Set([
+    'rice-meal', 'light-snack', 'pasta', 'waffles', 'quesadilla', 'bites', 'waffle'
+]);
 const isFreeDrinkFlow = sessionStorage.getItem('boycold_free_drink_flow') === '1';
 
 function prepareFreeDrinkMenu() {
@@ -11,7 +13,7 @@ function prepareFreeDrinkMenu() {
 
     document.querySelectorAll('.product-card').forEach((card) => {
         const category = (card.dataset.category || '').toLowerCase();
-        const eligible = FREE_DRINK_CATEGORIES.has(category);
+        const eligible = !FREE_DRINK_EXCLUDED_CATEGORIES.has(category);
         card.style.display = eligible ? '' : 'none';
         if (!eligible) return;
 
@@ -86,7 +88,8 @@ function applyFilters(query, category) {
         const name     = (card.getAttribute('data-product-name') || '').toLowerCase();
         const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
-        const rewardEligible = !isFreeDrinkFlow || FREE_DRINK_CATEGORIES.has((card.dataset.category || '').toLowerCase());
+        const rewardEligible = !isFreeDrinkFlow
+            || !FREE_DRINK_EXCLUDED_CATEGORIES.has((card.dataset.category || '').toLowerCase());
         const show     = (isFreeDrinkFlow ? rewardEligible : matchCat && rewardEligible) && matchQ;
         card.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
@@ -373,7 +376,7 @@ document.addEventListener('click', async function(e) {
 
         if (isFreeDrinkFlow) {
             const category = (card.dataset.category || '').toLowerCase();
-            if (!FREE_DRINK_CATEGORIES.has(category)) {
+            if (FREE_DRINK_EXCLUDED_CATEGORIES.has(category)) {
                 alert('Please select an eligible drink for your free reward.');
                 return;
             }

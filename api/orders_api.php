@@ -228,12 +228,12 @@ switch ($action) {
             break;
         }
 
-        if (!preg_match('/^09\d{9}$/', $contactNumber)) {
+        if (!$isFreeDrinkClaim && !preg_match('/^09\d{9}$/', $contactNumber)) {
             echo json_encode(['success' => false, 'error' => 'A valid 11-digit mobile number starting with 09 is required before QRPh payment.']);
             break;
         }
 
-        if ($userId > 0) {
+        if ($userId > 0 && preg_match('/^09\d{9}$/', $contactNumber)) {
             $phoneStmt = $connect->prepare('UPDATE users SET phone = ? WHERE id = ?');
             $phoneStmt->bind_param('si', $contactNumber, $userId);
             $phoneStmt->execute();
