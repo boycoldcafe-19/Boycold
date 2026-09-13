@@ -15,7 +15,20 @@
         return button;
     }
 
-    function getInventoryItems(inventory) {
+    function getInventoryItems(inventory, restockWarnings) {
+        const capacityWarnings = (restockWarnings || [])
+            .filter((item) => item.status && item.status !== 'ok')
+            .map((item) => ({
+                name: item.name,
+                current: Number(item.stock || 0),
+                min: 0,
+                max: 0,
+                unit: item.unit || '',
+                status: item.status,
+                remainingServings: Number(item.remaining_servings || 0),
+            }));
+        if (capacityWarnings.length) return capacityWarnings;
+
         return Object.values(inventory || {}).filter((item) => {
             const current = Number(item.current || 0);
             const minimum = Number(item.min || 0);
@@ -35,11 +48,11 @@
         return dropdown;
     }
 
-    function renderWarnings(inventory) {
+    function renderWarnings(inventory, restockWarnings) {
         const button = findAlertButton();
         if (!button) return;
 
-        const warnings = getInventoryItems(inventory);
+        const warnings = getInventoryItems(inventory, restockWarnings);
         let badge = button.querySelector('.icon-badge');
         if (!badge) {
             badge = document.createElement('span');
@@ -64,7 +77,11 @@
         warnings.forEach((item) => {
             const current = Number(item.current || 0);
             const minimum = Number(item.min || 0);
-            const label = current <= 0 ? 'Out of stock' : current <= minimum ? 'Below minimum stock' : 'Critical stock';
+            const label = item.status === 'critical'
+                ? `Critical stock (${item.remainingServings} servings left)`
+                : item.status === 'soon'
+                    ? `Low stock (${item.remainingServings} servings left)`
+                    : current <= 0 ? 'Out of stock' : current <= minimum ? 'Below minimum stock' : 'Critical stock';
             const row = document.createElement('div');
             row.className = 'notif-item unread inventory-warning-item';
             row.innerHTML = `<div class="notif-icon notif-icon-warning"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="notif-content"><p class="notif-item-title"></p><p class="notif-item-sub"></p></div>`;
@@ -78,7 +95,7 @@
         try {
             const response = await fetch(API_URL, { cache: 'no-store' });
             const data = await response.json();
-            if (data.success) renderWarnings(data.inventory);
+            if (data.success) renderWarnings(data.inventory, data.restock_warnings);
         } catch (error) {
             console.error('Inventory warning refresh failed:', error);
         }

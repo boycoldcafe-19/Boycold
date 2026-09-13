@@ -16,7 +16,9 @@ $action = $_GET['action'] ?? '';
 try {
     switch ($action) {
         case 'get_inventory':
-            echo json_encode(getInventory($connect, $branchId));
+            $inventory = getInventory($connect, $branchId);
+            $inventory['restock_warnings'] = boycold_get_ingredient_restock_capacities($connect, $branchId);
+            echo json_encode($inventory);
             break;
 
         case 'product_availability':
