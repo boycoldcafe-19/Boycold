@@ -636,6 +636,12 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     </div>
                     <div class="card-no-wrapper">
                         <span class="card-no">Card no: <?= $cardNo ?></span>
+                        <?php if ($isLoyaltyCardComplete): ?>
+                            <button class="reward-btn" type="button" onclick="openFreeDrinkModal()" title="Claim your free drink reward">
+                                <i class="fa-solid fa-gift" aria-hidden="true"></i>
+                                Rewards
+                            </button>
+                        <?php endif; ?>
                         <button class="qr-btn" onclick="openQRModal()" title="Show QR Code">
                             <i class="fa-solid fa-qrcode"></i>
                         </button>

@@ -119,7 +119,7 @@ document.querySelectorAll('.box ul li a').forEach(link => {
         activeCategory = this.getAttribute('data-filter');
         // Keep any current search query active
         const inp = document.querySelector('#navSearch input');
-        applyFilters(inp ? inp.value : '', activeCategory);
+        applyFilters(inp ? inp.value : '', isFreeDrinkFlow ? '' : activeCategory);
     });
 });
 
@@ -140,7 +140,7 @@ document.querySelectorAll('.box ul li a').forEach(link => {
                 activeCategory = activeLink.getAttribute('data-filter') || 'coffee';
                 activeLink.classList.add('active');
             }
-            applyFilters('', activeCategory);
+            applyFilters('', isFreeDrinkFlow ? '' : activeCategory);
         }
     });
 })();

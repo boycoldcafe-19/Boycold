@@ -1766,3 +1766,25 @@ html {
         height: 120px;
     }
 }
+
+.reward-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #692727;
+    border-radius: 16px;
+    background: #fff8e8;
+    color: #692727;
+    cursor: pointer;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.reward-btn:hover,
+.reward-btn:focus-visible {
+    background: #692727;
+    color: #fff;
+}

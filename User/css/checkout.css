@@ -12,6 +12,14 @@
 .co-free-reward-panel[hidden] {
     display: none;
 }
+
+#coPaymentList[aria-disabled="true"] {
+    pointer-events: none;
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+}
 .co-help-text {
     min-height: 1.25rem;
     margin: 6px 0 0;

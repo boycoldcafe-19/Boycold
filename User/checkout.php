@@ -263,7 +263,7 @@ $branches = $branches ?? [];
                     </div>
 
                     <div class="co-free-reward-panel" id="coFreeRewardPanel" hidden>
-                        <strong>🎁 Free Drink Reward</strong>
+                        <strong>Free Drink Reward</strong>
                         <strong>Payment Method: FREE REWARD</strong>
                         <span>No payment is required for this claim.</span>
                     </div>
@@ -630,15 +630,22 @@ $branches = $branches ?? [];
         const FREE_DRINK_MODE = new URLSearchParams(window.location.search).get('mode') === 'free-drink';
         let cartItems = [];
         let isDirectOrder = false; // true = "buy now" from ordercustom.php (single item only)
-        let isFreeDrinkClaim = false;
+        let isFreeDrinkClaim = FREE_DRINK_MODE;
         let branchIsAvailable = false;
 
         function configureFreeDrinkCheckout() {
             if (!isFreeDrinkClaim) return;
-            document.getElementById('coPaymentList').hidden = true;
+            const paymentList = document.getElementById('coPaymentList');
+            paymentList.hidden = true;
+            paymentList.setAttribute('aria-disabled', 'true');
+            paymentList.querySelectorAll('input, button').forEach((control) => {
+                control.disabled = true;
+            });
             document.getElementById('coFreeRewardPanel').hidden = false;
             document.getElementById('coPlaceBtn').textContent = 'Claimed Drinks';
         }
+
+        if (isFreeDrinkClaim) configureFreeDrinkCheckout();
 
         // Render the DELIVER TO field on page load
         renderAddressField();
