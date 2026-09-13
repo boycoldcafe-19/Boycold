@@ -846,7 +846,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
             <h2>Free Drink Ready!</h2>
             <p>You've completed your loyalty card.</p>
             <p>You can claim your free drink in any Boycold Cafe branch.</p>
-            <button class="freedrink-btn" id="freeDrinkViewBtn">View Loyalty Card</button>
+            <button class="freedrink-btn" id="freeDrinkViewBtn">Claim your Free Drink</button>
         </div>
     </div>
 
@@ -999,7 +999,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         if (freeDrinkViewBtn) {
             freeDrinkViewBtn.addEventListener('click', () => {
                 closeFreeDrinkModal();
-                if (loyaltyCardEl) loyaltyCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                window.location.href = 'menu.php';
             });
         }
 
