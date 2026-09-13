@@ -49,7 +49,10 @@
     fetch('../api/get_loyalty_data.php', { credentials: 'same-origin', cache: 'no-store' })
         .then((response) => response.json())
         .then((result) => {
-            if (result.success && Number(result.loyalty_stamps) >= 10) {
+            if (result.success
+                && Number(result.loyalty_stamps) >= 10
+                && sessionStorage.getItem('boycold_free_drink_flow') !== '1'
+                && sessionStorage.getItem('boycold_direct_order') === null) {
                 openModal();
             }
         })

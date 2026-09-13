@@ -239,7 +239,7 @@ $branches = $branches ?? [];
                 <div class="co-section">
                     <h3 class="co-section-title">PAYMENT METHOD</h3>
 
-                    <div class="co-payment-list">
+                    <div class="co-payment-list" id="coPaymentList">
 
                         <label class="co-pay-card co-pay-selected" id="payQrph">
                             <input type="radio" name="payment" value="qrph" checked class="co-radio">
@@ -260,6 +260,12 @@ $branches = $branches ?? [];
                             </div>
                             <div class="co-pay-circle"></div>
                         </label>
+                    </div>
+
+                    <div class="co-free-reward-panel" id="coFreeRewardPanel" hidden>
+                        <strong>🎁 Free Drink Reward</strong>
+                        <strong>Payment Method: FREE REWARD</strong>
+                        <span>No payment is required for this claim.</span>
                     </div>
 
                     <div class="co-pay-method-panel" id="codHintPanel" hidden>
@@ -585,6 +591,7 @@ $branches = $branches ?? [];
 
         function currentCheckoutTotal() {
             const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
+            if (isFreeDrinkClaim) return 0;
             return subtotal + currentDeliveryFee() + TAX;
         }
 
@@ -600,6 +607,10 @@ $branches = $branches ?? [];
         function updatePaymentHints() {
             const panel = document.getElementById('codHintPanel');
             const text = document.getElementById('codHintText');
+            if (isFreeDrinkClaim) {
+                panel.hidden = true;
+                return;
+            }
             const isCod = selectedPaymentMethod() === 'cod';
             panel.hidden = !isCod;
             if (isCod) {
@@ -618,7 +629,15 @@ $branches = $branches ?? [];
         const DIRECT_KEY = 'boycold_direct_order';
         let cartItems = [];
         let isDirectOrder = false; // true = "buy now" from ordercustom.php (single item only)
+        let isFreeDrinkClaim = false;
         let branchIsAvailable = false;
+
+        function configureFreeDrinkCheckout() {
+            if (!isFreeDrinkClaim) return;
+            document.getElementById('coPaymentList').hidden = true;
+            document.getElementById('coFreeRewardPanel').hidden = false;
+            document.getElementById('coPlaceBtn').textContent = 'Claimed Drinks';
+        }
 
         // Render the DELIVER TO field on page load
         renderAddressField();
@@ -635,6 +654,13 @@ $branches = $branches ?? [];
                 try {
                     cartItems = [JSON.parse(directRaw)];
                     isDirectOrder = true;
+                    isFreeDrinkClaim = cartItems[0].freeDrinkClaim === true;
+                    if (isFreeDrinkClaim) {
+                        const pickupButton = [...document.querySelectorAll('.co-toggle-btn')]
+                            .find((button) => button.textContent.trim().toLowerCase().includes('pick'));
+                        if (pickupButton) setDeliveryMode(pickupButton);
+                        configureFreeDrinkCheckout();
+                    }
                     renderSummary();
                     return;
                 } catch (err) {
@@ -706,6 +732,16 @@ $branches = $branches ?? [];
         }
 
         function updateTotals(subtotal) {
+            if (isFreeDrinkClaim) {
+                document.getElementById('coSubtotal').textContent = '₱0.00';
+                document.getElementById('coDelivery').textContent = '₱0.00';
+                document.getElementById('coTax').textContent = '₱0.00';
+                document.getElementById('coTotal').textContent = '₱0.00';
+                document.getElementById('coPlaceBtn').textContent = 'Claimed Drinks';
+                updatePlaceButtonState();
+                updatePaymentHints();
+                return;
+            }
             const deliveryFee = currentDeliveryFee();
             const total = subtotal + deliveryFee + TAX;
             document.getElementById('coSubtotal').textContent = '₱' + subtotal.toFixed(2);
@@ -784,8 +820,10 @@ $branches = $branches ?? [];
                 branch_id:       branchId,
                 address:         finalAddress,
                 contact_number:  phone,
-                delivery_fee:    currentDeliveryFee(),
-                tax:             TAX,
+                delivery_fee:    isFreeDrinkClaim ? 0 : currentDeliveryFee(),
+                tax:             isFreeDrinkClaim ? 0 : TAX,
+                free_drink_claim: isFreeDrinkClaim,
+                product_id:      isFreeDrinkClaim ? Number(cartItems[0]?.productId || 0) : 0,
                 notes:           '',
                 from_cart:       !isDirectOrder
             };
@@ -835,7 +873,7 @@ $branches = $branches ?? [];
             // Gather form values
             const activeDelivery = document.querySelector('.co-toggle-btn.co-active');
             const deliveryText = activeDelivery ? activeDelivery.textContent.trim().toLowerCase() : 'delivery';
-            const isPickup  = deliveryText.includes('pick');
+            const isPickup  = isFreeDrinkClaim || deliveryText.includes('pick');
             const orderType = isPickup ? 'pickup' : 'delivery';
 
             // For pick-up use the branch select; for delivery use the address field
@@ -859,14 +897,14 @@ $branches = $branches ?? [];
                 return;
             }
             const finalAddress = isPickup ? branchName : address;
-            const paymentMethod = selectedPaymentMethod();
+            const paymentMethod = isFreeDrinkClaim ? 'free_reward' : selectedPaymentMethod();
 
             this.disabled = true;
             this.textContent = 'Placing order…';
 
             const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
             const deliveryFee = isPickup ? 0 : DELIVERY_FEE;
-            const total = subtotal + deliveryFee + TAX;
+            const total = isFreeDrinkClaim ? 0 : subtotal + deliveryFee + TAX;
 
             // Proceed with order placement
             await placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, null);

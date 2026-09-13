@@ -3,6 +3,29 @@
 
 // ── NAV / SIDEBAR ────────────────────────────────────────────
 const nav = document.getElementById('mainNav');
+const FREE_DRINK_CATEGORIES = new Set(['coffee', 'matcha-fusion', 'frappe-series', 'non-coffee', 'smoothie']);
+const isFreeDrinkFlow = sessionStorage.getItem('boycold_free_drink_flow') === '1';
+
+function prepareFreeDrinkMenu() {
+    if (!isFreeDrinkFlow) return;
+
+    document.querySelectorAll('.product-card').forEach((card) => {
+        const category = (card.dataset.category || '').toLowerCase();
+        const eligible = FREE_DRINK_CATEGORIES.has(category);
+        card.style.display = eligible ? '' : 'none';
+        if (!eligible) return;
+
+        const price = card.querySelector('.card-price');
+        const cartButton = card.querySelector('.btn-cart');
+        const orderButton = card.querySelector('.btn-order');
+        if (price) price.textContent = 'FREE REWARD';
+        if (cartButton) cartButton.hidden = true;
+        if (orderButton) orderButton.innerHTML = '<i class="fa-solid fa-gift"></i> Select Free Drink';
+    });
+
+    const title = document.querySelector('.menu-section')?.previousElementSibling;
+    if (title) title.setAttribute('data-free-drink-mode', 'true');
+}
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -63,7 +86,8 @@ function applyFilters(query, category) {
         const name     = (card.getAttribute('data-product-name') || '').toLowerCase();
         const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
-        const show     = matchCat && matchQ;
+        const rewardEligible = !isFreeDrinkFlow || FREE_DRINK_CATEGORIES.has((card.dataset.category || '').toLowerCase());
+        const show     = matchCat && matchQ && rewardEligible;
         card.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
     });
@@ -346,6 +370,33 @@ document.addEventListener('click', async function(e) {
         const image  = card.querySelector('.card-image img')?.getAttribute('src') || '';
         const servings = card.dataset.availableServings || '0';
         const branchId = getSelectedBranchId();
+
+        if (isFreeDrinkFlow) {
+            const category = (card.dataset.category || '').toLowerCase();
+            if (!FREE_DRINK_CATEGORIES.has(category)) {
+                alert('Please select an eligible drink for your free reward.');
+                return;
+            }
+
+            sessionStorage.setItem('boycold_direct_order', JSON.stringify({
+                id: Date.now(),
+                productId: Number(card.dataset.productId || 0),
+                name,
+                image,
+                unitPrice: 0,
+                qty: 1,
+                total: 0,
+                milk: '',
+                addons: '',
+                orderType: 'pickup',
+                notes: '',
+                freeDrinkClaim: true
+            }));
+            sessionStorage.removeItem('boycold_free_drink_flow');
+            window.location.href = 'checkout.php?mode=free-drink';
+            return;
+        }
+
         const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId });
         window.location.href = 'ordercustom.php?' + params.toString();
         return;
@@ -362,6 +413,7 @@ function showCartToast(name) {
 }
 
 // ── INIT ─────────────────────────────────────────────────────
+prepareFreeDrinkMenu();
 loadFavorites();
 refreshMenuAvailability();
 setInterval(refreshMenuAvailability, 30000);

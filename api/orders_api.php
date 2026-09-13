@@ -207,6 +207,7 @@ switch ($action) {
         $tax            = (float) ($body['tax']          ?? 0);
         $orderNotes     = trim($body['notes']   ?? '');
         $branchId       = isset($body['branch_id']) && $body['branch_id'] !== '' ? (int) $body['branch_id'] : null;
+        $isFreeDrinkClaim = !empty($body['free_drink_claim']);
 
         // ── Payment method / status ────────────────────────────
         $paymentMethod = strtolower(trim($body['payment_method'] ?? 'cod'));
@@ -244,9 +245,68 @@ switch ($action) {
             $subtotal += (float)($item['unitPrice'] ?? 0) * max(1, (int)($item['qty'] ?? 1));
         }
         $total = $subtotal + $deliveryFee + $tax;
+        if ($isFreeDrinkClaim) {
+            $subtotal = 0.0;
+            $deliveryFee = 0.0;
+            $tax = 0.0;
+            $total = 0.0;
+        }
 
         $connect->begin_transaction();
         try {
+            $freeDrinkUser = null;
+            $freeDrinkProduct = null;
+            if ($isFreeDrinkClaim) {
+                if ($userId <= 0) {
+                    throw new RuntimeException('You must be logged in to claim a free drink.');
+                }
+
+                $freeUserStmt = $connect->prepare(
+                    'SELECT id, card_no, loyalty_stamps
+                     FROM users
+                     WHERE id = ?
+                     LIMIT 1
+                     FOR UPDATE'
+                );
+                $freeUserStmt->bind_param('i', $userId);
+                $freeUserStmt->execute();
+                $freeDrinkUser = $freeUserStmt->get_result()->fetch_assoc();
+                $freeUserStmt->close();
+
+                if (!$freeDrinkUser || (int) $freeDrinkUser['loyalty_stamps'] < BOYCOLD_LOYALTY_MAX_STAMPS) {
+                    throw new RuntimeException('Your free drink reward is not available.');
+                }
+
+                $freeDrinkProduct = findRedeemableDrinkProduct(
+                    $connect,
+                    (int) ($body['product_id'] ?? 0)
+                );
+                if (!$freeDrinkProduct) {
+                    throw new RuntimeException('The selected drink is not eligible for this reward.');
+                }
+
+                $items = [[
+                    'name' => (string) $freeDrinkProduct['product_name'],
+                    'unitPrice' => 0.0,
+                    'qty' => 1,
+                    'image' => (string) ($freeDrinkProduct['image'] ?? ''),
+                    'milk' => '',
+                    'addons' => '',
+                    'orderType' => 'pickup',
+                    'notes' => 'FREE DRINK REWARD',
+                ]];
+                $orderType = 'pickup';
+                $paymentMethod = 'cod';
+                $paymentStatus = 'paid';
+                $orderStatus = 'confirmed';
+                $address = 'FREE DRINK REWARD CLAIM';
+                $orderNotes = 'FREE DRINK REWARD CLAIM';
+                $subtotal = 0.0;
+                $deliveryFee = 0.0;
+                $tax = 0.0;
+                $total = 0.0;
+            }
+
             $branchStatus = boycold_get_branch_order_status($connect, (int) $branchId, true);
             if (!$branchStatus['exists']) {
                 throw new RuntimeException('The selected branch is not available.');
@@ -341,6 +401,51 @@ switch ($action) {
                 throw new RuntimeException((string) ($reservation['error'] ?? 'Inventory is no longer available.'));
             }
 
+            if ($isFreeDrinkClaim) {
+                $resetStmt = $connect->prepare(
+                    'UPDATE users SET loyalty_beans = 0, loyalty_stamps = 0 WHERE id = ?'
+                );
+                $resetStmt->bind_param('i', $userId);
+                $resetStmt->execute();
+                $resetStmt->close();
+
+                $markOrderStmt = $connect->prepare(
+                    "UPDATE orders
+                     SET loyalty_awarded = 1,
+                         payment_reference = 'FREE_REWARD',
+                         notes = 'FREE DRINK REWARD CLAIM'
+                     WHERE id = ?"
+                );
+                $markOrderStmt->bind_param('i', $orderId);
+                $markOrderStmt->execute();
+                $markOrderStmt->close();
+
+                $redeemStmt = $connect->prepare(
+                    "INSERT INTO loyalty_transactions
+                        (user_id, card_no, branch_id, device_id, employee_id, transaction_type,
+                         points_awarded, previous_balance, new_balance, order_id,
+                         redeemed_product_id, redeemed_product_name)
+                     VALUES (?, ?, ?, 0, 0, 'redemption', ?, ?, 0, ?, ?, ?)"
+                );
+                $pointsRedeemed = -((int) $freeDrinkUser['loyalty_stamps'] * 10);
+                $previousBalance = (int) $freeDrinkUser['loyalty_stamps'] * 10;
+                $redeemedProductId = (int) $freeDrinkProduct['id'];
+                $redeemedProductName = (string) $freeDrinkProduct['product_name'];
+                $redeemStmt->bind_param(
+                    'isiiiiis',
+                    $userId,
+                    $freeDrinkUser['card_no'],
+                    $branchId,
+                    $pointsRedeemed,
+                    $previousBalance,
+                    $orderId,
+                    $redeemedProductId,
+                    $redeemedProductName
+                );
+                $redeemStmt->execute();
+                $redeemStmt->close();
+            }
+
             $fromCart = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
             if ($fromCart) {
                 $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
@@ -374,10 +479,12 @@ switch ($action) {
             'success'        => true,
             'order_id'       => $orderId,
             'total'          => number_format($total, 2),
-            'payment_method' => $paymentMethod,
+            'payment_method' => $isFreeDrinkClaim ? 'free_reward' : $paymentMethod,
             'payment_status' => $paymentStatus,
             'order_status'   => $orderStatus,
-            'message'        => 'Order placed successfully.',
+            'message'        => $isFreeDrinkClaim
+                ? 'Free drink claimed successfully.'
+                : 'Order placed successfully.',
         ];
         if ($qrPayload) {
             $response['qr_image_url'] = $qrPayload['qr_image_url'];

@@ -1,3 +1,17 @@
+.co-free-reward-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid #d9b36c;
+    border-radius: 10px;
+    background: #fff8e8;
+    color: #692727;
+}
+
+.co-free-reward-panel[hidden] {
+    display: none;
+}
 .co-help-text {
     min-height: 1.25rem;
     margin: 6px 0 0;

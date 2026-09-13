@@ -1000,7 +1000,8 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         if (freeDrinkViewBtn) {
             freeDrinkViewBtn.addEventListener('click', () => {
                 closeFreeDrinkModal();
-                window.location.href = 'menu.php';
+                sessionStorage.setItem('boycold_free_drink_flow', '1');
+                window.location.href = 'menu.php?free_drink=1';
             });
         }
 
