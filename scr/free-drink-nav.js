@@ -1,4 +1,5 @@
 (() => {
+    const nav = document.getElementById('mainNav');
     let overlay = document.getElementById('freeDrinkOverlay');
     const createdOverlay = !overlay;
     if (!overlay) {
@@ -33,6 +34,22 @@
         overlay.classList.add('open');
     }
 
+    function addPersistentNavbarButton() {
+        if (!nav || nav.querySelector('[data-free-drink-nav]')) return;
+        const target = nav.querySelector('.nav-right-group');
+        if (!target) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'nav-free-drink-btn';
+        button.dataset.freeDrinkNav = 'true';
+        button.setAttribute('aria-label', 'Open available free drink reward');
+        button.title = 'Free Drinks reward available';
+        button.innerHTML = '<i class="fa-solid fa-gift" aria-hidden="true"></i><span>Free Drinks</span>';
+        button.addEventListener('click', openModal);
+        target.insertBefore(button, target.firstElementChild);
+    }
+
     closeButton?.addEventListener('click', closeModal);
     overlay.addEventListener('click', (event) => {
         if (event.target === overlay) closeModal();
@@ -49,11 +66,12 @@
     fetch('../api/get_loyalty_data.php', { credentials: 'same-origin', cache: 'no-store' })
         .then((response) => response.json())
         .then((result) => {
-            if (result.success
-                && Number(result.loyalty_stamps) >= 10
-                && sessionStorage.getItem('boycold_free_drink_flow') !== '1'
-                && sessionStorage.getItem('boycold_direct_order') === null) {
-                openModal();
+            if (result.success && Number(result.loyalty_stamps) >= 10) {
+                addPersistentNavbarButton();
+                if (sessionStorage.getItem('boycold_free_drink_flow') !== '1'
+                    && sessionStorage.getItem('boycold_direct_order') === null) {
+                    openModal();
+                }
             }
         })
         .catch(() => {});
