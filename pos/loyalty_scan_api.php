@@ -65,7 +65,7 @@ $cardNo = (string) ($user['card_no'] ?? '');
 function getRecentLoyaltyTransactions(mysqli $connect, int $userId): array
 {
     $stmt = $connect->prepare(
-        "SELECT transaction_type, points_awarded, created_at
+        "SELECT transaction_type, points_awarded, created_at, redeemed_product_name
          FROM loyalty_transactions
          WHERE user_id = ?
          ORDER BY created_at DESC, id DESC
@@ -119,7 +119,7 @@ if ($action === 'award') {
 
     // Record transaction in loyalty_transactions table
     $transactionStmt = $connect->prepare("INSERT INTO loyalty_transactions (user_id, card_no, branch_id, device_id, employee_id, transaction_type, points_awarded, previous_balance, new_balance) VALUES (?, ?, ?, ?, ?, 'bean_award', 10, ?, ?)");
-    $transactionStmt->bind_param('isiiii', $user['id'], $cardNo, $branchId, $deviceId, $employeeId, $previousBalance, $newBalance);
+    $transactionStmt->bind_param('isiiiii', $user['id'], $cardNo, $branchId, $deviceId, $employeeId, $previousBalance, $newBalance);
     $transactionStmt->execute();
     $transactionStmt->close();
 
@@ -127,6 +127,90 @@ if ($action === 'award') {
         'success' => true,
         'message' => 'Loyalty stamp awarded',
         'customer' => customerPayload(array_merge($user, $updated), getRecentLoyaltyTransactions($connect, (int) $user['id']))
+    ]);
+    exit;
+}
+
+if ($action === 'redeem') {
+    $branchId = (int) $employee['branch_id'];
+    $deviceId = isset($_SESSION['device_id']) ? (int) $_SESSION['device_id'] : 0;
+    $employeeId = (int) $employee['id'];
+
+    $connect->begin_transaction();
+
+    try {
+        // Lock the customer's row so two cashiers can't redeem the same card at once
+        $lockStmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps FROM users WHERE id = ? FOR UPDATE");
+        $lockStmt->bind_param('i', $user['id']);
+        $lockStmt->execute();
+        $locked = $lockStmt->get_result()->fetch_assoc();
+        $lockStmt->close();
+
+        $currentStamps = (int) ($locked['loyalty_stamps'] ?? 0);
+        if ($currentStamps < 10) {
+            throw new Exception("This card is not full yet ({$currentStamps}/10 stamps).");
+        }
+
+        // Any drink on the menu can be the reward - validate whatever the cashier picked
+        $productId = isset($input['product_id']) ? (int) $input['product_id'] : 0;
+        $drink = findRedeemableDrinkProduct($connect, $productId);
+        if (!$drink) {
+            throw new Exception('Please select a valid drink to redeem.');
+        }
+
+        // Same points scale used elsewhere in this file (1 stamp = 10 points)
+        $previousBalance = (int) ($locked['loyalty_beans'] ?? 0) + ($currentStamps * 10);
+        $newBalance = 0;
+        $pointsRedeemed = -$previousBalance;
+        $redeemedProductId = (int) $drink['id'];
+        $redeemedProductName = (string) $drink['product_name'];
+
+        // Reward claimed - reset the card
+        $resetStmt = $connect->prepare("UPDATE users SET loyalty_beans = 0, loyalty_stamps = 0 WHERE id = ?");
+        $resetStmt->bind_param('i', $user['id']);
+        $resetStmt->execute();
+        $resetStmt->close();
+
+        $transactionStmt = $connect->prepare(
+            "INSERT INTO loyalty_transactions
+                (user_id, card_no, branch_id, device_id, employee_id, transaction_type,
+                 points_awarded, previous_balance, new_balance, redeemed_product_id, redeemed_product_name)
+             VALUES (?, ?, ?, ?, ?, 'redemption', ?, ?, ?, ?, ?)"
+        );
+        $transactionStmt->bind_param(
+            'isiiiiiiis',
+            $user['id'],
+            $cardNo,
+            $branchId,
+            $deviceId,
+            $employeeId,
+            $pointsRedeemed,
+            $previousBalance,
+            $newBalance,
+            $redeemedProductId,
+            $redeemedProductName
+        );
+        $transactionStmt->execute();
+        $transactionStmt->close();
+
+        $connect->commit();
+    } catch (Exception $e) {
+        $connect->rollback();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
+
+    $refreshStmt = $connect->prepare("SELECT id, firstname, lastname, email, phone, card_no, created_at, loyalty_beans, loyalty_stamps FROM users WHERE id = ? LIMIT 1");
+    $refreshStmt->bind_param('i', $user['id']);
+    $refreshStmt->execute();
+    $updatedUser = $refreshStmt->get_result()->fetch_assoc();
+    $refreshStmt->close();
+
+    echo json_encode([
+        'success' => true,
+        'message' => "Reward redeemed \u2014 {$redeemedProductName} claimed.",
+        'customer' => customerPayload($updatedUser, getRecentLoyaltyTransactions($connect, (int) $user['id']))
     ]);
     exit;
 }

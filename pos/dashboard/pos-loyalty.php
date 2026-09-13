@@ -1,10 +1,10 @@
 <?php
-require_once '../auth/guard.php';
+require_once __DIR__ . '/../auth/guard.php';
 pos_start_session();
-require_once '../config/db_config.php';
+require_once __DIR__ . '/../config/db_config.php';
 $guardEmployee = pos_require_employee($connect);
-require_once '../../config/shift_manager.php';
-require_once '../../config/loyalty.php';
+require_once __DIR__ . '/../../config/shift_manager.php';
+require_once __DIR__ . '/../../config/loyalty.php';
 
 $employeeId = (int) $guardEmployee['id'];
 $branchId = (int) ($guardEmployee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
@@ -25,6 +25,8 @@ $branchName = strtoupper(trim(($guardEmployee['branch_code'] ?? '') . ' - ' . ($
 if ($branchName === '-') {
     $branchName = 'MAIN BRANCH';
 }
+
+$redeemableDrinks = getRedeemableDrinkProducts($connect);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,6 +52,32 @@ if ($branchName === '-') {
             (localStorage.getItem("boycold_theme") || "dark") === "dark"
         );
     </script>
+    <script>
+        const REDEEMABLE_DRINKS = <?= json_encode($redeemableDrinks, JSON_UNESCAPED_UNICODE) ?>;
+    </script>
+    <style>
+        .redeem-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .55); align-items: center; justify-content: center; z-index: 1000; }
+        .redeem-overlay.open { display: flex; }
+        .redeem-box { background: var(--surface); color: var(--text); border-radius: 12px; padding: 24px; width: min(360px, 90vw); box-shadow: 0 10px 30px var(--shadow); }
+        .redeem-box h3 { margin-bottom: 6px; font-size: 1.1rem; }
+        .redeem-box p { color: var(--text-light); font-size: .85rem; margin-bottom: 16px; }
+        #redeemDrinkSelect { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 18px; font-size: .95rem; }
+        .redeem-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .redeem-actions button { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; }
+        .redeem-actions .btn-secondary { background: var(--border); color: var(--text); }
+        .redeem-actions .btn-primary { background: var(--primary); color: var(--primary-text); }
+    </style>
+    <div class="redeem-overlay" id="redeemOverlay">
+        <div class="redeem-box">
+            <h3><i class="fa-solid fa-mug-hot"></i> Choose the free drink</h3>
+            <p>Any drink on the menu can be redeemed for this reward.</p>
+            <select id="redeemDrinkSelect"></select>
+            <div class="redeem-actions">
+                <button type="button" class="btn-secondary" id="redeemCancelBtn">Cancel</button>
+                <button type="button" class="btn-primary" id="redeemConfirmBtn">Confirm Redeem</button>
+            </div>
+        </div>
+    </div>
     <div class="app-shell">
 
         <!-- SIDEBAR -->
@@ -590,7 +618,7 @@ if ($branchName === '-') {
             transactionsList.innerHTML = transactions.map((transaction) => {
                 const label = transaction.transaction_type === 'redemption' ? 'Reward Redeemed' : 'Purchase';
                 const points = Number(transaction.points_awarded || 0);
-                const stampText = transaction.transaction_type === 'redemption' ? 'Free Drink' : `+${Math.max(1, Math.round(points / 10))} Stamp`;
+                const stampText = transaction.transaction_type === 'redemption' ? (transaction.redeemed_product_name || 'Free Drink') : `+${Math.max(1, Math.round(points / 10))} Stamp`;
                 const date = new Date(String(transaction.created_at || '').replace(' ', 'T'));
                 const dateText = Number.isNaN(date.getTime()) ? 'Date unavailable' : date.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).toLowerCase();
                 return `<div class="transaction-item"><span class="transaction-icon"><i class="fa-solid ${transaction.transaction_type === 'redemption' ? 'fa-gift' : 'fa-bag-shopping'}"></i></span><div class="transaction-details"><strong>${label}</strong><span>${dateText}</span></div><strong class="transaction-stamp">${stampText}</strong></div>`;
@@ -672,15 +700,66 @@ if ($branchName === '-') {
             return { label, stampText, iconClass, dateText, timeText };
         }
 
+        const redeemOverlay = document.getElementById('redeemOverlay');
+        const redeemDrinkSelect = document.getElementById('redeemDrinkSelect');
+        const redeemCancelBtn = document.getElementById('redeemCancelBtn');
+        const redeemConfirmBtn = document.getElementById('redeemConfirmBtn');
+
+        redeemDrinkSelect.innerHTML = REDEEMABLE_DRINKS.map(drink =>
+            `<option value="${drink.id}">${drink.product_name} (\u20b1${Number(drink.price).toFixed(2)})</option>`
+        ).join('');
+
+        function openRedeemModal() {
+            if (REDEEMABLE_DRINKS.length === 0) {
+                setStatus('No drinks are marked available on the menu right now.');
+                return;
+            }
+            redeemOverlay.classList.add('open');
+        }
+
+        function closeRedeemModal() {
+            redeemOverlay.classList.remove('open');
+        }
+
+        redeemCancelBtn.addEventListener('click', closeRedeemModal);
+
+        redeemConfirmBtn.addEventListener('click', async () => {
+            const productId = redeemDrinkSelect.value;
+            if (!productId) {
+                setStatus('Select a drink first.');
+                return;
+            }
+
+            redeemConfirmBtn.disabled = true;
+            try {
+                const response = await fetch('../loyalty_scan_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_no: selectedCardPayload, action: 'redeem', product_id: productId })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to redeem reward.');
+                applyCustomer(result.customer);
+                setStatus(result.message || 'Reward redeemed.');
+                closeRedeemModal();
+            } catch (error) {
+                setStatus(error.message);
+            } finally {
+                redeemConfirmBtn.disabled = false;
+            }
+        });
+
         addStampBtn.addEventListener('click', async () => {
             if (!selectedCustomer) {
                 setStatus('Scan a customer QR code first.');
                 return;
             }
+
             if (currentStamps >= TOTAL_LOYALTY_STAMPS) {
-                setStatus('Reward redemption must be recorded by the cashier workflow.');
+                openRedeemModal();
                 return;
             }
+
             addStampBtn.disabled = true;
             try {
                 const response = await fetch('../loyalty_scan_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ card_no: selectedCardPayload, action: 'award' }) });

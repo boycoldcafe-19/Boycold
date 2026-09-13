@@ -4,6 +4,53 @@ const BOYCOLD_LOYALTY_MAX_STAMPS = 10;
 const BOYCOLD_LOYALTY_RULE = 'item_quantity'; // Change to 'completed_order' for 1 stamp per completed order.
 const BOYCOLD_LOYALTY_STAMPS_PER_QUALIFYING_ITEM = 1;
 const BOYCOLD_LOYALTY_RESET_ON_REWARD = false;
+const BOYCOLD_LOYALTY_DRINK_CATEGORIES = ['coffee', 'matcha-fusion', 'frappe-series', 'non-coffee', 'smoothie'];
+
+function getRedeemableDrinkProducts(mysqli $connect): array
+{
+    $categories = BOYCOLD_LOYALTY_DRINK_CATEGORIES;
+    $placeholders = implode(',', array_fill(0, count($categories), '?'));
+    $types = str_repeat('s', count($categories));
+
+    $stmt = $connect->prepare(
+        "SELECT id, product_name, category, price
+         FROM products
+         WHERE is_available = 1 AND LOWER(category) IN ($placeholders)
+         ORDER BY category, product_name"
+    );
+    $lowerCategories = array_map('strtolower', $categories);
+    $stmt->bind_param($types, ...$lowerCategories);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    return $rows;
+}
+
+function findRedeemableDrinkProduct(mysqli $connect, int $productId): ?array
+{
+    if ($productId <= 0) {
+        return null;
+    }
+
+    $categories = BOYCOLD_LOYALTY_DRINK_CATEGORIES;
+    $placeholders = implode(',', array_fill(0, count($categories), '?'));
+    $types = 'i' . str_repeat('s', count($categories));
+    $lowerCategories = array_map('strtolower', $categories);
+
+    $stmt = $connect->prepare(
+        "SELECT id, product_name, category, price
+         FROM products
+         WHERE id = ? AND is_available = 1 AND LOWER(category) IN ($placeholders)
+         LIMIT 1"
+    );
+    $stmt->bind_param($types, $productId, ...$lowerCategories);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $row ?: null;
+}
 
 function generateLoyaltyToken(mysqli $connect): string
 {
