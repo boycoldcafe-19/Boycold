@@ -4,7 +4,7 @@ require_once __DIR__ . '/admin_guard.php';
 function adminReportPercent(float|int|string|null $value): string
 {
     $number = (float) $value;
-    return ($number > 0 ? '+' : '') . number_format($number, 2, '.', '') . '%';
+    return number_format(abs($number), 2, '.', '') . '%';
 }
 
 // Keep Dashboard metrics aligned with Data Analytics: latest rolling seven days.

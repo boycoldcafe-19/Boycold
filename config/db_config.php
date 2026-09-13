@@ -39,7 +39,7 @@ try {
         error_log($errorMsg);
         
         // Check if we're in debug mode
-        if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
+        if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
             die($errorMsg);
         } else {
             // Show generic error message in production
@@ -64,7 +64,7 @@ try {
         $errorMsg = 'Database connection lost after initialization';
         error_log($errorMsg);
         
-        if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
+        if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
             die($errorMsg);
         } else {
             header('HTTP/1.1 500 Internal Server Error');
@@ -75,7 +75,7 @@ try {
     $errorMsg = 'Database exception: ' . $e->getMessage();
     error_log($errorMsg);
     
-    if (getenv('APP_DEBUG') || $_ENV['APP_DEBUG'] ?? false) {
+    if (getenv('APP_DEBUG') || ($_ENV['APP_DEBUG'] ?? false)) {
         die($errorMsg);
     } else {
         header('HTTP/1.1 500 Internal Server Error');

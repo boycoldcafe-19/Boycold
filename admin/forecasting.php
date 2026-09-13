@@ -468,7 +468,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
         function formatReportPercent(value) {
             const number = Number(value) || 0;
-            return `${number > 0 ? '+' : ''}${number.toFixed(2)}%`;
+            return `${Math.abs(number).toFixed(2)}%`;
         }
 
         function loadLogoDataUrl() {

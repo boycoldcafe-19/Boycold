@@ -5,7 +5,7 @@ require_once '../config/db_config.php';
 function analyticsReportPercent(float|int|string|null $value): string
 {
     $number = (float) $value;
-    return ($number > 0 ? '+' : '') . number_format($number, 2, '.', '') . '%';
+    return number_format(abs($number), 2, '.', '') . '%';
 }
 
 /**
@@ -859,7 +859,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
 
         function formatReportPercent(value) {
             const number = Number(value) || 0;
-            return `${number > 0 ? '+' : ''}${number.toFixed(2)}%`;
+            return `${Math.abs(number).toFixed(2)}%`;
         }
 
         function loadLogoDataUrl() {
