@@ -1625,3 +1625,144 @@ html {
         display: flex !important;
     }
 }
+/* ══════════════════════════════
+   FREE DRINK READY MODAL
+══════════════════════════════ */
+.freedrink-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(20, 12, 6, 0.55);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.freedrink-overlay.open {
+    display: flex;
+    opacity: 1;
+}
+
+.freedrink-modal {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    padding: 28px 28px 32px;
+    text-align: center;
+
+    /* Start small and slightly lower */
+    transform: scale(0.5) translateY(30px);
+    opacity: 0;
+}
+
+/* POP animation */
+@keyframes popIn {
+    0% {
+        transform: scale(0.5) translateY(30px);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.08) translateY(-5px);
+        opacity: 1;
+    }
+
+    80% {
+        transform: scale(0.96) translateY(2px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.freedrink-overlay.open .freedrink-modal {
+    animation: popIn 0.45s ease-out forwards;
+}
+
+.freedrink-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.freedrink-close:hover {
+    color: #1e1e1e;
+    background: #f5f0eb;
+}
+
+.freedrink-img {
+    width: 140px;
+    height: 140px;
+    margin: 6px auto 18px;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.freedrink-img img {
+    width: 100%;
+    height: 80%;
+    object-fit: contain;
+}
+
+.freedrink-modal h2 {
+    font-family: 'gaegu', cursive;
+    font-size: 30px;
+    font-weight: 700;
+    color: #692727;
+    margin-bottom: 12px;
+}
+
+.freedrink-modal p {
+    font-size: 15px;
+    color: #000;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.freedrink-btn {
+    margin-top: 18px;
+    padding: 12px 28px;
+    background: #692727;
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Afacad', sans-serif;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+
+.freedrink-btn:hover {
+    filter: brightness(0.9);
+}
+
+@media (max-width: 480px) {
+    .freedrink-modal {
+        padding: 24px 20px 26px;
+    }
+
+    .freedrink-img {
+        width: 120px;
+        height: 120px;
+    }
+}

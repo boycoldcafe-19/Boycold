@@ -339,13 +339,26 @@ $loyaltyQrPayload = buildLoyaltyScanUrl($loyaltyToken);
 $loyaltyQrDataUri = buildLoyaltyQrDataUri($loyaltyQrPayload);
 $userName = $user['user_name'];
 $loyaltyBeans = (int) ($user['loyalty_beans'] ?? 0);
-$loyaltyStamps = min(10, max(0, (int) ($user['loyalty_stamps'] ?? 0)));
-$loyaltyDisplayStamps = min(10, max(0, $loyaltyStamps));
+$loyaltyMaxStamps = 10; // total stamp slots on the loyalty card (single source of truth)
+$loyaltyStamps = min($loyaltyMaxStamps, max(0, (int) ($user['loyalty_stamps'] ?? 0)));
+$loyaltyDisplayStamps = min($loyaltyMaxStamps, max(0, $loyaltyStamps));
 $loyaltyProgressText = $loyaltyStamps === 0
     ? 'No stamps yet — complete an order to start'
-    : ($loyaltyStamps >= 10 
-        ? '10 stamps earned! Great job!' 
+    : ($loyaltyStamps >= $loyaltyMaxStamps
+        ? $loyaltyMaxStamps . ' stamps earned! Great job!'
         : $loyaltyStamps . ' stamp' . ($loyaltyStamps > 1 ? 's' : '') . ' earned!');
+$isLoyaltyCardComplete = $loyaltyStamps >= $loyaltyMaxStamps;
+
+// Only auto-pop the "Free Drink Ready" modal the first time the card is seen
+// at max stamps — not on every page load. The session remembers the last
+// stamp count we showed the popup for; if stamps later drop (reward claimed
+// and reset by staff) and climb back to max, it will pop again.
+if (!isset($_SESSION['loyalty_popup_last_seen_stamps'])) {
+    $_SESSION['loyalty_popup_last_seen_stamps'] = 0;
+}
+$showLoyaltyPopupOnLoad = $isLoyaltyCardComplete
+    && $_SESSION['loyalty_popup_last_seen_stamps'] < $loyaltyMaxStamps;
+$_SESSION['loyalty_popup_last_seen_stamps'] = $loyaltyStamps;
 
 // Coffee bean brown color
 $beanColor = '#692727';
@@ -808,6 +821,22 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         </div>
     </div>
 
+    <!-- FREE DRINK MODAL -->
+    <div class="freedrink-overlay" id="freeDrinkOverlay">
+        <div class="freedrink-modal">
+            <button class="freedrink-close" id="freeDrinkClose" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="freedrink-img">
+                <img src="../picture/icon2.png" alt="Free drink">
+            </div>
+            <h2>Free Drink Ready!</h2>
+            <p>You've completed your loyalty card.</p>
+            <p>You can claim your free drink in any Boycold Cafe branch.</p>
+            <button class="freedrink-btn" id="freeDrinkViewBtn">View Loyalty Card</button>
+        </div>
+    </div>
+
     <!-- AVATAR CHOICE MODAL -->
     <div id="avatarModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:16px;padding:28px 32px;min-width:260px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25);">
@@ -919,10 +948,59 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
     <script>
         // Saved delivery addresses (address book), rendered/managed by account.js
         const ADDRESS_BOOK_INITIAL = <?= json_encode($savedAddresses) ?>;
-        
+
+        // Loyalty card config — sourced from PHP so nothing here is a magic number
+        const LOYALTY_MAX_STAMPS = <?= (int) $loyaltyMaxStamps ?>;
+
         // Store current stamps to detect changes
-        let currentStamps = <?= $loyaltyStamps ?>;
-        
+        let currentStamps = <?= (int) $loyaltyStamps ?>;
+
+        // Whether the "Free Drink Ready" popup has already been shown for the
+        // current completed card. Starts from what the server decided (based
+        // on session state), and flips as stamps change live during this page view.
+        let loyaltyPopupShown = <?= $showLoyaltyPopupOnLoad ? 'false' : ($isLoyaltyCardComplete ? 'true' : 'false') ?>;
+
+        /* ── FREE DRINK MODAL ── */
+        const freeDrinkOverlay = document.getElementById('freeDrinkOverlay');
+        const freeDrinkClose   = document.getElementById('freeDrinkClose');
+        const freeDrinkViewBtn = document.getElementById('freeDrinkViewBtn');
+        const loyaltyCardEl    = document.querySelector('.card-store');
+
+        function openFreeDrinkModal() {
+            if (!freeDrinkOverlay) return;
+            freeDrinkOverlay.classList.add('open');
+            loyaltyPopupShown = true;
+        }
+
+        function closeFreeDrinkModal() {
+            if (!freeDrinkOverlay) return;
+            freeDrinkOverlay.classList.remove('open');
+        }
+
+        if (freeDrinkClose) freeDrinkClose.addEventListener('click', closeFreeDrinkModal);
+        if (freeDrinkOverlay) {
+            freeDrinkOverlay.addEventListener('click', (e) => {
+                if (e.target === freeDrinkOverlay) closeFreeDrinkModal();
+            });
+        }
+        if (freeDrinkViewBtn) {
+            freeDrinkViewBtn.addEventListener('click', () => {
+                closeFreeDrinkModal();
+                if (loyaltyCardEl) loyaltyCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+
+        // Close free-drink modal with ESC, matching the QR modal's convention
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeFreeDrinkModal();
+        });
+
+        // Show it on load only if the server determined this is a newly
+        // completed card the user hasn't seen the popup for yet.
+        <?php if ($showLoyaltyPopupOnLoad): ?>
+        openFreeDrinkModal();
+        <?php endif; ?>
+
         // Auto-refresh loyalty card data
         async function refreshLoyaltyCard() {
             try {
@@ -936,7 +1014,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         currentStamps = newStamps;
                         
                         // Update loyalty stamps display
-                        const loyaltyDisplayStamps = Math.min(10, Math.max(0, newStamps));
+                        const loyaltyDisplayStamps = Math.min(LOYALTY_MAX_STAMPS, Math.max(0, newStamps));
                         const beanColor = '#692727';
                         
                         // Update all stamp SVGs in both rows
@@ -951,8 +1029,8 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         // Update progress text
                         const progressText = newStamps === 0 
                             ? 'No stamps yet — complete an order to start'
-                            : (newStamps >= 10 
-                                ? '10 stamps earned! Great job!' 
+                            : (newStamps >= LOYALTY_MAX_STAMPS
+                                ? LOYALTY_MAX_STAMPS + ' stamps earned! Great job!'
                                 : newStamps + ' stamp' + (newStamps > 1 ? 's' : '') + ' earned!');
                         
                         const progressElement = document.querySelector('.loyalty-progress');
@@ -968,6 +1046,17 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                             setTimeout(() => {
                                 storeCard.style.transform = 'scale(1)';
                             }, 300);
+                        }
+
+                        // Reactively pop the free-drink modal the moment the
+                        // card newly reaches completion during this page view
+                        // (e.g. a stamp was just credited via a live order).
+                        if (newStamps >= LOYALTY_MAX_STAMPS && !loyaltyPopupShown) {
+                            openFreeDrinkModal();
+                        } else if (newStamps < LOYALTY_MAX_STAMPS) {
+                            // Card was reset (reward claimed) — allow the
+                            // popup to fire again next time it completes.
+                            loyaltyPopupShown = false;
                         }
                     }
                 }

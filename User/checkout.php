@@ -224,7 +224,7 @@ $branches = $branches ?? [];
                         </button>
                     </div>
 
-                    <div style="margin-top:15px;">
+                    <div id="deliveryAddressSection" style="margin-top:15px;">
                             <label class="co-label" for="addressChoice">DELIVER TO <span aria-hidden="true">*</span></label>
                         <div id="addressFieldWrap"><!-- select or plain input, rendered by JS --></div>
                         <button type="button" class="co-add-address-link" id="addAddressBtn" onclick="openAddAddressModal()">
@@ -560,6 +560,12 @@ $branches = $branches ?? [];
         function setDeliveryMode(btn) {
             document.querySelectorAll('.co-toggle-btn').forEach(b => b.classList.remove('co-active'));
             btn.classList.add('co-active');
+            const isPickup = btn.textContent.trim().toLowerCase().includes('pick');
+            const addressSection = document.getElementById('deliveryAddressSection');
+            if (addressSection) {
+                addressSection.hidden = isPickup;
+            }
+            updateTotals(cartItems.reduce((sum, item) => sum + item.total, 0));
         }
         // Payment card selection
         document.querySelectorAll('.co-pay-card').forEach(card => {
@@ -578,7 +584,16 @@ $branches = $branches ?? [];
 
         function currentCheckoutTotal() {
             const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
-            return subtotal + DELIVERY_FEE + TAX;
+            return subtotal + currentDeliveryFee() + TAX;
+        }
+
+        function isPickupMode() {
+            const activeDelivery = document.querySelector('.co-toggle-btn.co-active');
+            return (activeDelivery?.textContent || '').trim().toLowerCase().includes('pick');
+        }
+
+        function currentDeliveryFee() {
+            return isPickupMode() ? 0 : DELIVERY_FEE;
         }
 
         function updatePaymentHints() {
@@ -587,7 +602,9 @@ $branches = $branches ?? [];
             const isCod = selectedPaymentMethod() === 'cod';
             panel.hidden = !isCod;
             if (isCod) {
-                text.textContent = 'Pay ₱' + currentCheckoutTotal().toFixed(2) + ' in cash when your order is delivered.';
+                text.textContent = isPickupMode()
+                    ? 'Pay ₱' + currentCheckoutTotal().toFixed(2) + ' in cash when you pick up your order.'
+                    : 'Pay ₱' + currentCheckoutTotal().toFixed(2) + ' in cash when your order is delivered.';
             }
         }
 
@@ -688,9 +705,10 @@ $branches = $branches ?? [];
         }
 
         function updateTotals(subtotal) {
-            const total = subtotal + DELIVERY_FEE + TAX;
+            const deliveryFee = currentDeliveryFee();
+            const total = subtotal + deliveryFee + TAX;
             document.getElementById('coSubtotal').textContent = '₱' + subtotal.toFixed(2);
-            document.getElementById('coDelivery').textContent = '₱' + DELIVERY_FEE.toFixed(2);
+            document.getElementById('coDelivery').textContent = '₱' + deliveryFee.toFixed(2);
             document.getElementById('coTax').textContent      = '₱' + TAX.toFixed(2);
             document.getElementById('coTotal').textContent    = '₱' + total.toFixed(2);
 
@@ -765,7 +783,7 @@ $branches = $branches ?? [];
                 branch_id:       branchId,
                 address:         finalAddress,
                 contact_number:  phone,
-                delivery_fee:    DELIVERY_FEE,
+                delivery_fee:    currentDeliveryFee(),
                 tax:             TAX,
                 notes:           '',
                 from_cart:       !isDirectOrder
@@ -831,7 +849,7 @@ $branches = $branches ?? [];
                 return;
             }
             if (!await checkBranchAvailability(branchId)) return;
-            if (!address) {
+            if (!isPickup && !address) {
                 alert('Please select or enter your address.');
                 return;
             }
@@ -846,7 +864,8 @@ $branches = $branches ?? [];
             this.textContent = 'Placing order…';
 
             const subtotal = cartItems.reduce((s, i) => s + i.total, 0);
-            const total = subtotal + DELIVERY_FEE + TAX;
+            const deliveryFee = isPickup ? 0 : DELIVERY_FEE;
+            const total = subtotal + deliveryFee + TAX;
 
             // Proceed with order placement
             await placeOrderWithPayment(orderType, branchId, finalAddress, phone, paymentMethod, subtotal, total, null);
