@@ -640,8 +640,23 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
     width: 100%;
+}
+
+.card-no {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loyalty-card-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 0 0 auto;
 }
 
 .qr-btn {
@@ -1781,6 +1796,21 @@ html {
     font: inherit;
     font-size: .8rem;
     font-weight: 700;
+}
+
+@media (max-width: 420px) {
+    .card-no-wrapper {
+        gap: 6px;
+    }
+
+    .reward-btn {
+        padding: 5px 8px;
+        font-size: .75rem;
+    }
+
+    .qr-btn {
+        padding: 4px 6px;
+    }
 }
 
 .reward-btn:hover,

@@ -18,7 +18,9 @@ function prepareFreeDrinkMenu() {
     document.querySelectorAll('.product-card').forEach((card) => {
         const category = normalizeMenuCategory(card.dataset.category);
         const eligible = !FREE_DRINK_EXCLUDED_CATEGORIES.has(category);
-        card.style.display = eligible ? '' : 'none';
+        // Non-drink items (Rice Meal, Light Snack, Pasta, Waffles, Quesadilla)
+        // stay visible in the menu during a free-drink claim — they're just
+        // not selectable as the reward, so leave their card untouched.
         if (!eligible) return;
 
         const price = card.querySelector('.card-price');
@@ -92,9 +94,10 @@ function applyFilters(query, category) {
         const name     = (card.getAttribute('data-product-name') || '').toLowerCase();
         const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
-        const rewardEligible = !isFreeDrinkFlow
-            || !FREE_DRINK_EXCLUDED_CATEGORIES.has(normalizeMenuCategory(card.dataset.category));
-        const show     = (isFreeDrinkFlow ? rewardEligible : matchCat && rewardEligible) && matchQ;
+        // Category/search filtering shows every product the same way in both
+        // modes — reward eligibility only affects what happens on click
+        // (see the ORDER handler), never whether the card is shown.
+        const show     = matchCat && matchQ;
         card.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
     });
@@ -119,7 +122,7 @@ document.querySelectorAll('.box ul li a').forEach(link => {
         activeCategory = this.getAttribute('data-filter');
         // Keep any current search query active
         const inp = document.querySelector('#navSearch input');
-        applyFilters(inp ? inp.value : '', isFreeDrinkFlow ? '' : activeCategory);
+        applyFilters(inp ? inp.value : '', activeCategory);
     });
 });
 
@@ -140,7 +143,7 @@ document.querySelectorAll('.box ul li a').forEach(link => {
                 activeCategory = activeLink.getAttribute('data-filter') || 'coffee';
                 activeLink.classList.add('active');
             }
-            applyFilters('', isFreeDrinkFlow ? '' : activeCategory);
+            applyFilters('', activeCategory);
         }
     });
 })();
