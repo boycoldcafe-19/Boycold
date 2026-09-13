@@ -58,6 +58,7 @@ function ensureProductIngredientsTable(mysqli $connect): void
         amount DECIMAL(10,3) NOT NULL DEFAULT 0.000,
         created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
+        UNIQUE KEY uq_product_ingredient (product_name, ingredient_id),
         KEY idx_product_name (product_name),
         KEY idx_ingredient_id (ingredient_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
@@ -65,6 +66,28 @@ function ensureProductIngredientsTable(mysqli $connect): void
     if (!$connect->query($sql)) {
         throw new RuntimeException('Could not prepare the product mapping table: ' . $connect->error);
     }
+}
+
+function findDuplicateIngredient(mysqli $connect, string $name, int $branchId): ?array
+{
+    $stmt = $connect->prepare(
+        'SELECT id, name, unit FROM ingredients WHERE branch_id = ? ORDER BY id'
+    );
+    $stmt->bind_param('i', $branchId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $candidateKey = boycold_inventory_duplicate_key($name);
+    $duplicate = null;
+
+    while ($row = $result->fetch_assoc()) {
+        if (boycold_inventory_duplicate_key((string) $row['name']) === $candidateKey) {
+            $duplicate = $row;
+            break;
+        }
+    }
+    $stmt->close();
+
+    return $duplicate;
 }
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -327,8 +350,21 @@ try {
             $unit = requireValue($data, 'unit');
             $stock = (float)($data['stock'] ?? 0);
             $minStock = max(0, (float)($data['min_stock'] ?? 0));
+            $branch = isset($data['branch_id']) && $data['branch_id'] !== ''
+                ? (int) $data['branch_id']
+                : (int) ($_SESSION['branch_id'] ?? 1);
+            if ($branch < 1) $branch = 1;
+            $duplicate = findDuplicateIngredient($connect, $name, $branch);
+            if ($duplicate) {
+                $sameUnit = strtolower((string) $duplicate['unit']) === strtolower($unit);
+                response([
+                    'success' => false,
+                    'error' => $sameUnit
+                        ? "Possible duplicate: {$duplicate['name']} already exists in this branch with the same unit."
+                        : "Possible duplicate: {$duplicate['name']} already exists in this branch with unit {$duplicate['unit']}. Review it before creating another ingredient."
+                ], 409);
+            }
             $stmt = $connect->prepare('INSERT INTO ingredients (name, category, unit, stock, min_stock, branch_id) VALUES (?, ?, ?, ?, ?, ?)');
-            $branch = isset($data['branch_id']) && $data['branch_id'] !== '' ? (int)$data['branch_id'] : null;
             $stmt->bind_param('sssddi', $name, $category, $unit, $stock, $minStock, $branch);
             $stmt->execute();
             response(['success' => true, 'id' => $connect->insert_id]);

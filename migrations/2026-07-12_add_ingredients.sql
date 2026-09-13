@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `product_ingredients` (
     `amount` DECIMAL(10,3) NOT NULL DEFAULT 0, -- amount of ingredient PER UNIT of product (eg ml, g, pcs)
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_product_ingredient` (`product_name`, `ingredient_id`),
     KEY `idx_product_name` (`product_name`),
     KEY `idx_ingredient_id` (`ingredient_id`),
     CONSTRAINT `fk_pi_ingredient` FOREIGN KEY (`ingredient_id`) REFERENCES `ingredients`(`id`) ON DELETE CASCADE

@@ -5,7 +5,7 @@ $branchId = 1;
 $ingredients = [
     ['Milk', 'L', 10],
     ['Blueberry Syrup', 'L', 10],
-    ['Condense', 'kg', 10],
+    ['Condensed Milk', 'kg', 10],
     ['Banana', 'kg', 10],
     ['Chocolate Pudding', 'kg', 10],
     ['Chocolate Syrup', 'L', 10],
@@ -14,7 +14,7 @@ $ingredients = [
     ['Strawberry Syrup', 'L', 10],
     ['Vanilla Syrup', 'L', 10],
     ['Oreo Cookies', 'kg', 10],
-    ['Condensed', 'kg', 10],
+    ['Condensed Milk', 'kg', 10],
 ];
 
 $stmt = $connect->prepare(

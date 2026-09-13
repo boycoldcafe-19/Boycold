@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS product_ingredients (
     amount DECIMAL(10,3) NOT NULL DEFAULT 0.000,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    UNIQUE KEY uq_product_ingredient (product_name, ingredient_id),
     KEY idx_product_name (product_name),
     KEY idx_ingredient_id (ingredient_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

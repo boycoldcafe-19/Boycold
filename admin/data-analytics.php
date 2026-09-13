@@ -2,6 +2,12 @@
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
+function analyticsReportPercent(float|int|string|null $value): string
+{
+    $number = (float) $value;
+    return ($number > 0 ? '+' : '') . number_format($number, 2, '.', '') . '%';
+}
+
 /**
  * @param mixed $value
  */
@@ -503,7 +509,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                         <div class="stat-value">₱ <?php echo number_format($analytics['total_sales'], 2); ?></div>
                         <div class="stat-trend <?php echo $analytics['sales_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
                             <i class="fa-solid fa-arrow-<?php echo $analytics['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo abs($analytics['sales_trend']); ?>%</span>
+                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['sales_trend']); ?></span>
                             <span class="trend-note">vs <?php echo date('M j', strtotime($prevStartDate)); ?> - <?php echo date('M j', strtotime($prevEndDate)); ?></span>
                         </div>
                     </div>
@@ -520,7 +526,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                         <div class="stat-value">₱ <?php echo number_format($analytics['avg_order_value'], 2); ?></div>
                         <div class="stat-trend <?php echo $analytics['avg_order_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
                             <i class="fa-solid fa-arrow-<?php echo $analytics['avg_order_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo abs($analytics['avg_order_trend']); ?>%</span>
+                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['avg_order_trend']); ?></span>
                             <span class="trend-note">vs <?php echo date('M j', strtotime($prevStartDate)); ?> - <?php echo date('M j', strtotime($prevEndDate)); ?></span>
                         </div>
                     </div>
@@ -536,7 +542,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                         <div class="stat-value"><?php echo $analytics['new_customers']; ?></div>
                         <div class="stat-trend <?php echo $analytics['customers_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
                             <i class="fa-solid fa-arrow-<?php echo $analytics['customers_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo abs($analytics['customers_trend']); ?>%</span>
+                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['customers_trend']); ?></span>
                             <span class="trend-note">vs <?php echo date('M j', strtotime($prevStartDate)); ?> - <?php echo date('M j', strtotime($prevEndDate)); ?></span>
                         </div>
                     </div>
@@ -813,7 +819,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                                 <i class="fa-solid fa-arrow-<?php echo $analytics['sales_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>"></i>
                             </span>
                             <div class="insight-content">
-                                <p class="insight-heading">Sales <?php echo $analytics['sales_trend'] >= 0 ? 'increase' : 'decrease'; ?> by <?php echo abs($analytics['sales_trend']); ?>%</p>
+                                <p class="insight-heading">Sales <?php echo $analytics['sales_trend'] >= 0 ? 'increase' : 'decrease'; ?> by <?php echo analyticsReportPercent($analytics['sales_trend']); ?></p>
                                 <p class="insight-desc"><?php echo $analytics['sales_trend'] >= 0 ? 'Great job! Your sales are higher than last week.' : 'Sales are lower than last week. Consider promotions.'; ?></p>
                             </div>
                         </div>
@@ -850,6 +856,11 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
     
     <script>
         const EXPORT_BRAND_MAROON = [105, 39, 39];
+
+        function formatReportPercent(value) {
+            const number = Number(value) || 0;
+            return `${number > 0 ? '+' : ''}${number.toFixed(2)}%`;
+        }
 
         function loadLogoDataUrl() {
             return new Promise((resolve) => {
@@ -918,9 +929,9 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                 ['Total Sales', `₱ ${Number(analyticsData.total_sales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
                 ['Average Order Value', `₱ ${Number(analyticsData.avg_order_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
                 ['New Customers', Number(analyticsData.new_customers || 0)],
-                ['Sales Trend', `${Math.abs(Number(analyticsData.sales_trend || 0)).toFixed(2)}%`],
-                ['Average Order Trend', `${Math.abs(Number(analyticsData.avg_order_trend || 0)).toFixed(2)}%`],
-                ['Customers Trend', `${Math.abs(Number(analyticsData.customers_trend || 0)).toFixed(2)}%`],
+                ['Sales Trend', formatReportPercent(analyticsData.sales_trend)],
+                ['Average Order Trend', formatReportPercent(analyticsData.avg_order_trend)],
+                ['Customers Trend', formatReportPercent(analyticsData.customers_trend)],
                 ['Date Range', `${startDate} to ${endDate}`],
                 ['Branch', branchLabel.trim()]
             ];

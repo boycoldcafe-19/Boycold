@@ -207,7 +207,7 @@ CREATE TABLE `ingredient_usage_daily` (
 --
 
 CREATE TABLE `login_logs` (
-  `id` int NOT NULL,
+  `id` int NOT NULL AUTO_INCREMENT,
   `employee_id` int DEFAULT NULL,
   `branch_id` int DEFAULT NULL,
   `device_id` int DEFAULT NULL,
@@ -236,7 +236,8 @@ CREATE TABLE `loyalty_transactions` (
   `previous_balance` int DEFAULT '0',
   `new_balance` int DEFAULT '0',
   `order_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_product_ingredient` (`product_name`,`ingredient_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

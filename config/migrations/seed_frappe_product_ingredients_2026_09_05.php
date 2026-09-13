@@ -4,35 +4,35 @@ require_once __DIR__ . '/../db_config.php';
 $recipes = [
     'Biscoff frappe' => [
         ['Milk', 180], ['Biscoff', 30], ['Biscoff Syrup', 20],
-        ['Condense', 15], ['Whipped Cream', 20]
+        ['Condensed Milk', 15], ['Whipped Cream', 20]
     ],
     'Black Forrest' => [
         ['Milk', 180], ['Chocolate Syrup', 25], ['Cherry Syrup', 20],
-        ['Condense', 15], ['Whipped Cream', 20], ['Chocolate Chips', 20]
+        ['Condensed Milk', 15], ['Whipped Cream', 20], ['Chocolate Chips', 20]
     ],
     'Cheesecake Frappe' => [
         ['Milk', 180], ['Cheesecake powder', 30], ['Cream Cheese', 25],
-        ['Condense', 15], ['Whipped Cream', 20], ['Crushed Graham', 20]
+        ['Condensed Milk', 15], ['Whipped Cream', 20], ['Crushed Graham', 20]
     ],
     'hershey delight' => [
         ['Milk', 180], ["Hershey's Chocolate Syrup", 30], ['Chocolate Powder', 20],
-        ['Condense', 15], ['Whipped Cream', 20], ['Chocolate Chips', 20]
+        ['Condensed Milk', 15], ['Whipped Cream', 20], ['Chocolate Chips', 20]
     ],
     'Java Chips' => [
         ['Milk', 180], ['Espresso', 36], ['Chocolate Syrup', 25],
-        ['Chocolate Chips', 30], ['Condense', 15], ['Whipped Cream', 20]
+        ['Chocolate Chips', 30], ['Condensed Milk', 15], ['Whipped Cream', 20]
     ],
     'Matcha Frappe' => [
-        ['Milk', 180], ['Matcha Powder', 5], ['Condense', 15],
+        ['Milk', 180], ['Matcha Powder', 5], ['Condensed Milk', 15],
         ['Vanilla Syrup', 15], ['Whipped Cream', 20]
     ],
     'Oreo Frappe' => [
-        ['Milk', 180], ['Oreo Cookies', 30], ['Condense', 15],
+        ['Milk', 180], ['Oreo Cookies', 30], ['Condensed Milk', 15],
         ['Vanilla Syrup', 15], ['Whipped Cream', 20]
     ],
     'Ube Frappe' => [
         ['Milk', 180], ['Ube Syrup', 30], ['Ube Powder', 20],
-        ['Condense', 15], ['Whipped Cream', 20]
+        ['Condensed Milk', 15], ['Whipped Cream', 20]
     ],
 ];
 

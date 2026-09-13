@@ -21,7 +21,7 @@ $additions = [
     ['Matcha Pudding', 'kg', 10.000],
     ['Sea Salt Cream', 'L', 10.000],
     ['Ube Syrup', 'L', 30.000],
-    ['Condense', 'kg', 20.000],
+    ['Condensed Milk', 'kg', 20.000],
     ['Crushed Graham', 'kg', 20.000],
     ['Yogurt', 'kg', 10.000],
     ['Biscoff Syrup', 'L', 10.000],

@@ -3,23 +3,23 @@ require_once __DIR__ . '/../db_config.php';
 
 $recipes = [
     'Blueberry Milk' => [
-        ['Milk', 180], ['Blueberry Syrup', 30], ['Condense', 15]
+        ['Milk', 180], ['Blueberry Syrup', 30], ['Condensed Milk', 15]
     ],
     'Choco Banana Pudding' => [
         ['Milk', 150], ['Banana', 60], ['Chocolate Pudding', 50],
         ['Chocolate Syrup', 20], ['Crushed Cookies', 20], ['Whipped Cream', 20]
     ],
     'Choco Berry' => [
-        ['Milk', 180], ['Strawberry Syrup', 25], ['Chocolate Syrup', 20], ['Condense', 15]
+        ['Milk', 180], ['Strawberry Syrup', 25], ['Chocolate Syrup', 20], ['Condensed Milk', 15]
     ],
     'Choco Vanilla Cookie' => [
-        ['Milk', 180], ['Chocolate Syrup', 20], ['Vanilla Syrup', 20], ['Condense', 15]
+        ['Milk', 180], ['Chocolate Syrup', 20], ['Vanilla Syrup', 20], ['Condensed Milk', 15]
     ],
     'Milky Oreo' => [
         ['Milk', 180], ['Oreo Cookies', 30], ['Condensed Milk', 25], ['Whipped Cream', 20]
     ],
     'Strawberry Milk' => [
-        ['Milk', 180], ['Strawberry Syrup', 30], ['Condense', 15]
+        ['Milk', 180], ['Strawberry Syrup', 30], ['Condensed Milk', 15]
     ],
 ];
 

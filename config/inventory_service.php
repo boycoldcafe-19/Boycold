@@ -7,6 +7,18 @@ function boycold_inventory_normalize_name(string $name): string
     return strtolower($name);
 }
 
+function boycold_inventory_duplicate_key(string $name): string
+{
+    $normalized = boycold_inventory_normalize_name($name);
+    $aliases = [
+        'whipping cream' => 'whipped cream',
+        'condense' => 'condensed milk',
+        'condensed' => 'condensed milk',
+    ];
+
+    return $aliases[$normalized] ?? $normalized;
+}
+
 function boycold_inventory_clean_label(string $label): string
 {
     $label = html_entity_decode($label, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -90,6 +102,7 @@ function boycold_ensure_inventory_schema(mysqli $connect): void
             amount DECIMAL(10,3) NOT NULL DEFAULT 0.000,
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            UNIQUE KEY uq_product_ingredient (product_name, ingredient_id),
             KEY idx_product_name (product_name),
             KEY idx_ingredient_id (ingredient_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"

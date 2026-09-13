@@ -466,6 +466,11 @@ while ($row = $branchesResult->fetch_assoc()) {
         // ==========================================
         const EXPORT_BRAND_MAROON = [105, 39, 39];
 
+        function formatReportPercent(value) {
+            const number = Number(value) || 0;
+            return `${number > 0 ? '+' : ''}${number.toFixed(2)}%`;
+        }
+
         function loadLogoDataUrl() {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -537,7 +542,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 ['Soon Restocks', Number((exportData.stats && exportData.stats.soon_restocks) || 0)],
                 ['Highest Demand Item', (exportData.stats && exportData.stats.highest_demand_item) || 'N/A'],
                 ['Highest Demand Qty', Number((exportData.stats && exportData.stats.highest_demand_qty) || 0)],
-                ['Sales Change %', `${Math.abs(Number((exportData.stats && exportData.stats.sales_change_percent) || 0)).toFixed(2)}%`],
+                ['Sales Change %', formatReportPercent(exportData.stats && exportData.stats.sales_change_percent)],
                 ['Branch', branchLabel.trim()]
             ];
 
@@ -655,7 +660,7 @@ while ($row = $branchesResult->fetch_assoc()) {
             const trendPercent = data.stats.sales_change_percent;
             trendEl.className = 'stat-trend ' + (trendPercent >= 0 ? 'trend-up' : 'trend-down');
             trendEl.querySelector('i').className = 'fa-solid fa-arrow-' + (trendPercent >= 0 ? 'up' : 'down');
-            trendEl.querySelector('.trend-percent').textContent = Math.abs(trendPercent) + '%';
+            trendEl.querySelector('.trend-percent').textContent = formatReportPercent(trendPercent);
             
             document.getElementById('restockCount').textContent = data.stats.critical_restocks + data.stats.soon_restocks;
             document.getElementById('restockCritical').textContent = data.stats.critical_restocks + ' Critical';
@@ -670,7 +675,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
             // Forecast footer note
             document.getElementById('forecastFooterText').innerHTML = 
-                `Sales are expected to <strong>${trendPercent >= 0 ? 'increase' : 'decrease'}</strong> by <strong>${Math.abs(trendPercent)}%</strong> in the next 14 days.`;
+                `Sales are expected to <strong>${trendPercent >= 0 ? 'increase' : 'decrease'}</strong> by <strong>${formatReportPercent(trendPercent)}</strong> in the next 14 days.`;
 
             // Demand Forecast Table
             updateDemandTable(data.demand_forecast);
@@ -1016,7 +1021,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                         <p class="trending-desc">${item.recent_7} orders this week vs ${item.prev_7} last week.</p>
                     </div>
                     <span class="trending-percent ${isUp ? 'trending-percent-up' : 'trending-percent-down'}">
-                        <i class="fa-solid fa-arrow-${isUp ? 'up' : 'down'}"></i> ${Math.abs(item.change_percent)}%
+                        <i class="fa-solid fa-arrow-${isUp ? 'up' : 'down'}"></i> ${formatReportPercent(item.change_percent)}
                     </span>
                 `;
                 list.appendChild(row);

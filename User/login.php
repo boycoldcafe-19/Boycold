@@ -156,20 +156,24 @@ function recordEmployeeLogin(mysqli $connect, array $employee): void
         $operatingSystem = 'Linux';
     }
 
-    $stmt = $connect->prepare(
-        'INSERT INTO login_logs (employee_id, branch_id, ip_address, browser, operating_system, login_status)
-            VALUES (?, NULLIF(?, 0), ?, ?, ?, \'success\')'
-    );
-    if (!$stmt) {
-        return;
-    }
+    try {
+        $stmt = $connect->prepare(
+            'INSERT INTO login_logs (employee_id, branch_id, ip_address, browser, operating_system, login_status)
+                VALUES (?, NULLIF(?, 0), ?, ?, ?, \'success\')'
+        );
+        if (!$stmt) {
+            return;
+        }
 
-    $employeeId = (int) ($employee['id'] ?? 0);
-    $branchId = (int) ($employee['branch_id'] ?? 0);
-    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
-    $stmt->bind_param('iisss', $employeeId, $branchId, $ipAddress, $browser, $operatingSystem);
-    $stmt->execute();
-    $stmt->close();
+        $employeeId = (int) ($employee['id'] ?? 0);
+        $branchId = (int) ($employee['branch_id'] ?? 0);
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+        $stmt->bind_param('iisss', $employeeId, $branchId, $ipAddress, $browser, $operatingSystem);
+        $stmt->execute();
+        $stmt->close();
+    } catch (mysqli_sql_exception $exception) {
+        error_log('Unable to record employee login: ' . $exception->getMessage());
+    }
 }
 
 function startUnifiedAdminSession(array $admin): void
@@ -258,15 +262,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($error === '') {
             $hasAccountStatus = usersHasAccountStatusColumn($connect);
             $userFields = $hasAccountStatus
-                ? 'id, firstname, lastname, user_name, password, account_status'
-                : 'id, firstname, lastname, user_name, password';
-            $stmt = $connect->prepare("SELECT $userFields FROM users WHERE email=? AND is_verified=1");
+                ? 'id, firstname, lastname, user_name, password, account_status, auth_provider, is_verified'
+                : 'id, firstname, lastname, user_name, password, auth_provider, is_verified';
+            $stmt = $connect->prepare("SELECT $userFields FROM users WHERE email=? LIMIT 1");
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $user = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
 
             if ($user && (($user['account_status'] ?? 'active') !== 'active')) {
                 $error = 'This account is inactive. Please contact the administrator to reactivate it.';
+            } elseif ($user && (int) ($user['is_verified'] ?? 0) !== 1) {
+                $error = 'Please verify your email address before logging in.';
             } elseif ($user && password_verify($password, $user['password'])) {
                 clearPosSessionIfPresent();
                 session_regenerate_id(true);
@@ -283,6 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 sendAuthResponse(true, 'home.php');
+            } elseif ($user && ($user['auth_provider'] ?? 'local') === 'google') {
+                $error = 'This account uses Google sign-in. Please click Continue with Google, or reset your password first.';
             } else {
                 $error = 'Invalid email or password.';
             }

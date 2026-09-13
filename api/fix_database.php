@@ -270,6 +270,13 @@ function ensureForeignKeys(mysqli $connect): void
         runSql($connect, 'ALTER TABLE `login_logs` ADD INDEX `idx_employee_id` (`employee_id`)', 'Added idx_employee_id on login_logs');
     }
 
+    if (tableExists($connect, 'login_logs')) {
+        $loginIdRepair = indexExists($connect, 'login_logs', 'PRIMARY')
+            ? 'ALTER TABLE `login_logs` MODIFY COLUMN `id` int NOT NULL AUTO_INCREMENT'
+            : 'ALTER TABLE `login_logs` MODIFY COLUMN `id` int NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (`id`)';
+        runSql($connect, $loginIdRepair, 'Repaired login_logs.id auto-increment');
+    }
+
     if (tableExists($connect, 'employees') && !indexExists($connect, 'employees', 'idx_employees_branch_role')) {
         runSql($connect, 'ALTER TABLE `employees` ADD INDEX `idx_employees_branch_role` (`branch_id`, `role`, `is_active`)', 'Added idx_employees_branch_role');
     }

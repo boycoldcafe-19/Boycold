@@ -3,34 +3,34 @@ require_once __DIR__ . '/../db_config.php';
 
 $recipes = [
     'Biscoff Matcha' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Biscoff', 25], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 180], ['Biscoff', 25], ['Condensed Milk', 15]
     ],
     'Cheesecake Matcha' => [
         ['Matcha Powder', 5], ['Milk', 180], ['Cheesecake Sauce', 25],
-        ['Condense', 15], ['Cream Cheese', 20]
+        ['Condensed Milk', 15], ['Cream Cheese', 20]
     ],
     'Mango matcha' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Mango Syrup', 30], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 180], ['Mango Syrup', 30], ['Condensed Milk', 15]
     ],
     'Matcha banana Pudding' => [
         ['Matcha Powder', 5], ['Milk', 150], ['Banana', 60], ['Matcha Pudding', 50],
-        ['Condense', 15], ['Crushed Cookies', 20], ['Whipped Cream', 20]
+        ['Condensed Milk', 15], ['Crushed Cookies', 20], ['Whipped Cream', 20]
     ],
     'Matcha Freddo' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Condense', 15],
+        ['Matcha Powder', 5], ['Milk', 180], ['Condensed Milk', 15],
         ['Vanilla Syrup', 15], ['Whipped Cream', 20]
     ],
     'Matcha Latte' => [
-        ['Matcha Powder', 5], ['Milk', 200], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 200], ['Condensed Milk', 15]
     ],
     'Seasalt Matcha' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Sea Salt Cream', 30], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 180], ['Sea Salt Cream', 30], ['Condensed Milk', 15]
     ],
     'Strawberry Matcha' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Strawberry Syrup', 30], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 180], ['Strawberry Syrup', 30], ['Condensed Milk', 15]
     ],
     'Ube Matcha' => [
-        ['Matcha Powder', 5], ['Milk', 180], ['Ube Syrup', 30], ['Condense', 15]
+        ['Matcha Powder', 5], ['Milk', 180], ['Ube Syrup', 30], ['Condensed Milk', 15]
     ],
 ];
 

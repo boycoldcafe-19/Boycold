@@ -658,8 +658,8 @@ textarea:focus {
 
 .cart-btn {
     background: #fff;
-    border: 2px solid #6f4d37;
-    color: #6f4d37;
+    border: 2px solid #692727;
+    color: #692727;
 }
 
 .cart-btn:hover {
@@ -667,12 +667,12 @@ textarea:focus {
 }
 
 .checkout-btn {
-    background: #6f4d37;
+    background: #692727;
     color: #fff;
 }
 
 .checkout-btn:hover {
-    background: #5a3d2b;
+    background: #692727;
 }
 
 /* ══════════════════════════════

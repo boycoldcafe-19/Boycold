@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('POS email used for customer registration: ' . $email);
             }
 
-            $chk = $connect->prepare("SELECT id, account_status, is_verified FROM users WHERE email=? LIMIT 1");
+            $chk = $connect->prepare("SELECT id, account_status, is_verified, auth_provider FROM users WHERE email=? LIMIT 1");
             if (!$chk) {
                 throw new Exception('Database prepare failed: ' . $connect->error);
             }
@@ -55,7 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($existingUser && (($existingUser['account_status'] ?? 'active') !== 'active')) {
                 $error = 'This account is inactive. Please contact the administrator to reactivate it.';
             } elseif ($existingUser && (int) $existingUser['is_verified'] === 1) {
-                $error = 'This email is already registered. Please log in.';
+                $error = ($existingUser['auth_provider'] ?? 'local') === 'google'
+                    ? 'This email is already registered with Google. Please use Continue with Google or Forgot Password.'
+                    : 'This email is already registered. Please log in or use Forgot Password.';
             } else {
                 $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='register' AND status='pending'");
                 if (!$exp) {

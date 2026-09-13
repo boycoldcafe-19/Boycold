@@ -121,9 +121,9 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
             <ul>
                 <li><a href="home.php">HOME</a></li>
                 <li><a href="menu.php">MENU</a></li>
-                <li><a href="../order/status.php">ORDER</a></li>
+                <li><a href="status.php">ORDER</a></li>
                 <li><a href="../store/store.php">STORES</a></li>
-                <li class="sidebar-nav-only-not"><a href="../order/status.php">ORDERS</a></li>
+                <li class="sidebar-nav-only-not"><a href="status.php">ORDERS</a></li>
                 <li class="sidebar-nav-only"><a href="favorites.php">FAVORITES</a></li>
                 <li><a href="cart.php" class="cart-link">
                         <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i> CART
@@ -159,7 +159,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
             <ul class="nav-links">
                 <li><a href="home.php">HOME</a></li>
                 <li><a href="menu.php">MENU</a></li>
-                <li><a href="../order/status.php">ORDERS</a></li>
+                <li><a href="status.php">ORDERS</a></li>
                 <li><a href="favorites.php">FAVORITES</a></li>
                 <li><a href="../store/store.php">STORES</a></li>
             </ul>

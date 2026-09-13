@@ -531,7 +531,7 @@ $response = [
         [
             'type' => $salesChangePercent >= 0 ? 'positive' : 'negative',
             'icon' => $salesChangePercent >= 0 ? 'arrow-trend-up' : 'arrow-trend-down',
-            'heading' => 'Sales ' . ($salesChangePercent >= 0 ? 'increase' : 'decrease') . ' by ' . abs($salesChangePercent) . '%',
+            'heading' => 'Sales ' . ($salesChangePercent >= 0 ? 'increase' : 'decrease') . ' by ' . ($salesChangePercent > 0 ? '+' : '') . number_format($salesChangePercent, 2, '.', '') . '%',
             'desc' => $salesChangePercent >= 0 ? 'Great job! Your sales are higher than last week.' : 'Sales are lower than last week. Consider promotions.'
         ],
         [

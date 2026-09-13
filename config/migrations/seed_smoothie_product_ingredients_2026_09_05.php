@@ -3,24 +3,24 @@ require_once __DIR__ . '/../db_config.php';
 
 $recipes = [
     'Berry mango' => [
-        ['Milk', 180], ['Strawberry Syrup', 25], ['Mango Syrup', 30], ['Condense', 15]
+        ['Milk', 180], ['Strawberry Syrup', 25], ['Mango Syrup', 30], ['Condensed Milk', 15]
     ],
     'Blueberry' => [
-        ['Milk', 180], ['Blueberry Syrup', 30], ['Condense', 15]
+        ['Milk', 180], ['Blueberry Syrup', 30], ['Condensed Milk', 15]
     ],
     'Mango Graham' => [
-        ['Milk', 180], ['Mango Syrup', 30], ['Condense', 15],
+        ['Milk', 180], ['Mango Syrup', 30], ['Condensed Milk', 15],
         ['Crushed Graham', 30], ['Whipped Cream', 20]
     ],
     'Strawberry' => [
-        ['Milk', 180], ['Strawberry Syrup', 30], ['Condense', 15]
+        ['Milk', 180], ['Strawberry Syrup', 30], ['Condensed Milk', 15]
     ],
     'Tropical Matcha Yogurt' => [
         ['Matcha Powder', 5], ['Yogurt', 100], ['Milk', 100],
-        ['Mango Syrup', 20], ['Strawberry Syrup', 20], ['Condense', 15]
+        ['Mango Syrup', 20], ['Strawberry Syrup', 20], ['Condensed Milk', 15]
     ],
     'Ube Yogurt' => [
-        ['Yogurt', 100], ['Milk', 100], ['Ube Syrup', 30], ['Condense', 15]
+        ['Yogurt', 100], ['Milk', 100], ['Ube Syrup', 30], ['Condensed Milk', 15]
     ],
 ];
 

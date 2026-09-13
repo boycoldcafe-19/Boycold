@@ -1,6 +1,12 @@
 ﻿<?php
 require_once __DIR__ . '/admin_guard.php';
 
+function adminReportPercent(float|int|string|null $value): string
+{
+    $number = (float) $value;
+    return ($number > 0 ? '+' : '') . number_format($number, 2, '.', '') . '%';
+}
+
 // Keep Dashboard metrics aligned with Data Analytics: latest rolling seven days.
 $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-6 days'));
 $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
@@ -460,7 +466,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="stat-label">Total Sales</p>
                             <p class="stat-value" id="totalSalesValue">₱ <?php echo number_format($dashboard['total_sales'], 2); ?></p>
                             <p class="stat-change <?php echo $dashboard['sales_trend'] >= 0 ? 'positive' : 'negative'; ?>" id="salesTrend">
-                                <i class="fa-solid fa-arrow-<?php echo $dashboard['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['sales_trend']); ?>%
+                                <i class="fa-solid fa-arrow-<?php echo $dashboard['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['sales_trend']); ?>
                             </p>
                             <p class="stat-span">vs last week</p>
                         </div>
@@ -476,7 +482,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="stat-label">Total Orders</p>
                             <p class="stat-value" id="totalOrdersValue"><?php echo $dashboard['total_orders']; ?></p>
                             <p class="stat-change <?php echo $dashboard['orders_trend'] >= 0 ? 'positive' : 'negative'; ?>" id="ordersTrend">
-                                <i class="fa-solid fa-arrow-<?php echo $dashboard['orders_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['orders_trend']); ?>%
+                                <i class="fa-solid fa-arrow-<?php echo $dashboard['orders_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['orders_trend']); ?>
                             </p>
                             <p class="stat-span">vs last week</p>
                         </div>
@@ -491,7 +497,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="stat-label">Online Orders</p>
                             <p class="stat-value" id="onlineOrdersValue"><?php echo $dashboard['online_orders']; ?></p>
                             <p class="stat-change <?php echo $dashboard['online_trend'] >= 0 ? 'positive' : 'negative'; ?>" id="onlineTrend">
-                                <i class="fa-solid fa-arrow-<?php echo $dashboard['online_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['online_trend']); ?>%
+                                <i class="fa-solid fa-arrow-<?php echo $dashboard['online_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['online_trend']); ?>
                             </p>
                             <p class="stat-span">vs last week</p>
                         </div>
@@ -503,7 +509,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="stat-label">New Customers</p>
                             <p class="stat-value" id="customersValue"><?php echo $dashboard['new_customers']; ?></p>
                             <p class="stat-change <?php echo $dashboard['customers_trend'] >= 0 ? 'positive' : 'negative'; ?>" id="customersTrend">
-                                <i class="fa-solid fa-arrow-<?php echo $dashboard['customers_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['customers_trend']); ?>%
+                                <i class="fa-solid fa-arrow-<?php echo $dashboard['customers_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['customers_trend']); ?>
                             </p>
                             <p class="stat-span">vs last week</p>
                         </div>
@@ -520,7 +526,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                     <div class="sales-overview-value-row">
                         <span class="sales-overview-value" id="overviewSalesValue">₱ <?php echo number_format($dashboard['total_sales'], 2); ?></span>
                         <span class="change-pill <?php echo $dashboard['sales_trend'] >= 0 ? 'positive' : 'negative'; ?>" id="overviewSalesTrend">
-                            <i class="fa-solid fa-arrow-<?php echo $dashboard['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['sales_trend']); ?>%
+                            <i class="fa-solid fa-arrow-<?php echo $dashboard['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['sales_trend']); ?>
                         </span>
                     </div>
                     <p class="sales-overview-range"><?php echo date('M j', strtotime($startDate)); ?> - <?php echo date('M j', strtotime($endDate)); ?></p>
@@ -534,7 +540,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="footer-stat-label">Average Order Value</p>
                             <p class="footer-stat-value" id="avgOrderValue">₱ <?php echo number_format($dashboard['avg_order_value'], 2); ?> 
                                 <span class="mini-change <?php echo $dashboard['avg_order_trend'] >= 0 ? 'positive' : 'negative'; ?>">
-                                    <i class="fa-solid fa-arrow-<?php echo $dashboard['avg_order_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['avg_order_trend']); ?>%
+                                    <i class="fa-solid fa-arrow-<?php echo $dashboard['avg_order_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['avg_order_trend']); ?>
                                 </span>
                             </p>
                         </div>
@@ -548,7 +554,7 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <p class="footer-stat-label">Transactions</p>
                             <p class="footer-stat-value" id="transactionsCount"><?php echo $dashboard['total_orders']; ?> 
                                 <span class="mini-change <?php echo $dashboard['orders_trend'] >= 0 ? 'positive' : 'negative'; ?>">
-                                    <i class="fa-solid fa-arrow-<?php echo $dashboard['orders_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo abs($dashboard['orders_trend']); ?>%
+                                    <i class="fa-solid fa-arrow-<?php echo $dashboard['orders_trend'] >= 0 ? 'up' : 'down'; ?>"></i> <?php echo adminReportPercent($dashboard['orders_trend']); ?>
                                 </span>
                             </p>
                         </div>
