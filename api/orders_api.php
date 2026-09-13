@@ -261,6 +261,10 @@ switch ($action) {
                     throw new RuntimeException('You must be logged in to claim a free drink.');
                 }
 
+                if (count($items) !== 1 || (int) ($body['product_id'] ?? 0) <= 0) {
+                    throw new RuntimeException('Select exactly one eligible drink for your free reward.');
+                }
+
                 $freeUserStmt = $connect->prepare(
                     'SELECT id, card_no, loyalty_stamps
                      FROM users

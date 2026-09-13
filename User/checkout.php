@@ -841,7 +841,7 @@ $branches = $branches ?? [];
                     console.error('API Response Error:', res.status, errText);
                     alert('Error: ' + res.status + ' ' + res.statusText);
                     btn.disabled = false;
-                    btn.textContent = 'Place Order — ₱' + total.toFixed(2);
+                    btn.textContent = isFreeDrinkClaim ? 'Claimed Drinks' : 'Place Order — ₱' + total.toFixed(2);
                     return;
                 }
                 
@@ -856,7 +856,7 @@ $branches = $branches ?? [];
                 } else {
                     alert('Error placing order: ' + (result.error || 'Unknown error'));
                     btn.disabled = false;
-                    btn.textContent = 'Place Order — ₱' + total.toFixed(2);
+                    btn.textContent = isFreeDrinkClaim ? 'Claimed Drinks' : 'Place Order — ₱' + total.toFixed(2);
                 }
             } catch (err) {
                 console.error('Network error:', err);
@@ -892,7 +892,7 @@ $branches = $branches ?? [];
                 alert('Please select or enter your address.');
                 return;
             }
-            if (!/^09\d{9}$/.test(phone)) {
+            if (!isFreeDrinkClaim && !/^09\d{9}$/.test(phone)) {
                 alert('Please provide a valid 11-digit mobile number starting with 09.');
                 return;
             }
