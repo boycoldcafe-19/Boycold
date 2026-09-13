@@ -407,7 +407,11 @@ switch ($action) {
 
             if ($isFreeDrinkClaim) {
                 $resetStmt = $connect->prepare(
-                    'UPDATE users SET loyalty_beans = 0, loyalty_stamps = 0 WHERE id = ?'
+                    "UPDATE users
+                     SET loyalty_beans = 0,
+                         loyalty_stamps = 0,
+                         loyalty_card_status = 'active'
+                     WHERE id = ?"
                 );
                 $resetStmt->bind_param('i', $userId);
                 $resetStmt->execute();

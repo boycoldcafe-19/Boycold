@@ -521,9 +521,11 @@
                             </div>
                             <div class="reward-info">
                                 <strong>${item.reward}</strong>
-                                ${item.redeemed
-                        ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
-                        : `<span>Not Redeemed</span>`}
+                                ${item.stamps >= 10
+                        ? `<span>Ready to be Claimed</span>`
+                        : (item.redeemed
+                            ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
+                            : `<span>Not Redeemed</span>`)}
                             </div>
                         </div>
                     </td>
@@ -681,8 +683,10 @@
                         initials: `${card.firstname[0] || ''}${card.lastname[0] || ''}`.toUpperCase(),
                         stamps: Math.min(10, Math.max(0, Number(card.loyalty_stamps || 0))),
                         reward: 'Free Drink',
-                        redeemed: card.loyalty_card_status === 'completed',
-                        dateRedeemed: '',
+                        redeemed: Boolean(card.date_redeemed),
+                        dateRedeemed: card.date_redeemed
+                            ? new Date(String(card.date_redeemed).replace(' ', 'T')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : '',
                         activationDate: String(card.activation_date || card.created_at).slice(0, 10),
                         status: card.loyalty_card_status.charAt(0).toUpperCase() + card.loyalty_card_status.slice(1)
                     }));

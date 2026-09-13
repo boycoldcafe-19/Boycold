@@ -174,6 +174,7 @@ try {
                  $result = $connect->query("SELECT u.id, u.card_no, u.firstname, u.lastname, u.phone, u.created_at,
                                     LEAST(10, GREATEST(0, u.loyalty_stamps)) AS loyalty_stamps, $statusSelect,
                                     COALESCE(MIN(lt.created_at), u.created_at) AS activation_date,
+                                    MAX(CASE WHEN lt.transaction_type = 'redemption' THEN lt.created_at END) AS date_redeemed,
                                     COUNT(DISTINCT o.id) AS order_count
                                 FROM users u
                                 LEFT JOIN loyalty_transactions lt ON lt.user_id = u.id

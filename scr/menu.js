@@ -87,7 +87,7 @@ function applyFilters(query, category) {
         const matchCat = !category || (category === 'popular' ? Boolean(popular) : cats.includes(category));
         const matchQ   = !q || name.includes(q);
         const rewardEligible = !isFreeDrinkFlow || FREE_DRINK_CATEGORIES.has((card.dataset.category || '').toLowerCase());
-        const show     = matchCat && matchQ && rewardEligible;
+        const show     = (isFreeDrinkFlow ? rewardEligible : matchCat && rewardEligible) && matchQ;
         card.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
     });
