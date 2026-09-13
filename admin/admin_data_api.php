@@ -442,31 +442,39 @@ try {
         case 'stock_in':
             $items = $data['items'] ?? [];
             if (!is_array($items) || !$items) response(['success' => false, 'error' => 'No stock items supplied'], 422);
+            $branchId = isset($data['branch_id']) && (int) $data['branch_id'] > 0
+                ? (int) $data['branch_id']
+                : (int) ($_SESSION['branch_id'] ?? 1);
             $connect->begin_transaction();
-            $update = $connect->prepare('UPDATE ingredients SET stock = stock + ? WHERE id = ?');
-            $movement = $connect->prepare("INSERT INTO ingredient_stock_movements (ingredient_id, movement_type, quantity, resulting_stock) SELECT id, 'stock_in', ?, stock FROM ingredients WHERE id = ?");
+            $update = $connect->prepare('UPDATE ingredients SET stock = stock + ? WHERE id = ? AND branch_id = ?');
+            $movement = $connect->prepare("INSERT INTO ingredient_stock_movements (ingredient_id, movement_type, quantity, resulting_stock) SELECT id, 'stock_in', ?, stock FROM ingredients WHERE id = ? AND branch_id = ?");
             foreach ($items as $item) {
                 $id = (int)($item['id'] ?? 0);
                 if ($id < 1 && !empty($item['name'])) {
-                    $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? LIMIT 1');
-                    $lookup->bind_param('s', $item['name']);
+                    $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? AND branch_id = ? LIMIT 1');
+                    $lookup->bind_param('si', $item['name'], $branchId);
                     $lookup->execute();
                     $id = (int)($lookup->get_result()->fetch_assoc()['id'] ?? 0);
                 }
                 $quantity = (float)($item['quantity'] ?? 0);
                 if ($id < 1 || $quantity <= 0) continue;
-                $update->bind_param('di', $quantity, $id);
+                $update->bind_param('dii', $quantity, $id, $branchId);
                 $update->execute();
-                $movement->bind_param('di', $quantity, $id);
+                $movement->bind_param('dii', $quantity, $id, $branchId);
                 $movement->execute();
             }
             $connect->commit();
             response(['success' => true]);
 
         case 'stock_history':
+            $requestedBranch = filter_input(INPUT_GET, 'branch_id', FILTER_VALIDATE_INT);
+            $branchId = $requestedBranch && $requestedBranch > 0
+                ? $requestedBranch
+                : (int) ($_SESSION['branch_id'] ?? 1);
             $result = $connect->query("SELECT m.id, i.name, i.unit, m.movement_type, m.quantity, m.resulting_stock,
                                               m.order_id, m.source, m.product_name, m.reference, m.created_at
                                        FROM ingredient_stock_movements m JOIN ingredients i ON i.id = m.ingredient_id
+                                       WHERE i.branch_id = {$branchId}
                                        ORDER BY m.created_at DESC LIMIT 200");
             $history = [];
             while ($row = $result->fetch_assoc()) $history[] = $row;

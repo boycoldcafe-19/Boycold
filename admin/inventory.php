@@ -800,48 +800,6 @@ boycold_ensure_inventory_schema($connect);
                 }
             });
 
-            document.getElementById("cancelEditIngredientBtn").addEventListener("click", () => {
-                editIngredientOverlay.hidden = true;
-                editingIngredient = null;
-            });
-
-            editIngredientOverlay.addEventListener("click", (event) => {
-                if (event.target === editIngredientOverlay) editIngredientOverlay.hidden = true;
-            });
-
-            document.getElementById("saveEditIngredientBtn").addEventListener("click", async () => {
-                if (!editingIngredient) return;
-                const nextUnit = editIngredientUnit.value;
-                if (!nextUnit) {
-                    alert("Please select a valid unit of measure.");
-                    return;
-                }
-                if (nextUnit !== editingIngredient.unit && Number(editingIngredient.mapping_count || 0) > 0 &&
-                    !confirm("Changing the unit of measure may affect existing ingredient mappings. Please review the mapped quantities after changing the unit. Continue?")) {
-                    return;
-                }
-
-                const saveButton = document.getElementById("saveEditIngredientBtn");
-                saveButton.disabled = true;
-                try {
-                    const response = await fetch("admin_data_api.php?action=ingredient_update", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ id: editingIngredient.id, unit: nextUnit })
-                    });
-                    const result = await response.json();
-                    if (!response.ok || !result.success) throw new Error(result.error || "Unable to update the unit of measure. Please try again.");
-                    editIngredientOverlay.hidden = true;
-                    editingIngredient = null;
-                    await loadIngredients();
-                    window.dispatchEvent(new Event("inventoryBranchChanged"));
-                } catch (error) {
-                    alert(error.message || "Unable to update the unit of measure. Please try again.");
-                } finally {
-                    saveButton.disabled = false;
-                }
-            });
-
             addIngredientBtn.addEventListener("click", () => {
                 addIngredientOverlay.hidden = false;
             });
@@ -1129,7 +1087,7 @@ boycold_ensure_inventory_schema($connect);
                 fetch('admin_data_api.php?action=stock_in', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items })
+                    body: JSON.stringify({ items, branch_id: window.currentInventoryBranchId || '1' })
                 }).then(response => response.json()).then(result => {
                     if (!result.success) throw new Error(result.error || 'Stock could not be saved');
                     statusEl.textContent = 'Stock In recorded.';
@@ -1215,7 +1173,9 @@ boycold_ensure_inventory_schema($connect);
                 emptyState.hidden = visibleCount !== 0;
             }
 
-            fetch('admin_data_api.php?action=stock_history', { cache: 'no-store' })
+            function loadStockHistory() {
+                const branchId = window.currentInventoryBranchId || '1';
+                return fetch(`admin_data_api.php?action=stock_history&branch_id=${encodeURIComponent(branchId)}`, { cache: 'no-store' })
                 .then((response) => response.json())
                 .then((result) => {
                     if (!result.success) throw new Error(result.error || 'Stock history could not be loaded');
@@ -1226,6 +1186,10 @@ boycold_ensure_inventory_schema($connect);
                     emptyState.hidden = false;
                     emptyState.textContent = 'Unable to load stock history from the database.';
                 });
+            }
+
+            window.addEventListener('inventoryBranchChanged', loadStockHistory);
+            loadStockHistory();
 
             searchInput.addEventListener("input", applyFilter);
             filterSelect.addEventListener("change", applyFilter);
