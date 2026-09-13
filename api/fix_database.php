@@ -3,7 +3,10 @@ require_once __DIR__ . '/../config/db_config.php';
 
 function tableExists(mysqli $connect, string $table): bool
 {
-    $stmt = $connect->prepare("SHOW TABLES LIKE ?");
+    $stmt = $connect->prepare(
+        'SELECT 1 FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1'
+    );
     $stmt->bind_param('s', $table);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -14,8 +17,11 @@ function tableExists(mysqli $connect, string $table): bool
 
 function columnExists(mysqli $connect, string $table, string $column): bool
 {
-    $stmt = $connect->prepare('SHOW COLUMNS FROM `'. $table .'` LIKE ?');
-    $stmt->bind_param('s', $column);
+    $stmt = $connect->prepare(
+        'SELECT 1 FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+    );
+    $stmt->bind_param('ss', $table, $column);
     $stmt->execute();
     $result = $stmt->get_result();
     $exists = $result && $result->num_rows > 0;
@@ -25,13 +31,30 @@ function columnExists(mysqli $connect, string $table, string $column): bool
 
 function indexExists(mysqli $connect, string $table, string $index): bool
 {
-    $stmt = $connect->prepare('SHOW INDEX FROM `'. $table .'` WHERE Key_name = ?');
-    $stmt->bind_param('s', $index);
+    $stmt = $connect->prepare(
+        'SELECT 1 FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1'
+    );
+    $stmt->bind_param('ss', $table, $index);
     $stmt->execute();
     $result = $stmt->get_result();
     $exists = $result && $result->num_rows > 0;
     $stmt->close();
     return $exists;
+}
+
+function isGeneratedColumn(mysqli $connect, string $table, string $column): bool
+{
+    $stmt = $connect->prepare(
+        'SELECT EXTRA FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+    );
+    $stmt->bind_param('ss', $table, $column);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return strtolower((string) ($row['EXTRA'] ?? '')) === 'stored generated';
 }
 
 function runSql(mysqli $connect, string $sql, string $label): bool
@@ -162,7 +185,9 @@ function ensureEmployees(mysqli $connect): void
         runSql($connect, "ALTER TABLE `employees` ADD COLUMN `employee_name` varchar(255) DEFAULT NULL AFTER `lastname`", 'Added employees.employee_name fallback column');
     }
 
-    $connect->query("UPDATE `employees` SET `employee_name` = CONCAT(COALESCE(`firstname`, ''), ' ', COALESCE(`lastname`, '')) WHERE `employee_name` IS NULL OR TRIM(`employee_name`) = ''");
+    if (!isGeneratedColumn($connect, 'employees', 'employee_name')) {
+        $connect->query("UPDATE `employees` SET `employee_name` = CONCAT(COALESCE(`firstname`, ''), ' ', COALESCE(`lastname`, '')) WHERE `employee_name` IS NULL OR TRIM(`employee_name`) = ''");
+    }
     $connect->query("ALTER TABLE `employees` MODIFY COLUMN `pin` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL");
 
     $count = $connect->query('SELECT COUNT(*) AS total FROM employees')->fetch_assoc()['total'] ?? 0;
