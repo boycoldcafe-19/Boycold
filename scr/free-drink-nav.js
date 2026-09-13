@@ -11,7 +11,7 @@
                 <div class="freedrink-img"><img src="../picture/icon2.png" alt="Free drink"></div>
                 <h2 id="freeDrinkNavTitle">Free Drink Reward</h2>
                 <p>View your loyalty card and claim your free drink.</p>
-                <button type="button" class="freedrink-btn">View Loyalty Card</button>
+                <button type="button" class="freedrink-btn">Claim Free Drinks</button>
             </div>`;
         document.body.appendChild(overlay);
     }

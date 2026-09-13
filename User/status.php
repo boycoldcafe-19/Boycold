@@ -1146,7 +1146,7 @@ function step_class(bool $reached)
             <h2 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1e1e1e;font-family:'Afacad',sans-serif;">Free Drink Ready!</h2>
             <p style="margin:0 0 4px;font-size:15px;color:#777;font-family:'Afacad',sans-serif;">You've completed your loyalty card.</p>
             <p style="margin:0 0 20px;font-size:15px;color:#777;font-family:'Afacad',sans-serif;">You can claim your free drink in any Boycold Cafe branch.</p>
-            <button class="freedrink-btn" id="freeDrinkViewBtn" style="padding:12px 24px;background:#692727;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:'Afacad',sans-serif;cursor:pointer;transition:background 0.15s;">View Loyalty Card</button>
+            <button class="freedrink-btn" id="freeDrinkViewBtn" style="padding:12px 24px;background:#692727;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:'Afacad',sans-serif;cursor:pointer;transition:background 0.15s;">Claim Free Drinks</button>
         </div>
     </div>
 
