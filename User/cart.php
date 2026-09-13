@@ -94,6 +94,7 @@ $_SESSION['user_email'] = $user['email'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/cart.css">
     <link rel="stylesheet" href="css/sidebar-responsive.css">
+    <link rel="stylesheet" href="css/free-drink-nav.css">
     <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -337,5 +338,6 @@ $_SESSION['user_email'] = $user['email'];
         <?php endif; ?>
     </script>
 
+    <script src="../scr/free-drink-nav.js"></script>
 </body>
 </html>

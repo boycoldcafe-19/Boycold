@@ -1,0 +1,71 @@
+.nav-free-drink-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+    border: 0;
+    border-radius: 50%;
+    background: #692727;
+    color: #fff;
+    cursor: pointer;
+    font-size: 17px;
+}
+
+.nav-free-drink-btn:hover,
+.nav-free-drink-btn:focus-visible {
+    background: #4f1d1d;
+}
+
+.freedrink-overlay:not(.open) {
+    display: none;
+}
+
+.freedrink-overlay.open {
+    display: flex;
+}
+
+.freedrink-overlay .freedrink-modal {
+    width: min(340px, calc(100vw - 40px));
+    padding: 28px 24px;
+    border-radius: 20px;
+    background: #fff;
+    color: #1e1e1e;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+}
+
+.freedrink-overlay .freedrink-img {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    border-radius: 16px;
+    background: #f5f0eb;
+    overflow: hidden;
+}
+
+.freedrink-overlay .freedrink-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.freedrink-overlay .freedrink-close {
+    float: right;
+    border: 0;
+    background: transparent;
+    color: #692727;
+    cursor: pointer;
+    font-size: 24px;
+}
+
+.freedrink-overlay .freedrink-btn {
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 10px;
+    background: #692727;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+}

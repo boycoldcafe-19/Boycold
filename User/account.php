@@ -461,6 +461,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
     <link rel="stylesheet" href="css/account.css">
     <link rel="stylesheet" href="css/Address-modal.css">
     <link rel="stylesheet" href="css/sidebar-responsive.css">
+    <link rel="stylesheet" href="css/free-drink-nav.css">
     <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1093,6 +1094,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
     </script>
     <script src="../scr/account.js"></script>
 
+    <script src="../scr/free-drink-nav.js"></script>
 </body>
 
 </html>

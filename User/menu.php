@@ -62,6 +62,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/sidebar-responsive.css">
+    <link rel="stylesheet" href="css/free-drink-nav.css">
     <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -358,6 +359,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
         openFreeDrinkModal();
         <?php endif; ?>
     </script>
+    <script src="../scr/free-drink-nav.js"></script>
 </body>
 
 </html>
