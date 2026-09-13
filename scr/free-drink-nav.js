@@ -1,19 +1,4 @@
 (() => {
-    const nav = document.getElementById('mainNav');
-    if (!nav || document.querySelector('[data-free-drink-nav]')) return;
-
-    const target = nav.querySelector('.nav-right-group');
-    if (!target) return;
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav-free-drink-btn';
-    button.dataset.freeDrinkNav = 'true';
-    button.title = 'Free drink reward';
-    button.setAttribute('aria-label', 'Open free drink reward');
-    button.innerHTML = '<i class="fa-solid fa-gift" aria-hidden="true"></i>';
-    target.insertBefore(button, target.firstElementChild);
-
     let overlay = document.getElementById('freeDrinkOverlay');
     const createdOverlay = !overlay;
     if (!overlay) {
@@ -40,11 +25,14 @@
     }
 
     function openModal() {
+        if (!createdOverlay && typeof window.openFreeDrinkModal === 'function') {
+            window.openFreeDrinkModal();
+            return;
+        }
         overlay.style.display = 'flex';
         overlay.classList.add('open');
     }
 
-    button.addEventListener('click', openModal);
     closeButton?.addEventListener('click', closeModal);
     overlay.addEventListener('click', (event) => {
         if (event.target === overlay) closeModal();
@@ -57,4 +45,13 @@
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') closeModal();
     });
+
+    fetch('../api/get_loyalty_data.php', { credentials: 'same-origin', cache: 'no-store' })
+        .then((response) => response.json())
+        .then((result) => {
+            if (result.success && Number(result.loyalty_stamps) >= 10) {
+                openModal();
+            }
+        })
+        .catch(() => {});
 })();
