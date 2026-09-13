@@ -478,7 +478,7 @@
         }
 
         async function loadIngredients() {
-            const response = await fetch('admin_data_api.php?action=ingredients', { cache: 'no-store' });
+            const response = await fetch('admin_data_api.php?action=ingredients&branch_id=1', { cache: 'no-store' });
             const result = await response.json();
             if (!response.ok || !result.success) {
                 throw new Error(result.error || 'Ingredients could not be loaded');
