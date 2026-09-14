@@ -423,12 +423,40 @@ function boycold_get_ingredient_restock_capacities(mysqli $connect, int $branchI
             'stock' => round($availableStock, 3),
             'required_per_serving' => round((float) $recipe['amount'], 3),
             'remaining_servings' => $remainingServings,
+            'branch_servings' => [$remainingServings],
             'status' => boycold_inventory_restock_status($remainingServings),
         ];
     }
 
     if (isset($ingredientStmt)) {
         $ingredientStmt->close();
+    }
+
+    if ($branchId === 0) {
+        $combined = [];
+        foreach ($capacities as $capacity) {
+            $key = boycold_inventory_normalize_name((string) $capacity['name']);
+            if (!isset($combined[$key])) {
+                $combined[$key] = $capacity;
+                continue;
+            }
+
+            $combined[$key]['stock'] = round(
+                (float) $combined[$key]['stock'] + (float) $capacity['stock'],
+                3
+            );
+            $combined[$key]['remaining_servings'] += (int) $capacity['remaining_servings'];
+            $combined[$key]['branch_servings'] = array_merge(
+                $combined[$key]['branch_servings'],
+                $capacity['branch_servings']
+            );
+            if ($capacity['status'] === 'critical' || $combined[$key]['status'] === 'critical') {
+                $combined[$key]['status'] = 'critical';
+            } elseif ($capacity['status'] === 'soon' || $combined[$key]['status'] === 'soon') {
+                $combined[$key]['status'] = 'soon';
+            }
+        }
+        $capacities = array_values($combined);
     }
 
     usort($capacities, static function (array $a, array $b): int {

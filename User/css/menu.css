@@ -264,6 +264,12 @@ html, body {
     color: rgb(0, 0, 0);
 }
 
+.cart-link.is-disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .nav-search {
     display: flex;
     align-items: center;

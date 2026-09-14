@@ -21,6 +21,7 @@ $avatar   = $user['avatar'] ?? '';
 $loyaltyStamps = (int) ($user['loyalty_stamps'] ?? 0);
 $loyaltyMaxStamps = 10;
 $isLoyaltyCardComplete = $loyaltyStamps >= $loyaltyMaxStamps;
+$isFreeDrinkMode = isset($_GET['free_drink']) && $_GET['free_drink'] === '1';
 
 // Check if we should show the free drink modal
 if (!isset($_SESSION['loyalty_popup_shown_for_completion'])) {
@@ -84,7 +85,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                 <li><a href="../store/store.php">STORES</a></li>
                 <li class="sidebar-nav-only-not"><a href="status.php">ORDERS</a></li>
                 <li class="sidebar-nav-only"><a href="favorites.php">FAVORITES</a></li>
-                <li><a href="cart.php" class="cart-link">
+                <li><a <?= $isFreeDrinkMode ? 'class="cart-link is-disabled" aria-disabled="true" tabindex="-1"' : 'href="cart.php" class="cart-link"' ?>>
                         <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i> CART
                     </a></li>
             </ul>
@@ -130,7 +131,7 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
                 <i class="fa-solid fa-magnifying-glass" id="searchIconBtn" onclick="toggleSearch()"></i>
                 <input type="text" placeholder="Search coffee and more">
             </div>
-            <a href="cart.php" class="cart-link">
+            <a <?= $isFreeDrinkMode ? 'class="cart-link is-disabled" aria-disabled="true" tabindex="-1"' : 'href="cart.php" class="cart-link"' ?>>
                 <i class="fa-solid fa-cart-shopping fa-lg" style="color: rgb(0, 0, 0);"></i>
             </a>
             <div class="avatar-dropdown-wrap">

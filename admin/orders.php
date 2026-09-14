@@ -404,7 +404,7 @@
                     </div>
                     <div class="receipt-row">
                         <span class="r-label">STATUS:</span>
-                        <span class="r-val bold">COMPLETED / PAID</span>
+                        <span class="r-val bold" id="modalOrderStatus">PENDING / UNPAID</span>
                     </div>
                 </div>
 
@@ -473,46 +473,8 @@
 
                 <div class="receipt-divider-dashed">--------------------------------</div>
 
-                <!-- Barcode & Footer -->
+                <!-- Receipt Footer -->
                 <div class="receipt-footer">
-                    <div class="receipt-barcode-wrap">
-                        <svg class="receipt-barcode" viewBox="0 0 200 36" preserveAspectRatio="none">
-                            <rect x="5" y="0" width="3" height="36" fill="#000" />
-                            <rect x="11" y="0" width="1" height="36" fill="#000" />
-                            <rect x="15" y="0" width="4" height="36" fill="#000" />
-                            <rect x="22" y="0" width="2" height="36" fill="#000" />
-                            <rect x="27" y="0" width="3" height="36" fill="#000" />
-                            <rect x="33" y="0" width="5" height="36" fill="#000" />
-                            <rect x="41" y="0" width="2" height="36" fill="#000" />
-                            <rect x="46" y="0" width="4" height="36" fill="#000" />
-                            <rect x="53" y="0" width="1" height="36" fill="#000" />
-                            <rect x="57" y="0" width="3" height="36" fill="#000" />
-                            <rect x="63" y="0" width="2" height="36" fill="#000" />
-                            <rect x="68" y="0" width="4" height="36" fill="#000" />
-                            <rect x="75" y="0" width="2" height="36" fill="#000" />
-                            <rect x="80" y="0" width="5" height="36" fill="#000" />
-                            <rect x="88" y="0" width="3" height="36" fill="#000" />
-                            <rect x="94" y="0" width="1" height="36" fill="#000" />
-                            <rect x="98" y="0" width="4" height="36" fill="#000" />
-                            <rect x="105" y="0" width="2" height="36" fill="#000" />
-                            <rect x="110" y="0" width="5" height="36" fill="#000" />
-                            <rect x="118" y="0" width="3" height="36" fill="#000" />
-                            <rect x="124" y="0" width="2" height="36" fill="#000" />
-                            <rect x="129" y="0" width="4" height="36" fill="#000" />
-                            <rect x="136" y="0" width="1" height="36" fill="#000" />
-                            <rect x="140" y="0" width="3" height="36" fill="#000" />
-                            <rect x="146" y="0" width="5" height="36" fill="#000" />
-                            <rect x="154" y="0" width="2" height="36" fill="#000" />
-                            <rect x="159" y="0" width="4" height="36" fill="#000" />
-                            <rect x="166" y="0" width="2" height="36" fill="#000" />
-                            <rect x="171" y="0" width="3" height="36" fill="#000" />
-                            <rect x="177" y="0" width="5" height="36" fill="#000" />
-                            <rect x="185" y="0" width="2" height="36" fill="#000" />
-                            <rect x="190" y="0" width="4" height="36" fill="#000" />
-                        </svg>
-                        <span class="barcode-num" id="modalBarcodeNum">* ORDER-1234 *</span>
-                    </div>
-
                     <p class="receipt-thankyou">*** THANK YOU FOR YOUR PURCHASE! ***</p>
                     <p class="receipt-tagline">Brewed with passion, served with love.</p>
                     <p class="receipt-social">Follow us: @boycoldcafe</p>
@@ -764,6 +726,8 @@
                 const rawTime = row.getAttribute('data-time');
                 const type = row.getAttribute('data-order-type') || 'Physical';
                 const payment = row.getAttribute('data-payment') || 'COD';
+                const orderStatus = (row.getAttribute('data-status') || 'pending').toUpperCase();
+                const paymentStatus = (row.getAttribute('data-payment-status') || 'unpaid').toUpperCase();
                 const tenderedAttr = parseFloat(row.getAttribute('data-tendered'));
                 document.getElementById('modalBranch').textContent = row.getAttribute('data-branch') || 'Branch information unavailable';
 
@@ -777,11 +741,11 @@
 
                 // Header Metadata
                 document.getElementById('modalOrderId').textContent = orderId;
-                document.getElementById('modalBarcodeNum').textContent = `* ${orderId.replace('#', '')} *`;
                 document.getElementById('modalOrderTime').textContent = formatReceiptDate(rawTime);
                 document.getElementById('modalCustomerName').textContent = customer;
                 document.getElementById('modalOrderType').textContent = `${type.toUpperCase()} ORDER`;
                 document.getElementById('modalPayment').textContent = payment;
+                document.getElementById('modalOrderStatus').textContent = `${orderStatus} / ${paymentStatus}`;
 
                 // Render Line Items
                 const itemsContainer = document.getElementById('modalItemsList');

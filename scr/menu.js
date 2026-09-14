@@ -8,6 +8,10 @@ const FREE_DRINK_EXCLUDED_CATEGORIES = new Set([
 ]);
 const isFreeDrinkFlow = sessionStorage.getItem('boycold_free_drink_flow') === '1';
 
+document.querySelectorAll('.cart-link.is-disabled').forEach((link) => {
+    link.addEventListener('click', (event) => event.preventDefault());
+});
+
 function normalizeMenuCategory(value) {
     return String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
 }

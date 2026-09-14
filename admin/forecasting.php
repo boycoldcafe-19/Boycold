@@ -692,7 +692,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 
         function updateRestockList(items) {
             const list = document.getElementById('restockList');
-            const restockItems = (items || []).filter(item => Number(item.remaining_servings) <= 25 && item.status !== 'ok');
+            const restockItems = (items || []).filter(item => item.status !== 'ok');
             list.innerHTML = '';
 
             if (!restockItems.length) {
@@ -704,11 +704,17 @@ while ($row = $branchesResult->fetch_assoc()) {
                 const row = document.createElement('div');
                 row.className = `restock-list-row restock-list-${item.status}`;
                 const servings = Math.max(0, Math.floor(Number(item.remaining_servings) || 0));
+                const branchServings = Array.isArray(item.branch_servings)
+                    ? item.branch_servings.map(value => Math.max(0, Math.floor(Number(value) || 0)))
+                    : [];
+                const branchDetail = branchServings.length > 1 && branchServings.every(value => value === branchServings[0])
+                    ? ` (${branchServings[0]} each branch)`
+                    : '';
                 const status = item.status === 'critical'
                     ? (servings === 0 ? 'Critical / Insufficient' : 'Critical Restock')
                     : 'Restock';
                 row.innerHTML = `
-                    <div class="restock-list-name"><i class="fa-solid fa-triangle-exclamation"></i><strong>${item.name}</strong><span>${servings} serving${servings === 1 ? '' : 's'} left</span></div>
+                    <div class="restock-list-name"><i class="fa-solid fa-triangle-exclamation"></i><strong>${item.name}</strong><span>${servings} serving${servings === 1 ? '' : 's'} left${branchDetail}</span></div>
                     <span class="restock-list-days">${status}</span>
                     <span class="restock-list-quantity">${Number(item.stock || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${item.unit || ''} available</span>
                 `;
