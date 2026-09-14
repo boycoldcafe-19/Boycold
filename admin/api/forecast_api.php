@@ -96,20 +96,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-$branchSalesQuery = "SELECT b.branch_name, COALESCE(SUM(o.total), 0) AS total_sales
-    FROM branches b
-    LEFT JOIN orders o ON o.branch_id = b.id
-        AND DATE(o.created_at) >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
-        AND {$successfulSaleCondition}
-    WHERE b.status = 'active'
-    GROUP BY b.id, b.branch_name
-    ORDER BY b.branch_name";
-$branchSalesStmt = $connect->prepare($branchSalesQuery);
-$branchSalesStmt->bind_param('i', $histDaysParam);
-$branchSalesStmt->execute();
-$branchSales = $branchSalesStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$branchSalesStmt->close();
-
 // Keep zero-sales days in the series so the regression and chart use a real
 // contiguous database date range instead of only dates that had an order.
 $historicalByDate = [];
@@ -542,7 +528,6 @@ $response = [
         'total_ingredients' => count($restockItems)
     ],
     'historical_sales' => $historicalSales,
-    'branch_sales' => $branchSales,
     'forecasted_sales' => $forecastedSales,
     'historical_dates' => $historicalDates,
     'demand_forecast' => $demandForecast,

@@ -376,10 +376,22 @@ try {
 
         case 'product_delete':
             $id = (int)($data['id'] ?? 0);
+            if ($id < 1) {
+                response(['success' => false, 'error' => 'Invalid product ID.'], 422);
+            }
             $stmt = $connect->prepare('DELETE FROM products WHERE id = ?');
+            if (!$stmt) {
+                response(['success' => false, 'error' => 'Could not prepare product deletion: ' . $connect->error], 500);
+            }
             $stmt->bind_param('i', $id);
-            $stmt->execute();
-            response(['success' => true]);
+            if (!$stmt->execute()) {
+                $error = $stmt->error ?: $connect->error;
+                $stmt->close();
+                response(['success' => false, 'error' => 'Product could not be deleted: ' . $error], 409);
+            }
+            $deleted = $stmt->affected_rows;
+            $stmt->close();
+            response(['success' => $deleted === 1, 'error' => $deleted === 1 ? null : 'Product was not found.']);
 
         case 'ingredient_create':
             $name = requireValue($data, 'name');

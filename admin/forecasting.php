@@ -245,10 +245,6 @@ while ($row = $branchesResult->fetch_assoc()) {
                     </div>
 
                 </div>
-                <div class="chart-card branch-sales-card" aria-label="Historical sales by branch">
-                    <div class="chart-card-header"><h2 class="chart-card-title">Historical Sales by Branch</h2><span>Used for prediction</span></div>
-                    <div class="branch-sales-list" id="branchSalesList"><div class="restock-list-empty">Loading branch sales...</div></div>
-                </div>
                 <div class="chart-card restock-list-card" id="restockListCard">
                     <div class="chart-card-header">
                         <h2 class="chart-card-title">Ingredients to Restock</h2>
@@ -656,16 +652,6 @@ while ($row = $branchesResult->fetch_assoc()) {
             }
         });
 
-        function escapeHtml(value) {
-            return String(value ?? '').replace(/[&<>'"]/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;'
-            }[character]));
-        }
-
         function updateDashboard(data) {
             window.forecastSnapshot = data;
             // Stats cards
@@ -684,16 +670,6 @@ while ($row = $branchesResult->fetch_assoc()) {
             
             document.getElementById('highestDemandItem').textContent = data.stats.highest_demand_item;
             document.getElementById('highestDemandQty').textContent = data.stats.highest_demand_qty + ' units (forecast)';
-
-            const branchSalesList = document.getElementById('branchSalesList');
-            if (branchSalesList) {
-                const branchSales = data.branch_sales || [];
-                const combinedSales = branchSales.reduce((total, branch) => total + Number(branch.total_sales || 0), 0);
-                branchSalesList.innerHTML = branchSales.map(branch => `
-                    <div class="branch-sales-row"><span>${escapeHtml(branch.branch_name)}</span><strong>₱${Number(branch.total_sales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-                `).join('') + `
-                    <div class="branch-sales-row branch-sales-total"><span>Both Branches Total</span><strong>₱${combinedSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>`;
-            }
 
             // Sales Forecast Chart
             updateForecastChart(data);

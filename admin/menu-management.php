@@ -5155,16 +5155,25 @@ boycold_ensure_inventory_schema($connect);
                 confirmDeleteBtn.addEventListener('click', () => {
                     if (!currentDeletingCard) return;
 
+                    const cardToDelete = currentDeletingCard;
+                    const productId = Number(cardToDelete.dataset.id);
+                    if (!Number.isInteger(productId) || productId <= 0) {
+                        alert('This menu item has an invalid database ID. Please reload the page and try again.');
+                        return;
+                    }
+
+                    confirmDeleteBtn.disabled = true;
                     fetch('admin_data_api.php?action=product_delete', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: currentDeletingCard.dataset.id })
+                        body: JSON.stringify({ id: productId })
                     }).then(response => response.json()).then(result => {
                         if (!result.success) throw new Error(result.error || 'Product could not be deleted');
-                        currentDeletingCard.remove();
+                        cardToDelete.remove();
                         filterProducts();
-                    }).catch(error => alert(error.message));
-                    currentDeletingCard = null;
-                    deleteProductModal?.classList.remove('open');
+                        closeDeleteModal();
+                    }).catch(error => alert(error.message)).finally(() => {
+                        confirmDeleteBtn.disabled = false;
+                    });
                 });
             }
 

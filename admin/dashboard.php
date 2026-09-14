@@ -7,15 +7,39 @@ function adminReportPercent(float|int|string|null $value): string
     return number_format(abs($number), 2, '.', '') . '%';
 }
 
-// Keep Dashboard metrics aligned with Data Analytics: latest rolling seven days.
-$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-6 days'));
-$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
+// Keep Dashboard metrics aligned with admin/sales.php: latest successful sale
+// date and the preceding six days when no date range is selected.
+$startDate = (string) ($_GET['start_date'] ?? '');
+$endDate = (string) ($_GET['end_date'] ?? '');
 
 // Admin accounts use branch_id = 0, which means all branches.
 $sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
 $branchId = isset($_GET['branch_id'])
     ? $_GET['branch_id']
     : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
+
+if ($startDate === '' && $endDate === '') {
+    $latestSalesSql = "SELECT MAX(DATE(created_at)) AS latest_date
+        FROM orders
+        WHERE (status IN ('completed', 'delivered') OR payment_status = 'paid')
+          AND status <> 'cancelled'
+          AND payment_status NOT IN ('failed', 'expired', 'cancelled')";
+    if ($branchId !== 'all') $latestSalesSql .= ' AND branch_id = ?';
+    $latestSalesStmt = $connect->prepare($latestSalesSql);
+    if ($branchId !== 'all') {
+        $latestBranchId = (int) $branchId;
+        $latestSalesStmt->bind_param('i', $latestBranchId);
+    }
+    $latestSalesStmt->execute();
+    $latestSalesDate = (string) ($latestSalesStmt->get_result()->fetch_assoc()['latest_date'] ?? '');
+    $latestSalesStmt->close();
+    $endDate = $latestSalesDate !== '' ? $latestSalesDate : date('Y-m-d');
+    $startDate = date('Y-m-d', strtotime($endDate . ' -6 days'));
+}
+
+if ($startDate > $endDate) {
+    [$startDate, $endDate] = [$endDate, $startDate];
+}
 
 // Fetch available branches
 $branchesQuery = "SELECT b.id, b.branch_name,
@@ -66,22 +90,6 @@ function getDashboardData(mysqli $connect, string $startDate, string $endDate, s
     }
     $stmt->execute();
     $prevData = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    $branchSalesQuery = "SELECT b.branch_name, COALESCE(SUM(o.total), 0) AS total_sales
-        FROM branches b
-        LEFT JOIN orders o ON o.branch_id = b.id
-            AND DATE(o.created_at) BETWEEN ? AND ?
-            AND (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
-            AND o.status <> 'cancelled'
-            AND o.payment_status NOT IN ('failed', 'expired', 'cancelled')
-        WHERE b.status = 'active'
-        GROUP BY b.id, b.branch_name
-        ORDER BY b.branch_name";
-    $stmt = $connect->prepare($branchSalesQuery);
-    $stmt->bind_param('ss', $startDate, $endDate);
-    $stmt->execute();
-    $branchSales = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
     // Total Orders follows admin/orders.php and includes physical and online orders.
@@ -274,7 +282,6 @@ function getDashboardData(mysqli $connect, string $startDate, string $endDate, s
     
     return [
         'total_sales' => $currentData['total_sales'],
-        'branch_sales' => $branchSales,
         'total_orders' => $currentData['total_orders'],
         'sales_trend' => $salesTrend,
         'orders_trend' => $ordersTrend,
@@ -552,20 +559,6 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                         </div>
                     </div>
                 </div>
-                <section class="dashboard-insights" aria-label="Sales by branch">
-                    <div class="sales-overview-card">
-                        <div class="sales-overview-header"><h1>Sales by Branch</h1><span>Successful sales</span></div>
-                        <div class="branch-sales-list">
-                            <?php foreach ($dashboard['branch_sales'] as $branchSale): ?>
-                                <div class="branch-sales-row">
-                                    <span><?= htmlspecialchars($branchSale['branch_name']) ?></span>
-                                    <strong>₱<?= number_format((float) $branchSale['total_sales'], 2) ?></strong>
-                                </div>
-                            <?php endforeach; ?>
-                            <div class="branch-sales-row branch-sales-total"><span>Both Branches Total</span><strong>₱<?= number_format((float) $dashboard['total_sales'], 2) ?></strong></div>
-                        </div>
-                    </div>
-                </section>
             </div>
             <section class="dashboard-insights" aria-label="Dashboard insights">
                 <div class="overview-grid">
