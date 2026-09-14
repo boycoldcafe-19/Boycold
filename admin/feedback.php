@@ -45,9 +45,6 @@ $reportQuery = $connect->query("SELECT r.id, r.order_id, r.issue, r.details, r.p
                                        CONCAT(u.firstname, ' ', u.lastname) AS customer_name, u.email
                                 FROM order_reports r
                                 INNER JOIN users u ON u.id = r.user_id
-                                                                WHERE r.photo_paths IS NOT NULL
-                                                                    AND r.photo_paths <> ''
-                                                                    AND r.photo_paths <> '[]'
                                 ORDER BY r.created_at DESC, r.id DESC");
 if ($reportQuery) {
     while ($row = $reportQuery->fetch_assoc()) $reports[] = $row;

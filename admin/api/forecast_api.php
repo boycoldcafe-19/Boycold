@@ -24,6 +24,13 @@ $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_day
 $forecastDays = max(1, min($forecastDays, 90));
 $historicalDays = max(3, min($historicalDays, 365));
 
+// Match admin/sales.php: forecasting uses successful sales only.
+$successfulSaleCondition = "(
+    (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
+    AND o.status <> 'cancelled'
+    AND o.payment_status NOT IN ('failed', 'expired', 'cancelled')
+)";
+
 // Branch filter
 $branchCondition = '';
 $params = [];
@@ -39,7 +46,7 @@ if ($branchId !== 'all') {
 // deployed databases that do not receive orders every calendar day.
 $latestOrderQuery = "SELECT MAX(DATE(o.created_at)) AS latest_order_date
     FROM orders o
-    WHERE o.status NOT IN ('cancelled')
+    WHERE {$successfulSaleCondition}
     $branchCondition";
 $latestStmt = $connect->prepare($latestOrderQuery);
 if ($branchId !== 'all') {
@@ -61,7 +68,7 @@ $dailySalesQuery = "SELECT
     COALESCE(SUM(o.total), 0) as total_sales,
     COUNT(o.id) as total_orders
 FROM orders o
-WHERE o.status NOT IN ('cancelled')
+WHERE {$successfulSaleCondition}
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY DATE(o.created_at)
@@ -193,7 +200,7 @@ $demandQuery = "SELECT
     COUNT(DISTINCT DATE(o.created_at)) as days_sold
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
-WHERE o.status NOT IN ('cancelled')
+WHERE {$successfulSaleCondition}
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY oi.product_name
@@ -249,7 +256,7 @@ foreach ($demandItems as $item) {
         SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as previous
     FROM order_items oi
     INNER JOIN orders o ON oi.order_id = o.id
-    WHERE o.status NOT IN ('cancelled')
+    WHERE {$successfulSaleCondition}
         AND oi.product_name = ?
         AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
         $branchCondition";
@@ -294,7 +301,7 @@ $peakHoursQuery = "SELECT
     COUNT(*) as order_count,
     COUNT(DISTINCT DATE(o.created_at)) as days_active
 FROM orders o
-WHERE o.status NOT IN ('cancelled')
+WHERE {$successfulSaleCondition}
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY HOUR(o.created_at)
@@ -398,7 +405,7 @@ $trendingQuery = "SELECT
     SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as prev_7
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
-WHERE o.status NOT IN ('cancelled')
+WHERE {$successfulSaleCondition}
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
     $branchCondition
 GROUP BY oi.product_name
@@ -477,7 +484,7 @@ $weekComparisonQuery = "SELECT
     COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as this_week_orders,
     COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as last_week_orders
 FROM orders o
-WHERE o.status NOT IN ('cancelled')
+WHERE {$successfulSaleCondition}
     $branchCondition
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)";
 

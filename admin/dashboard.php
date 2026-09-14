@@ -35,12 +35,14 @@ $prevEndDate = date('Y-m-d', strtotime($endDate . ' -1 week'));
 
 // Fetch analytics data
 function getDashboardData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId) {
-    // Total Sales & Orders
-    $salesQuery = "SELECT 
-        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END), 0) as total_sales,
-        COALESCE(COUNT(CASE WHEN status != 'cancelled' THEN 1 END), 0) as total_orders
+    // Total Sales follows admin/sales.php and includes successful sales only.
+    $salesQuery = "SELECT
+        COALESCE(SUM(total), 0) as total_sales
         FROM orders 
-        WHERE DATE(created_at) BETWEEN ? AND ?";
+        WHERE DATE(created_at) BETWEEN ? AND ?
+        AND (status IN ('completed', 'delivered') OR payment_status = 'paid')
+        AND status <> 'cancelled'
+        AND payment_status NOT IN ('failed', 'expired', 'cancelled')";
     
     if ($branchId !== 'all') {
         $salesQuery .= " AND branch_id = ?";
@@ -65,6 +67,37 @@ function getDashboardData(mysqli $connect, string $startDate, string $endDate, s
     $stmt->execute();
     $prevData = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+
+    // Total Orders follows admin/orders.php and includes physical and online orders.
+    $ordersQuery = "SELECT COUNT(*) AS total_orders
+        FROM orders
+        WHERE DATE(created_at) BETWEEN ? AND ?";
+    if ($branchId !== 'all') {
+        $ordersQuery .= " AND branch_id = ?";
+    }
+
+    $stmt = $connect->prepare($ordersQuery);
+    if ($branchId !== 'all') {
+        $stmt->bind_param('ssi', $startDate, $endDate, $branchId);
+    } else {
+        $stmt->bind_param('ss', $startDate, $endDate);
+    }
+    $stmt->execute();
+    $currentOrderData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    $stmt = $connect->prepare($ordersQuery);
+    if ($branchId !== 'all') {
+        $stmt->bind_param('ssi', $prevStartDate, $prevEndDate, $branchId);
+    } else {
+        $stmt->bind_param('ss', $prevStartDate, $prevEndDate);
+    }
+    $stmt->execute();
+    $prevOrderData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    $currentData['total_orders'] = (int) ($currentOrderData['total_orders'] ?? 0);
+    $prevData['total_orders'] = (int) ($prevOrderData['total_orders'] ?? 0);
     
     // Sales trend
     $salesTrend = $prevData['total_sales'] > 0 
@@ -78,7 +111,6 @@ function getDashboardData(mysqli $connect, string $startDate, string $endDate, s
     $onlineQuery = "SELECT COUNT(*) as online_orders, COALESCE(SUM(total), 0) as online_sales
         FROM orders 
         WHERE DATE(created_at) BETWEEN ? AND ?
-        AND status != 'cancelled'
         AND order_type IN ('delivery', 'pickup')";
     
     if ($branchId !== 'all') {
@@ -109,32 +141,19 @@ function getDashboardData(mysqli $connect, string $startDate, string $endDate, s
         ? (($onlineData['online_orders'] - $prevOnlineData['online_orders']) / $prevOnlineData['online_orders']) * 100 
         : 0;
     
-    // New customers
-    $customersQuery = "SELECT COUNT(DISTINCT user_name) as new_customers
-        FROM orders 
-        WHERE DATE(created_at) BETWEEN ? AND ? 
-        AND status != 'cancelled'";
-    
-    if ($branchId !== 'all') {
-        $customersQuery .= " AND branch_id = ?";
-    }
+    // New Customers follows admin/customers.php and counts registrations in users.
+    $customersQuery = "SELECT COUNT(*) AS new_customers
+        FROM users
+        WHERE DATE(created_at) BETWEEN ? AND ?";
     
     $stmt = $connect->prepare($customersQuery);
-    if ($branchId !== 'all') {
-        $stmt->bind_param('ssi', $startDate, $endDate, $branchId);
-    } else {
-        $stmt->bind_param('ss', $startDate, $endDate);
-    }
+    $stmt->bind_param('ss', $startDate, $endDate);
     $stmt->execute();
     $currentCustomers = $stmt->get_result()->fetch_assoc()['new_customers'];
     $stmt->close();
     
     $stmt = $connect->prepare($customersQuery);
-    if ($branchId !== 'all') {
-        $stmt->bind_param('ssi', $prevStartDate, $prevEndDate, $branchId);
-    } else {
-        $stmt->bind_param('ss', $prevStartDate, $prevEndDate);
-    }
+    $stmt->bind_param('ss', $prevStartDate, $prevEndDate);
     $stmt->execute();
     $prevCustomers = $stmt->get_result()->fetch_assoc()['new_customers'];
     $stmt->close();

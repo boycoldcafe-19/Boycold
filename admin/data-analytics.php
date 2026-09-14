@@ -315,6 +315,17 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
 $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $prevEndDate, $branchId);
 $timeAnalytics = getAnalyticsData($connect, $timeStartDate, $timeEndDate, $timePrevStartDate, $timePrevEndDate, $branchId);
 $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakPrevStartDate, $peakPrevEndDate, $branchId);
+
+if (($_GET['format'] ?? '') === 'json') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    echo json_encode([
+        'success' => true,
+        'total_sales' => (float) $analytics['total_sales'],
+        'total_orders' => (int) $analytics['total_orders'],
+    ]);
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -514,7 +525,7 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
                                 </svg>
                             </span>
                         </div>
-                        <div class="stat-value">₱ <?php echo number_format($analytics['total_sales'], 2); ?></div>
+                        <div class="stat-value" id="totalSalesValue">₱ <?php echo number_format($analytics['total_sales'], 2); ?></div>
                         <div class="stat-trend <?php echo $analytics['sales_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
                             <i class="fa-solid fa-arrow-<?php echo $analytics['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
                             <span class="trend-percent"><?php echo analyticsReportPercent($analytics['sales_trend']); ?></span>
@@ -1376,6 +1387,34 @@ $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakP
             url.searchParams.set(`${prefix}end_date`, rangeEnd);
             window.location.assign(url.toString());
         }
+
+        async function refreshTotalSales() {
+            const totalSalesValue = document.getElementById('totalSalesValue');
+            if (!totalSalesValue || document.hidden) return;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('format', 'json');
+
+            try {
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!data.success) return;
+
+                totalSalesValue.textContent = `₱ ${Number(data.total_sales || 0).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+            } catch (error) {
+                console.warn('Unable to refresh analytics sales total.', error);
+            }
+        }
+
+        setInterval(refreshTotalSales, 15000);
 
         function closeAllDropdowns(except) {
             document.querySelectorAll('.period-dropdown').forEach(d => {
