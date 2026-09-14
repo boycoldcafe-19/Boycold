@@ -57,6 +57,7 @@ boycold_ensure_inventory_schema($connect);
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -244,7 +245,7 @@ boycold_ensure_inventory_schema($connect);
                                 aria-label="Delete category">&times;</span></a>
                         <a href="#" data-filter="pasta" class="cat-pill">Pasta<span class="cat-delete-btn"
                                 aria-label="Delete category">&times;</span></a>
-                        <a href="#" data-filter="waffle" class="cat-pill">Waffles<span class="cat-delete-btn"
+                        <a href="#" data-filter="waffles" class="cat-pill">Waffles<span class="cat-delete-btn"
                                 aria-label="Delete category">&times;</span></a>
                         <a href="#" data-filter="quesadilla" class="cat-pill">Quesadilla<span class="cat-delete-btn"
                                 aria-label="Delete category">&times;</span></a>
@@ -3889,14 +3890,13 @@ boycold_ensure_inventory_schema($connect);
                                 <option value="" disabled selected>Select Category</option>
                                 <option value="coffee">Coffee</option>
                                 <option value="non-coffee">Non-Coffee</option>
-                                <option value="special-coffee">Special Coffee</option>
                                 <option value="matcha-fusion">Matcha Fusion</option>
                                 <option value="smoothie">Smoothie</option>
                                 <option value="frappe-series">Frappe Series</option>
                                 <option value="rice-meal">Rice Meal</option>
                                 <option value="light-snack">Light Snack</option>
                                 <option value="pasta">Pasta</option>
-                                <option value="waffle">Waffles</option>
+                                <option value="waffles">Waffles</option>
                                 <option value="quesadilla">Quesadilla</option>
                             </select>
                         </div>
@@ -4017,14 +4017,13 @@ boycold_ensure_inventory_schema($connect);
                             <select id="editProductCategory">
                                 <option value="coffee">Coffee</option>
                                 <option value="non-coffee">Non-Coffee</option>
-                                <option value="special-coffee">Special Coffee</option>
                                 <option value="matcha-fusion">Matcha Fusion</option>
                                 <option value="smoothie">Smoothie</option>
                                 <option value="frappe-series">Frappe Series</option>
                                 <option value="rice-meal">Rice Meal</option>
                                 <option value="light-snack">Light Snack</option>
                                 <option value="pasta">Pasta</option>
-                                <option value="waffle">Waffles</option>
+                                <option value="waffles">Waffles</option>
                                 <option value="quesadilla">Quesadilla</option>
                             </select>
                         </div>
@@ -4269,17 +4268,25 @@ boycold_ensure_inventory_schema($connect);
                 const staticPills = catPillsWrap.querySelectorAll('.cat-pill:not(.cat-add-ghost)');
                 staticPills.forEach(pill => pill.remove());
 
-                const categories = [...new Set(products.map(product => String(product.category || '').trim()).filter(Boolean))]
-                    .sort((a, b) => a.localeCompare(b));
+                const categoryOrder = ['coffee', 'non-coffee', 'matcha-fusion', 'smoothie', 'frappe-series', 'rice-meal', 'light-snack', 'pasta', 'waffles', 'quesadilla'];
+                const categoryLabels = {
+                    'coffee': 'Coffee', 'non-coffee': 'Non-Coffee',
+                    'matcha-fusion': 'Matcha Fusion', 'smoothie': 'Smoothie', 'frappe-series': 'Frappe Series',
+                    'rice-meal': 'Rice Meal', 'light-snack': 'Light Snack', 'pasta': 'Pasta',
+                    'waffles': 'Waffles', 'quesadilla': 'Quesadilla'
+                };
+                const categories = categoryOrder.filter(category =>
+                    products.some(product => normalizeProductCategory(product.category) === category)
+                );
                 const ghost = getAddCategoryGhost();
                 categories.forEach(category => {
                     const pill = document.createElement('a');
                     pill.href = '#';
                     pill.className = 'cat-pill';
                     pill.dataset.filter = normalizeProductCategory(category);
-                    pill.innerHTML = `${escapeProductText(category)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
+                    pill.innerHTML = `${escapeProductText(categoryLabels[category] || category)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
                     catPillsWrap.insertBefore(pill, ghost || addCategoryBtn);
-                    addCategoryOptionToSelects(normalizeProductCategory(category), category);
+                    addCategoryOptionToSelects(category, categoryLabels[category] || category);
                 });
 
                 const firstPill = getCatPills()[0];
@@ -4533,7 +4540,9 @@ boycold_ensure_inventory_schema($connect);
 
             function normalizeProductCategory(value) {
                 const category = String(value ?? '').trim().toLowerCase();
-                return category === 'waffles' ? 'waffle' : category;
+                if (category === 'waffle') return 'waffles';
+                if (category === 'bites') return 'light-snack';
+                return category;
             }
 
             function renderDatabaseProducts(products) {

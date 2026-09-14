@@ -49,6 +49,7 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -731,9 +732,20 @@
 
         function getCustomerAvatar(avatar) {
             const value = String(avatar || '').trim();
-            if (!value) return '../img/LOGO.png';
+            if (!value) return '';
             if (/^(https?:\/\/|\/)/i.test(value)) return value;
             return '../User/' + value.replace(/^\/+/, '');
+        }
+
+        function renderCustomerAvatar(avatar, name) {
+            const imageUrl = getCustomerAvatar(avatar);
+            const safeName = String(name || 'Customer').replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[character]));
+            if (!imageUrl) {
+                return `<span class="avatar avatar-placeholder" aria-label="${safeName} profile placeholder"><i class="fa-solid fa-user"></i></span>`;
+            }
+            return `<img class="avatar" src="${imageUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile picture" onerror="this.onerror=null;this.src='../img/LOGO.png';">`;
         }
 
         const customerTableBody = document.getElementById('customerTableBody');
@@ -746,13 +758,12 @@
             const tbody = customerTableBody;
                 tbody.innerHTML = result.customers.map(customer => {
                     const name = `${customer.firstname} ${customer.lastname}`;
-                    const initials = `${customer.firstname[0] || ''}${customer.lastname[0] || ''}`.toUpperCase();
                     const active = customer.account_status === 'active';
                     const orderCount = Number(customer.order_count || 0);
                     const member = orderCount > 0 && Boolean(customer.card_no);
                     const avatar = getCustomerAvatar(customer.avatar);
                     return `<tr data-id="${customer.id}" data-status="${customer.account_status}">
-                        <td><div class="customer-cell"><img class="avatar" src="${avatar}" alt="${name} profile picture" onerror="this.onerror=null;this.src='../img/LOGO.png';"><span class="customer-cell-text"><span class="customer-name">${name}</span><span class="customer-joined">Joined ${new Date(customer.created_at).toLocaleDateString()}</span></span></div></td>
+                        <td><div class="customer-cell">${renderCustomerAvatar(customer.avatar, name)}<span class="customer-cell-text"><span class="customer-name">${name}</span><span class="customer-joined">Joined ${new Date(customer.created_at).toLocaleDateString()}</span></span></div></td>
                         <td><span class="cell-stack"><span>${customer.email}</span><span class="badge badge-verified">${Number(customer.is_verified) ? 'Verified' : 'Unverified'}</span></span></td>
                         <td><span>${customer.phone || '-'}</span></td><td>${orderCount}</td>
                         <td><span class="cell-stack">${member ? `<span class="badge badge-loyalty"><i class="fa-solid fa-star"></i> Member</span><span class="loyalty-card-no">Card #${customer.card_no}</span>` : '<span class="badge badge-not-member">Not a Member</span>'}</span></td>

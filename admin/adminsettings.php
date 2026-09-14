@@ -52,6 +52,9 @@ require_once __DIR__ . '/admin_guard.php';
                             </a>
                         </li>
                         <li>
+                            <a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a>
+                        </li>
+                        <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">

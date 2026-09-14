@@ -45,6 +45,9 @@ $reportQuery = $connect->query("SELECT r.id, r.order_id, r.issue, r.details, r.p
                                        CONCAT(u.firstname, ' ', u.lastname) AS customer_name, u.email
                                 FROM order_reports r
                                 INNER JOIN users u ON u.id = r.user_id
+                                                                WHERE r.photo_paths IS NOT NULL
+                                                                    AND r.photo_paths <> ''
+                                                                    AND r.photo_paths <> '[]'
                                 ORDER BY r.created_at DESC, r.id DESC");
 if ($reportQuery) {
     while ($row = $reportQuery->fetch_assoc()) $reports[] = $row;
@@ -137,7 +140,7 @@ if ($reportQuery) {
                                 }
                             ?>
                             <article class="review-card problem-report-card">
-                                <div class="review-card-head"><div><strong><?= htmlspecialchars($report['customer_name']) ?></strong><small><?= htmlspecialchars($report['email']) ?></small></div><span class="report-issue-label"><?= htmlspecialchars($report['issue']) ?></span></div>
+                                <div class="review-card-head"><div><strong><?= htmlspecialchars($report['customer_name']) ?></strong><small><?= htmlspecialchars($report['email']) ?></small></div><span class="report-issue-label"><?= htmlspecialchars($report['issue'] !== '' ? $report['issue'] : 'Details only') ?></span></div>
                                 <p><?= nl2br(htmlspecialchars($report['details'])) ?></p>
                                 <?php if ($reportPhotos): ?>
                                     <div class="report-photo-list">
@@ -193,5 +196,13 @@ if ($reportQuery) {
         document.getElementById('reportPhotoModalClose').addEventListener('click', closeReportPhotoModal);
         reportPhotoModal.addEventListener('click', event => { if (event.target === reportPhotoModal) closeReportPhotoModal(); });
     </script>
+<script>
+    const feedbackDashboardLink = document.querySelector('.sidebar a[href="dashboard.php"]');
+    if (feedbackDashboardLink && !document.querySelector('.sidebar a[href="sales.php"]')) {
+        const salesItem = document.createElement('li');
+        salesItem.innerHTML = '<a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a>';
+        feedbackDashboardLink.closest('li')?.after(salesItem);
+    }
+</script>
 </body>
 </html>

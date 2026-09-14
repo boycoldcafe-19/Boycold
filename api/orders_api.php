@@ -778,8 +778,8 @@ switch ($action) {
         $issue = trim((string)($body['issue'] ?? ''));
         $details = trim((string)($body['details'] ?? ''));
         $photos = is_array($body['photos'] ?? null) ? $body['photos'] : [];
-        if ($userId <= 0 || $orderId <= 0 || $issue === '' || $details === '' || strlen($details) > 500) {
-            echo json_encode(['success' => false, 'error' => 'Please provide the issue and report details.']);
+        if ($userId <= 0 || $orderId <= 0 || ($issue === '' && $details === '') || strlen($issue) > 120 || strlen($details) > 500) {
+            echo json_encode(['success' => false, 'error' => 'Please provide an issue or report details.']);
             break;
         }
 

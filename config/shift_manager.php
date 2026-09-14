@@ -44,16 +44,13 @@ function pos_shift_sales(mysqli $connect, int $shiftId): array
     $sales = $stmt->get_result()->fetch_assoc() ?: [];
     $stmt->close();
 
-    $branchStmt = $connect->prepare('SELECT branch_id FROM shift_logs WHERE id = ? LIMIT 1');
+    $branchStmt = $connect->prepare('SELECT branch_id, opened_at FROM shift_logs WHERE id = ? LIMIT 1');
     $branchStmt->bind_param('i', $shiftId);
     $branchStmt->execute();
-    $branchId = (int) (($branchStmt->get_result()->fetch_assoc()['branch_id'] ?? 0));
+    $shiftMeta = $branchStmt->get_result()->fetch_assoc() ?: [];
+    $branchId = (int) ($shiftMeta['branch_id'] ?? 0);
+    $openedAt = (string) ($shiftMeta['opened_at'] ?? '');
     $branchStmt->close();
-
-    $salesDate = pos_sales_date();
-    $nextSalesDate = (new DateTimeImmutable($salesDate, new DateTimeZone(POS_BUSINESS_TIMEZONE)))
-        ->modify('+1 day')
-        ->format('Y-m-d');
 
     $onlineStmt = $connect->prepare(
         "SELECT
@@ -63,10 +60,9 @@ function pos_shift_sales(mysqli $connect, int $shiftId): array
          WHERE branch_id = ?
            AND user_id IS NOT NULL
            AND status <> 'cancelled'
-           AND created_at >= CONCAT(?, ' 02:00:00')
-           AND created_at < CONCAT(?, ' 02:00:00')"
+            AND created_at >= ?"
     );
-    $onlineStmt->bind_param('iss', $branchId, $salesDate, $nextSalesDate);
+        $onlineStmt->bind_param('is', $branchId, $openedAt);
     $onlineStmt->execute();
     $onlineSales = $onlineStmt->get_result()->fetch_assoc() ?: [];
     $onlineStmt->close();
@@ -102,14 +98,6 @@ function pos_reconcile_branch_shift(mysqli $connect, int $branchId, ?int $employ
     try {
         $salesDate = pos_sales_date();
         $connect->begin_transaction();
-
-        $existingStmt = $connect->prepare(
-            'SELECT id, status FROM shift_logs WHERE branch_id = ? AND shift_date = ? ORDER BY id DESC LIMIT 1 FOR UPDATE'
-        );
-        $existingStmt->bind_param('is', $branchId, $salesDate);
-        $existingStmt->execute();
-        $existingSalesDayShift = $existingStmt->get_result()->fetch_assoc() ?: null;
-        $existingStmt->close();
 
         $openStmt = $connect->prepare(
             "SELECT * FROM shift_logs
@@ -159,7 +147,7 @@ function pos_reconcile_branch_shift(mysqli $connect, int $branchId, ?int $employ
             pos_shift_event($connect, $shiftId, $branchId, 'automatic-close', $employeeId);
         }
 
-        if ($currentShift === null && $existingSalesDayShift === null && $createMissing) {
+        if ($currentShift === null && $createMissing) {
             $employeeForShift = (int) ($employeeId ?? 0);
             if ($employeeForShift <= 0) {
                 $employeeStmt = $connect->prepare(

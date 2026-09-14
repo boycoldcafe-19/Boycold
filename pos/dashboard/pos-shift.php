@@ -53,7 +53,7 @@ $historyStmt->bind_param('i', $branchId);
 $historyStmt->execute();
 $hasShiftHistory = (bool) $historyStmt->get_result()->fetch_assoc();
 $historyStmt->close();
-pos_reconcile_branch_shift($connect, $branchId, $employeeId, $hasShiftHistory);
+pos_reconcile_branch_shift($connect, $branchId, $employeeId, false);
 
 // Check for the branch-wide active shift shared by all POS terminals.
 $currentShift = null;
@@ -89,30 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response['errors']['opening_cash'] = 'You already have an open shift.';
       } else {
         $salesDate = pos_sales_date();
-        $closedStmt = $connect->prepare("SELECT id FROM shift_logs WHERE branch_id = ? AND shift_date = ? AND status IN ('closed', 'auto-closed') LIMIT 1");
-        $closedStmt->bind_param('is', $branchId, $salesDate);
-        $closedStmt->execute();
-        $closedShift = $closedStmt->get_result()->fetch_assoc();
-        $closedStmt->close();
-
-        if ($closedShift) {
-          $reopenStmt = $connect->prepare(
-            "UPDATE shift_logs SET employee_id = ?, opening_cash_float = ?, closed_at = NULL,
-                    status = 'open', close_reason = NULL, open_reason = 'manual'
-                   WHERE id = ? AND branch_id = ? AND status IN ('closed', 'auto-closed')"
-          );
-          $closedShiftId = (int) $closedShift['id'];
-          $reopenStmt->bind_param('idii', $employeeId, $openingCash, $closedShiftId, $branchId);
-          $reopened = $reopenStmt->execute() && $reopenStmt->affected_rows === 1;
-          $reopenStmt->close();
-          $newShiftId = $closedShiftId;
-        } else {
-          $insertStmt = $connect->prepare("INSERT INTO shift_logs (branch_id, employee_id, opening_cash_float, shift_date, status, open_reason) VALUES (?, ?, ?, ?, 'open', 'manual')");
-          $insertStmt->bind_param('iids', $branchId, $employeeId, $openingCash, $salesDate);
-          $reopened = $insertStmt->execute();
-          $newShiftId = (int) $insertStmt->insert_id;
-          $insertStmt->close();
-        }
+        $insertStmt = $connect->prepare("INSERT INTO shift_logs (branch_id, employee_id, opening_cash_float, shift_date, status, open_reason) VALUES (?, ?, ?, ?, 'open', 'manual')");
+        $insertStmt->bind_param('iids', $branchId, $employeeId, $openingCash, $salesDate);
+        $reopened = $insertStmt->execute();
+        $newShiftId = (int) $insertStmt->insert_id;
+        $insertStmt->close();
 
         if ($reopened) {
           $response['success'] = true;

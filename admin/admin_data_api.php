@@ -274,11 +274,11 @@ try {
 
         case 'products':
             $result = $connect->query(
-                "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available,
+                "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available,
                         COUNT(pi.id) AS mapping_count
                  FROM products p
                  LEFT JOIN product_ingredients pi ON pi.product_name = p.product_name
-                 GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.is_available
+                 GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available
                  ORDER BY p.category, p.product_name"
             );
             $products = [];
@@ -333,6 +333,8 @@ try {
         case 'product_create':
             $name = requireValue($data, 'product_name');
             $category = requireValue($data, 'category');
+            $categoryAliases = ['waffle' => 'waffles', 'bites' => 'light-snack'];
+            $category = $categoryAliases[strtolower($category)] ?? strtolower($category);
             $price = max(0, (float)($data['price'] ?? 0));
             $image = trim((string)($data['image'] ?? ''));
             $available = !empty($data['is_available']) ? 1 : 0;
@@ -346,6 +348,8 @@ try {
             $id = (int)($data['id'] ?? 0);
             $name = requireValue($data, 'product_name');
             $category = requireValue($data, 'category');
+            $categoryAliases = ['waffle' => 'waffles', 'bites' => 'light-snack'];
+            $category = $categoryAliases[strtolower($category)] ?? strtolower($category);
             $price = max(0, (float)($data['price'] ?? 0));
             $available = !empty($data['is_available']) ? 1 : 0;
             $currentStmt = $connect->prepare('SELECT is_available FROM products WHERE id = ? LIMIT 1');

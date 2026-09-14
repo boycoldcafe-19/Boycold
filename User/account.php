@@ -349,7 +349,7 @@ $loyaltyProgressText = $loyaltyStamps === 0
         : $loyaltyStamps . ' stamp' . ($loyaltyStamps > 1 ? 's' : '') . ' earned!');
 $isLoyaltyCardComplete = $loyaltyStamps >= $loyaltyMaxStamps;
 $loyaltyCardStatus = strtolower((string) ($user['loyalty_card_status'] ?? 'active'));
-$isLoyaltyCardActive = $loyaltyCardStatus === 'active';
+$isLoyaltyCardActive = $loyaltyCardStatus !== 'inactive';
 
 // Only auto-pop the "Free Drink Ready" modal the first time the card is seen
 // at max stamps — not on every page load. The session remembers the last
@@ -1038,7 +1038,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 const data = await response.json();
                 if (data.success) {
                     const newStamps = data.loyalty_stamps;
-                    const isCardActive = String(data.loyalty_card_status || 'active').toLowerCase() === 'active';
+                    const isCardActive = String(data.loyalty_card_status || 'active').toLowerCase() !== 'inactive';
                     const card = document.getElementById('loyaltyCard');
                     if (card) card.classList.toggle('loyalty-card-inactive', !isCardActive);
                     

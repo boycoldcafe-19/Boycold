@@ -1198,3 +1198,11 @@ button {
         overflow-x: auto;
     }
 }
+
+.avatar-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #8a6a55;
+    background: #f2e4d8;
+}

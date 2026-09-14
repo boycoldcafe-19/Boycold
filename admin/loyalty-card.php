@@ -49,6 +49,7 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
+                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -469,7 +470,8 @@
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             }[character]));
             if (!value) return `<div class="avatar-circle" aria-label="${safeName} profile placeholder"><i class="fa-solid fa-user"></i></div>`;
-            return `<img class="avatar-circle avatar-image" src="${value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'), {className:'avatar-circle', innerHTML:'<i class=\"fa-solid fa-user\"></i>'}))">`;
+            const imageUrl = /^(https?:\/\/|\/)/i.test(value) ? value : `../User/${value.replace(/^\/+/, '')}`;
+            return `<img class="avatar-circle avatar-image" src="${imageUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile" onerror="this.onerror=null;this.src='../img/LOGO.png'">`;
         }
 
         // Filter and Render Logic
@@ -606,7 +608,8 @@
         function openDrawer(item) {
             const drawerAvatar = document.getElementById('drawerAvatar');
             if (item.avatar) {
-                drawerAvatar.innerHTML = `<img class="avatar-circle avatar-image" src="${item.avatar}" alt="${item.customer} profile">`;
+                const imageUrl = /^(https?:\/\/|\/)/i.test(item.avatar) ? item.avatar : `../User/${item.avatar.replace(/^\/+/, '')}`;
+                drawerAvatar.innerHTML = `<img class="avatar-circle avatar-image" src="${imageUrl}" alt="${item.customer} profile" onerror="this.onerror=null;this.src='../img/LOGO.png'">`;
             } else {
                 drawerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
             }

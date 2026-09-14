@@ -1071,14 +1071,11 @@ function step_class(bool $reached)
 
         /* ── Submit report ── */
         async function submitReport() {
-            const issue = document.getElementById('selectDisplay').textContent;
-            if (issue === 'Select an issue') {
-                alert('Please select an issue first.');
-                return;
-            }
+            const selectedIssue = document.getElementById('selectDisplay').textContent;
+            const issue = selectedIssue === 'Select an issue' ? '' : selectedIssue;
             const details = document.getElementById('reportTextarea').value.trim();
-            if (!details) {
-                alert('Please tell us more about the issue.');
+            if (!issue && !details) {
+                alert('Please select an issue or tell us more about the problem.');
                 return;
             }
 
