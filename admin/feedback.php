@@ -129,9 +129,9 @@ if ($reportQuery) {
                                 $storedPhotos = $report['photo_paths'] ?? '';
                                 if (is_string($storedPhotos) && $storedPhotos !== '') {
                                     $decodedPhotos = json_decode($storedPhotos, true);
-                                    if (is_array($decodedPhotos) && $decodedPhotos !== []) {
+                                    if (is_array($decodedPhotos)) {
                                         $reportPhotos = $decodedPhotos;
-                                    } else {
+                                    } elseif ($storedPhotos !== '[]') {
                                         $reportPhotos = [$storedPhotos];
                                     }
                                 }

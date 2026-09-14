@@ -158,6 +158,22 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
     $stmt->execute();
     $prevData = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+
+    $branchSalesQuery = "SELECT b.branch_name, COALESCE(SUM(o.total), 0) AS total_sales
+        FROM branches b
+        LEFT JOIN orders o ON o.branch_id = b.id
+            AND DATE(o.created_at) BETWEEN ? AND ?
+            AND (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
+            AND o.status <> 'cancelled'
+            AND o.payment_status NOT IN ('failed', 'expired', 'cancelled')
+        WHERE b.status = 'active'
+        GROUP BY b.id, b.branch_name
+        ORDER BY b.branch_name";
+    $branchSalesStmt = $connect->prepare($branchSalesQuery);
+    $branchSalesStmt->bind_param('ss', $startDate, $endDate);
+    $branchSalesStmt->execute();
+    $branchSales = $branchSalesStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $branchSalesStmt->close();
     
     // Average Order Value
     $avgOrderValue = $currentData['total_orders'] > 0 
@@ -167,29 +183,19 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
         ? $prevData['total_sales'] / $prevData['total_orders'] 
         : 0;
     
-    // New Customers (unique users)
-    $customersQuery = "SELECT COUNT(DISTINCT user_name) as new_customers
-        FROM orders 
-        WHERE DATE(created_at) BETWEEN ? AND ? 
-        AND status != 'cancelled'
-        $branchCondition";
+    // New Customers comes from registrations in admin/customers.php.
+    $customersQuery = "SELECT COUNT(*) AS new_customers
+        FROM users
+        WHERE DATE(created_at) BETWEEN ? AND ?";
     
     $stmt = $connect->prepare($customersQuery);
-    if ($branchId !== 'all') {
-        $stmt->bind_param('ssi', $startDate, $endDate, $branchId);
-    } else {
-        $stmt->bind_param('ss', $startDate, $endDate);
-    }
+    $stmt->bind_param('ss', $startDate, $endDate);
     $stmt->execute();
     $currentCustomers = $stmt->get_result()->fetch_assoc()['new_customers'];
     $stmt->close();
     
     $stmt = $connect->prepare($customersQuery);
-    if ($branchId !== 'all') {
-        $stmt->bind_param('ssi', $prevStartDate, $prevEndDate, $branchId);
-    } else {
-        $stmt->bind_param('ss', $prevStartDate, $prevEndDate);
-    }
+    $stmt->bind_param('ss', $prevStartDate, $prevEndDate);
     $stmt->execute();
     $prevCustomers = $stmt->get_result()->fetch_assoc()['new_customers'];
     $stmt->close();
@@ -299,6 +305,7 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
     
     return [
         'total_sales' => $currentData['total_sales'],
+        'branch_sales' => $branchSales,
         'total_orders' => $currentData['total_orders'],
         'avg_order_value' => $avgOrderValue,
         'new_customers' => $currentCustomers,
@@ -567,6 +574,15 @@ if (($_GET['format'] ?? '') === 'json') {
                     </div>
                     
                 </div>
+                <section class="chart-card branch-sales-card" aria-label="Sales by branch">
+                    <div class="chart-card-header"><h2 class="chart-card-title">Sales by Branch</h2><span>Successful sales</span></div>
+                    <div class="branch-sales-list">
+                        <?php foreach ($analytics['branch_sales'] as $branchSale): ?>
+                            <div class="branch-sales-row"><span><?= htmlspecialchars($branchSale['branch_name']) ?></span><strong>₱<?= number_format((float) $branchSale['total_sales'], 2) ?></strong></div>
+                        <?php endforeach; ?>
+                        <div class="branch-sales-row branch-sales-total"><span>Both Branches Total</span><strong>₱<?= number_format((float) $analytics['total_sales'], 2) ?></strong></div>
+                    </div>
+                </section>
                 <div class="charts-row">
 
                     <div class="chart-card" id="salesOverviewCard">
