@@ -273,44 +273,15 @@ function orderhis_format_group_label(string $dateStr): string {
                 <div class="notif-wrap">
                     <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
                         <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span class="icon-badge" id="notifBadge">3</span>
+                        <span class="icon-badge" id="notifBadge">0</span>
                     </button>
 
                     <div class="notif-dropdown" id="notifDropdown">
                         <div class="notif-header">
-                            <span class="notif-title">Notifications</span>
-                            <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
+                            <span class="notif-title">Inventory Warnings</span>
                         </div>
-
-                        <div class="notif-list" id="notifList">
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">New online order received</p>
-                                    <p class="notif-item-sub">Order #0001</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-
-                            <div class="notif-item unread">
-                                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                                <div class="notif-content">
-                                    <p class="notif-item-title">Payment Confirmed</p>
-                                    <p class="notif-item-sub">Order #0003</p>
-                                </div>
-                                <div class="notif-time">
-                                    <span class="notif-time-main">10:30 am</span>
-                                    <span class="notif-time-sub">Just now</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="#" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
+                        <div class="notif-list inventory-warning-list"></div>
+                        <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
                     </div>
                 </div>
 
@@ -485,6 +456,7 @@ function orderhis_format_group_label(string $dateStr): string {
         const notifBadge = document.getElementById("notifBadge");
         const notifList = document.getElementById("notifList");
 
+        if (notifBtn?.dataset.inventoryAlert !== "true") {
         notifBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             notifDropdown.classList.toggle("open");
@@ -496,13 +468,14 @@ function orderhis_format_group_label(string $dateStr): string {
             }
         });
 
-        markAllRead.addEventListener("click", (e) => {
+        markAllRead?.addEventListener("click", (e) => {
             e.preventDefault();
-            notifList.querySelectorAll(".notif-item.unread").forEach(item => {
+            notifList?.querySelectorAll(".notif-item.unread").forEach(item => {
                 item.classList.remove("unread");
             });
             if (notifBadge) notifBadge.style.display = "none";
         });
+        }
         // ── Date dropdown ──
         const dateDropdownBtn = document.getElementById("dateDropdownBtn");
         const dateDropdownPanel = document.getElementById("dateDropdownPanel");

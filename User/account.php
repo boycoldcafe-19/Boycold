@@ -927,10 +927,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     <label>Label (Optional)</label>
                     <input type="text" id="addrLabel" placeholder="e.g. Home, Work">
                 </div>
-                <div class="addr-field">
-                    <label>Recipient Name</label>
-                    <input type="text" id="addrRecipient" placeholder="Full Name">
-                </div>
             </div>
 
             <div class="addr-field">

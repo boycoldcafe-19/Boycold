@@ -97,6 +97,7 @@ $recentOrdersStmt->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="dash-css/pos-settings.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -237,6 +238,136 @@ $recentOrdersStmt->close();
             font-size: 11px;
             margin-left: 10px;
         }
+        .header-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+        .notif-wrap {
+            position: relative;
+        }
+        .icon-btn {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .icon-btn:hover {
+            background: #e0e0e0;
+        }
+        .icon-btn.inventory-warning-active {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .icon-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #f44336;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .notif-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 1000;
+        }
+        .notif-dropdown.open {
+            display: block;
+        }
+        .notif-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notif-title {
+            font-weight: 600;
+            color: #333;
+        }
+        .notif-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .notif-empty {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+        .notif-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+        .notif-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .notif-icon-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .notif-content {
+            flex: 1;
+        }
+        .notif-item-title {
+            margin: 0 0 4px 0;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+        .notif-item-sub {
+            margin: 0;
+            color: #666;
+            font-size: 12px;
+        }
+        .notif-footer {
+            display: block;
+            padding: 12px 20px;
+            text-align: center;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+            color: #666;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .notif-footer:hover {
+            background: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -295,6 +426,23 @@ $recentOrdersStmt->close();
                 <div class="page-header">
                     <h1>Super Admin Dashboard</h1>
                     <p>Combined analytics across all branches</p>
+                </div>
+
+                <div class="header-actions">
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span class="icon-badge" id="notifBadge">0</span>
+                        </button>
+
+                        <div class="notif-dropdown" id="notifDropdown">
+                            <div class="notif-header">
+                                <span class="notif-title">Inventory Warnings</span>
+                            </div>
+                            <div class="notif-list inventory-warning-list"></div>
+                            <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="date-filter">
@@ -384,5 +532,7 @@ $recentOrdersStmt->close();
             </div>
         </main>
     </div>
+
+    <script src="inventory-warning.js"></script>
 </body>
 </html>

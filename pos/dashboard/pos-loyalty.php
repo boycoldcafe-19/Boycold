@@ -216,17 +216,10 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
 
                     <div class="notif-dropdown" id="notifDropdown">
                         <div class="notif-header">
-                            <span class="notif-title">Notifications</span>
-                            <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
+                            <span class="notif-title">Inventory Warnings</span>
                         </div>
-
-                        <div class="notif-list" id="notifList">
-                            <div class="notif-empty">Loading notifications...</div>
-                        </div>
-
-                        <a href="notification.html" class="notif-footer">
-                            View all notifications <i class="fa-solid fa-chevron-right"></i>
-                        </a>
+                        <div class="notif-list inventory-warning-list"></div>
+                        <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
                     </div>
                 </div>
 

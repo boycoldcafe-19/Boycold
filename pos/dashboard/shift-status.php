@@ -23,7 +23,16 @@ if (!$employee || (int) $employee['is_active'] === 0) {
 
 try {
     $branchId = (int) $employee['branch_id'];
-    $shift = pos_reconcile_branch_shift($connect, $branchId, $employeeId);
+    $shiftStmt = $connect->prepare(
+        "SELECT * FROM shift_logs
+         WHERE branch_id = ? AND status = 'open'
+         ORDER BY opened_at DESC, id DESC
+         LIMIT 1"
+    );
+    $shiftStmt->bind_param('i', $branchId);
+    $shiftStmt->execute();
+    $shift = $shiftStmt->get_result()->fetch_assoc() ?: null;
+    $shiftStmt->close();
     echo json_encode([
         'success' => true,
         'sales_date' => pos_sales_date(),

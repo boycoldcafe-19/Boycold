@@ -542,6 +542,14 @@ if ($paymentMethodKey === 'qrph') {
                     <?php endif; ?>
                 </button>
 
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-header">
+                        <span class="notif-title">Inventory Warnings</span>
+                    </div>
+                    <div class="notif-list inventory-warning-list"></div>
+                    <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
+                </div>
+
                 <div class="header-divider"></div>
 
                 <button class="profile-btn">
@@ -674,16 +682,16 @@ if ($paymentMethodKey === 'qrph') {
                         </section>
 
                         <footer class="status-actions">
+                            <a class="status-btn secondary" href="pos-online.php">
+                                <i class="fa-solid fa-chevron-left"></i>
+                                Back to Online Orders
+                            </a>
                             <?php if ($nextStatus): ?>
                                 <button class="status-btn primary" type="button" data-status="<?= htmlspecialchars($nextStatus['status']) ?>">
                                     <?= htmlspecialchars($nextStatus['label']) ?>
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </button>
                             <?php endif; ?>
-                            <a class="status-btn secondary" href="pos-online.php">
-                                <i class="fa-solid fa-chevron-left"></i>
-                                Back to Online Orders
-                            </a>
                             <?php if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid' && $orderStatus === 'ready'): ?>
                                 <button class="status-btn primary" type="button" id="confirmCodPayBtn">
                                     Confirm Cash Payment

@@ -53,8 +53,6 @@ $historyStmt->bind_param('i', $branchId);
 $historyStmt->execute();
 $hasShiftHistory = (bool) $historyStmt->get_result()->fetch_assoc();
 $historyStmt->close();
-pos_reconcile_branch_shift($connect, $branchId, $employeeId, false);
-
 // Check for the branch-wide active shift shared by all POS terminals.
 $currentShift = null;
 $shiftStmt = $connect->prepare("SELECT * FROM shift_logs WHERE status = 'open' AND branch_id = ? ORDER BY opened_at DESC LIMIT 1");
@@ -182,6 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>BoyCold — Open / Close Shift</title>
   <link rel="icon" href="../img/LOGO 2.png">
   <link rel="stylesheet" href="dash-css/pos-shift.css">
+  <link rel="stylesheet" href="dash-css/order-notify.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -331,44 +330,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="notif-wrap">
           <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span class="icon-badge" id="notifBadge">2</span>
+            <span class="icon-badge" id="notifBadge">0</span>
           </button>
 
           <div class="notif-dropdown" id="notifDropdown">
             <div class="notif-header">
-              <span class="notif-title">Notifications</span>
-              <a href="#" class="notif-mark-read" id="markAllRead">Mark all as read</a>
+              <span class="notif-title">Inventory Warnings</span>
             </div>
-
-            <div class="notif-list" id="notifList">
-              <div class="notif-item unread">
-                <div class="notif-icon notif-icon-bag"><i class="fa-solid fa-bag-shopping"></i></div>
-                <div class="notif-content">
-                  <p class="notif-item-title">New online order received</p>
-                  <p class="notif-item-sub">Order #0001</p>
-                </div>
-                <div class="notif-time">
-                  <span class="notif-time-main">10:30 am</span>
-                  <span class="notif-time-sub">Just now</span>
-                </div>
-              </div>
-
-              <div class="notif-item unread">
-                <div class="notif-icon notif-icon-card"><i class="fa-solid fa-credit-card"></i></div>
-                <div class="notif-content">
-                  <p class="notif-item-title">Payment Confirmed</p>
-                  <p class="notif-item-sub">Order #0003</p>
-                </div>
-                <div class="notif-time">
-                  <span class="notif-time-main">10:30 am</span>
-                  <span class="notif-time-sub">Just now</span>
-                </div>
-              </div>
-            </div>
-
-            <a href="#" class="notif-footer">
-              View all notifications <i class="fa-solid fa-chevron-right"></i>
-            </a>
+            <div class="notif-list inventory-warning-list"></div>
+            <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
           </div>
         </div>
 
@@ -789,6 +759,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const notifList = document.getElementById('notifList');
 
       function init() {
+        if (!notifBtn || !notifDropdown) return;
 
         notifBtn.addEventListener('click', function(e) {
           e.stopPropagation();
@@ -804,10 +775,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
         });
 
-        markAllRead.addEventListener('click', function(e) {
+        markAllRead?.addEventListener('click', function(e) {
           e.preventDefault();
 
-          const unreadItems = notifList.querySelectorAll('.notif-item.unread');
+          const unreadItems = notifList?.querySelectorAll('.notif-item.unread') || [];
           unreadItems.forEach(function(item) {
             item.classList.remove('unread');
           });

@@ -10,6 +10,7 @@
         if (!button) return null;
         button.dataset.inventoryAlert = 'true';
         button.setAttribute('aria-label', 'Inventory warnings');
+        button.setAttribute('type', 'button');
         const icon = button.querySelector('i');
         if (icon) icon.className = 'fa-solid fa-triangle-exclamation';
         return button;
@@ -27,23 +28,36 @@
                 status: item.status,
                 remainingServings: Number(item.remaining_servings || 0),
             }));
-        if (capacityWarnings.length) return capacityWarnings;
-
-        return Object.values(inventory || {}).filter((item) => {
+        const stockWarnings = Object.values(inventory || {}).filter((item) => {
             const current = Number(item.current || 0);
             const minimum = Number(item.min || 0);
             return current <= minimum || (Number(item.max || 0) > 0 && current / Number(item.max) <= 0.2);
-        }).sort((a, b) => Number(a.current || 0) - Number(b.current || 0));
+        });
+        const warningsByName = new Map();
+        [...capacityWarnings, ...stockWarnings].forEach((item) => {
+            const key = String(item.name || '').trim().toLowerCase();
+            if (key && !warningsByName.has(key)) warningsByName.set(key, item);
+        });
+        return [...warningsByName.values()]
+            .sort((a, b) => Number(a.current || 0) - Number(b.current || 0));
     }
 
     function ensureDropdown(button) {
         let dropdown = document.getElementById('notifDropdown');
+        let container = button.closest('.notif-wrap');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notif-wrap';
+            button.parentNode.insertBefore(container, button);
+            container.appendChild(button);
+        }
         if (!dropdown) {
             dropdown = document.createElement('div');
             dropdown.id = 'notifDropdown';
             dropdown.className = 'notif-dropdown';
-            const container = button.closest('.notif-wrap') || button.parentElement;
-            container?.appendChild(dropdown);
+            container.appendChild(dropdown);
+        } else if (dropdown.parentElement !== container) {
+            container.appendChild(dropdown);
         }
         return dropdown;
     }
