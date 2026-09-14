@@ -188,7 +188,7 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 // ==========================================
 $demandQuery = "SELECT 
     oi.product_name,
-    COUNT(DISTINCT oi.order_id) as total_orders,
+    SUM(oi.quantity) as total_orders,
     SUM(oi.line_total) as total_revenue,
     COUNT(DISTINCT DATE(o.created_at)) as days_sold
 FROM order_items oi
@@ -538,7 +538,7 @@ $response = [
             'type' => 'info',
             'icon' => 'star',
             'heading' => $highestDemandItem,
-            'desc' => 'Top selling item with ~' . $highestDemandQty . ' orders forecasted.'
+            'desc' => 'Top selling item with ~' . $highestDemandQty . ' units forecasted.'
         ],
         [
             'type' => 'warning',

@@ -1,7 +1,7 @@
 <?php
 
 const BOYCOLD_LOYALTY_MAX_STAMPS = 10;
-const BOYCOLD_LOYALTY_RULE = 'item_quantity'; // Change to 'completed_order' for 1 stamp per completed order.
+const BOYCOLD_LOYALTY_RULE = 'completed_order'; // One stamp per completed order, regardless of item quantity.
 const BOYCOLD_LOYALTY_STAMPS_PER_QUALIFYING_ITEM = 1;
 const BOYCOLD_LOYALTY_RESET_ON_REWARD = false;
 const BOYCOLD_LOYALTY_EXCLUDED_DRINK_CATEGORIES = [

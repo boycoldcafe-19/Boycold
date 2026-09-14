@@ -240,7 +240,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                             <span class="stat-icon stat-icon-purple"><i class="fa-regular fa-star"></i></span>
                         </div>
                         <div class="stat-value stat-value-name" id="highestDemandItem">Loading...</div>
-                        <div class="forecast-note" id="highestDemandQty">0 orders (forecast)</div>
+                        <div class="forecast-note" id="highestDemandQty">0 units (forecast)</div>
                     </div>
 
                 </div>
@@ -310,7 +310,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                             <div class="demand-table" id="demandTable">
                                 <div class="demand-table-head">
                                     <span class="demand-col-item">Menu Items</span>
-                                    <span class="demand-col-orders">Predicted Orders</span>
+                                    <span class="demand-col-orders">Predicted Units</span>
                                     <span class="demand-col-trend">Trend</span>
                                 </div>
                                 <div class="demand-loading">Loading demand data...</div>
@@ -626,7 +626,7 @@ while ($row = $branchesResult->fetch_assoc()) {
             doc.autoTable({
                 startY: demandStartY + 4,
                 margin: { left: marginX, right: marginX },
-                head: [['Item', 'Predicted Orders', 'Trend']],
+                head: [['Item', 'Predicted Units', 'Trend']],
                 body: demandRows,
                 styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, lineColor: [196,193,193], lineWidth: 0.1 },
                 headStyles: { fillColor: EXPORT_BRAND_MAROON, textColor: [255,255,255], fontStyle: 'bold', halign: 'left' },
@@ -668,7 +668,7 @@ while ($row = $branchesResult->fetch_assoc()) {
             updateRestockList(data.restock_items);
             
             document.getElementById('highestDemandItem').textContent = data.stats.highest_demand_item;
-            document.getElementById('highestDemandQty').textContent = data.stats.highest_demand_qty + ' orders (forecast)';
+            document.getElementById('highestDemandQty').textContent = data.stats.highest_demand_qty + ' units (forecast)';
 
             // Sales Forecast Chart
             updateForecastChart(data);
@@ -954,7 +954,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 row.innerHTML = `
                         <span class="demand-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../pos/img/icon.png'"></span>
                     <span class="demand-item-name">${item.product_name}</span>
-                    <span class="demand-orders">${item.forecasted_orders} orders</span>
+                    <span class="demand-orders">${item.forecasted_orders} units</span>
                     <span class="demand-trend ${trendClass}">
                         <i class="fa-solid ${trendIcon}"></i> ${trendLabel}
                     </span>
@@ -1018,7 +1018,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                     <span class="trending-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../POS/img/icon.png'"></span>
                     <div class="trending-content">
                         <span class="trending-name">${item.product_name}</span>
-                        <p class="trending-desc">${item.recent_7} orders this week vs ${item.prev_7} last week.</p>
+                        <p class="trending-desc">${item.recent_7} units this week vs ${item.prev_7} last week.</p>
                     </div>
                     <span class="trending-percent ${isUp ? 'trending-percent-up' : 'trending-percent-down'}">
                         <i class="fa-solid fa-arrow-${isUp ? 'up' : 'down'}"></i> ${formatReportPercent(item.change_percent)}
