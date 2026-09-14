@@ -1461,6 +1461,34 @@ footer {
     color: #666;
 }
 
+.qrph-modal button {
+    margin-top: 18px;
+    padding: 12px 24px;
+    background: #e53935;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    width: 100%;
+    max-width: 280px;
+}
+
+.qrph-modal button:hover:not(:disabled) {
+    background: #c62828;
+}
+
+.qrph-modal button:active:not(:disabled) {
+    opacity: 0.8;
+}
+
+.qrph-modal button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
 

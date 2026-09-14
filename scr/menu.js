@@ -18,13 +18,17 @@ function prepareFreeDrinkMenu() {
     document.querySelectorAll('.product-card').forEach((card) => {
         const category = normalizeMenuCategory(card.dataset.category);
         const eligible = !FREE_DRINK_EXCLUDED_CATEGORIES.has(category);
+        const cartButton = card.querySelector('.btn-cart');
+        if (cartButton) {
+            cartButton.hidden = true;
+            cartButton.disabled = true;
+        }
         // Non-drink items (Rice Meal, Light Snack, Pasta, Waffles, Quesadilla)
         // stay visible in the menu during a free-drink claim — they're just
         // not selectable as the reward, so leave their card untouched.
         if (!eligible) return;
 
         const price = card.querySelector('.card-price');
-        const cartButton = card.querySelector('.btn-cart');
         const orderButton = card.querySelector('.btn-order');
         if (price) price.textContent = 'FREE REWARD';
         if (cartButton) cartButton.hidden = true;
@@ -341,6 +345,11 @@ document.addEventListener('click', async function(e) {
     if (cartBtn) {
         e.preventDefault();
         e.stopPropagation();
+
+        if (isFreeDrinkFlow) {
+            alert('Cart is disabled while claiming a free drink. Select an eligible drink instead.');
+            return;
+        }
 
         if (!await isStoreOpen()) return;
 

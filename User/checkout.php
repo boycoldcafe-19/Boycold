@@ -857,7 +857,10 @@ $branches = $branches ?? [];
                 if (result.success) {
                     if (isDirectOrder) sessionStorage.removeItem(DIRECT_KEY);
                     if (paymentMethod === 'qrph') {
+                        // Pass order_id in URL so page reload can detect pending QRPh payment
                         startQrphWait(result.order_id, total, result.qr_image_url || '');
+                        // Update URL for reload detection (but don't redirect)
+                        window.history.replaceState(null, '', `checkout.php?pending_qrph_order_id=${result.order_id}`);
                         return;
                     }
                     window.location.href = 'status.php?order_id=' + encodeURIComponent(result.order_id);
@@ -927,6 +930,9 @@ $branches = $branches ?? [];
             const img = document.getElementById('qrphImage');
             const waitMessage = document.getElementById('qrphWait');
             const cancelButton = document.getElementById('cancelQrphPayment');
+            cancelButton.style.cursor = 'pointer';
+            cancelButton.style.pointerEvents = 'auto';
+            cancelButton.style.opacity = '1';
             let pollTimer;
             let expiryTimer;
             let isExpired = false;
@@ -1018,6 +1024,31 @@ $branches = $branches ?? [];
 
         // Load cart on page ready
         loadCart();
+
+        // ── Auto-redirect for pending QRPh on page reload ──
+        // If user accidentally reloads during payment, redirect to status page
+        (async function checkPendingQrphOnLoad() {
+            const params = new URLSearchParams(window.location.search);
+            const orderId = params.get('pending_qrph_order_id');
+            if (!orderId) return;
+
+            try {
+                const res = await fetch(ORDER_API, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'payment_status', order_id: parseInt(orderId) })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const overlay = document.getElementById('qrphOverlay');
+                    if (overlay) overlay.hidden = true;
+                    window.location.href = 'status.php?order_id=' + encodeURIComponent(orderId);
+                }
+            } catch (err) {
+                // Network error, allow user to continue on checkout
+            }
+        })();
 
         // Pre-select delivery mode based on order type from ordercustom.php
         const storedOrderType = sessionStorage.getItem('boycold_order_type');
