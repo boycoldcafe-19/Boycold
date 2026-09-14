@@ -193,7 +193,7 @@ $_SESSION['user_email'] = $user['email'];
                             <i class="fa-solid fa-chevron-down"></i>
                         </button>
                         <div class="faq-answer">
-                            <p>We accept cash and major e-wallets like GCash. Card payments are currently unavailable.</p>
+                            <p>We accept cash and major e-wallets like QRPh. Card payments are currently unavailable.</p>
                         </div>
                     </div>
 

@@ -31,7 +31,7 @@ try {
     syncLoyaltyStampsFromCompletedOrders($connect, (int) $userId);
 
     // Get current user loyalty data
-    $stmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps FROM users WHERE id = ?");
+    $stmt = $connect->prepare("SELECT loyalty_beans, loyalty_stamps, loyalty_card_status FROM users WHERE id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
@@ -47,7 +47,8 @@ try {
     echo json_encode([
         'success' => true,
         'loyalty_beans' => (int) $result['loyalty_beans'],
-        'loyalty_stamps' => $displayStamps
+        'loyalty_stamps' => $displayStamps,
+        'loyalty_card_status' => strtolower((string) ($result['loyalty_card_status'] ?? 'active'))
     ]);
 
 } catch (Exception $e) {

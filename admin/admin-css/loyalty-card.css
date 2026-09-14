@@ -1061,6 +1061,10 @@ button {
     flex-shrink: 0;
 }
 
+.avatar-circle.avatar-image {
+    object-fit: cover;
+}
+
 .customer-info-text strong {
     display: block;
     color: var(--text);

@@ -463,6 +463,15 @@
             return beans;
         }
 
+        function getProfileAvatar(avatar, name) {
+            const value = String(avatar || '').trim();
+            const safeName = String(name || 'Customer').replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[character]));
+            if (!value) return `<div class="avatar-circle" aria-label="${safeName} profile placeholder"><i class="fa-solid fa-user"></i></div>`;
+            return `<img class="avatar-circle avatar-image" src="${value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'), {className:'avatar-circle', innerHTML:'<i class=\"fa-solid fa-user\"></i>'}))">`;
+        }
+
         // Filter and Render Logic
         function renderFilteredTable() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -503,7 +512,7 @@
                     </td>
                     <td>
                         <div class="customer-cell">
-                            <div class="avatar-circle">${item.initials}</div>
+                            ${getProfileAvatar(item.avatar, item.customer)}
                             <div class="customer-info-text">
                                 <strong>${item.customer}</strong>
                                 <span>${item.phone}</span>
@@ -595,7 +604,12 @@
         }
 
         function openDrawer(item) {
-            document.getElementById('drawerAvatar').innerText = item.initials;
+            const drawerAvatar = document.getElementById('drawerAvatar');
+            if (item.avatar) {
+                drawerAvatar.innerHTML = `<img class="avatar-circle avatar-image" src="${item.avatar}" alt="${item.customer} profile">`;
+            } else {
+                drawerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+            }
             document.getElementById('drawerCustomerName').innerText = item.customer;
             document.getElementById('drawerCustomerPhone').innerText = item.phone;
             document.getElementById('drawerCardId').innerText = item.id;
@@ -680,6 +694,7 @@
                         issued: new Date(card.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                         customer: `${card.firstname} ${card.lastname}`,
                         phone: card.phone || 'No phone number',
+                        avatar: card.avatar || '',
                         initials: `${card.firstname[0] || ''}${card.lastname[0] || ''}`.toUpperCase(),
                         stamps: Math.min(10, Math.max(0, Number(card.loyalty_stamps || 0))),
                         reward: 'Free Drink',
@@ -688,7 +703,7 @@
                             ? new Date(String(card.date_redeemed).replace(' ', 'T')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                             : '',
                         activationDate: String(card.activation_date || card.created_at).slice(0, 10),
-                        status: card.loyalty_card_status.charAt(0).toUpperCase() + card.loyalty_card_status.slice(1)
+                        status: (card.loyalty_card_status || 'active').charAt(0).toUpperCase() + (card.loyalty_card_status || 'active').slice(1)
                     }));
                 renderFilteredTable();
             } catch (error) {

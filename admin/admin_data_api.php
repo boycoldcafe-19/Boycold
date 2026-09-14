@@ -171,7 +171,7 @@ try {
                 $hasStatusColumn = true;
             }
             $statusSelect = $hasStatusColumn ? 'MAX(u.loyalty_card_status) AS loyalty_card_status' : "'active' AS loyalty_card_status";
-                 $result = $connect->query("SELECT u.id, u.card_no, u.firstname, u.lastname, u.phone, u.created_at,
+                 $result = $connect->query("SELECT u.id, u.card_no, u.firstname, u.lastname, u.phone, u.avatar, u.created_at,
                                     LEAST(10, GREATEST(0, u.loyalty_stamps)) AS loyalty_stamps, $statusSelect,
                                     COALESCE(MIN(lt.created_at), u.created_at) AS activation_date,
                                     MAX(CASE WHEN lt.transaction_type = 'redemption' THEN lt.created_at END) AS date_redeemed,
@@ -180,7 +180,7 @@ try {
                                 LEFT JOIN loyalty_transactions lt ON lt.user_id = u.id
                                 LEFT JOIN orders o ON o.user_name = u.user_name
                                 WHERE u.card_no IS NOT NULL AND u.card_no <> ''
-                                GROUP BY u.id, u.card_no, u.firstname, u.lastname, u.phone, u.created_at, u.loyalty_stamps
+                                GROUP BY u.id, u.card_no, u.firstname, u.lastname, u.phone, u.avatar, u.created_at, u.loyalty_stamps
                                 HAVING COUNT(DISTINCT o.id) > 0
                                 ORDER BY u.created_at DESC");
             $cards = [];
@@ -202,20 +202,8 @@ try {
             $status = $data['status'] ?? '';
             if ($id < 1 || !in_array($status, ['active', 'inactive', 'completed'], true)) response(['success' => false, 'error' => 'Invalid loyalty update'], 422);
             
-            // Check if users table has account_status column
-            $columnCheck = $connect->query("SHOW COLUMNS FROM users LIKE 'account_status'");
-            $hasAccountStatus = $columnCheck && $columnCheck->num_rows > 0;
-            
-            if ($hasAccountStatus) {
-                // Update both loyalty card status and account status
-                $accountStatus = ($status === 'active') ? 'active' : 'inactive';
-                $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ?, account_status = ? WHERE id = ?');
-                $stmt->bind_param('ssi', $status, $accountStatus, $id);
-            } else {
-                // Only update loyalty card status
-                $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ? WHERE id = ?');
-                $stmt->bind_param('si', $status, $id);
-            }
+            $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ? WHERE id = ?');
+            $stmt->bind_param('si', $status, $id);
             $stmt->execute();
             response(['success' => true]);
 

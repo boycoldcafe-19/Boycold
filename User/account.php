@@ -314,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch latest user data
 syncLoyaltyStampsFromCompletedOrders($connect, (int) $userId);
 $stmt = $connect->prepare(
-    "SELECT firstname, lastname, email, phone, address, avatar, card_no, user_name, loyalty_beans, loyalty_stamps FROM users WHERE id = ?"
+    "SELECT firstname, lastname, email, phone, address, avatar, card_no, user_name, loyalty_beans, loyalty_stamps, loyalty_card_status FROM users WHERE id = ?"
 );
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -348,6 +348,8 @@ $loyaltyProgressText = $loyaltyStamps === 0
         ? $loyaltyMaxStamps . ' stamps earned! Great job!'
         : $loyaltyStamps . ' stamp' . ($loyaltyStamps > 1 ? 's' : '') . ' earned!');
 $isLoyaltyCardComplete = $loyaltyStamps >= $loyaltyMaxStamps;
+$loyaltyCardStatus = strtolower((string) ($user['loyalty_card_status'] ?? 'active'));
+$isLoyaltyCardActive = $loyaltyCardStatus === 'active';
 
 // Only auto-pop the "Free Drink Ready" modal the first time the card is seen
 // at max stamps — not on every page load. The session remembers the last
@@ -600,7 +602,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 </div>
             </div>
 
-            <div class="card card-store">
+            <div class="card card-store<?= $isLoyaltyCardActive ? '' : ' loyalty-card-inactive' ?>" id="loyaltyCard">
                 <!-- TOP: background image + yellow overlay + logo + name -->
                 <div class="store-banner">
                     <div class="store-banner-overlay"></div>
@@ -613,6 +615,9 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 <!-- BOTTOM: loyalty info -->
                 <div class="store-info">
                     <div class="loyalty">Loyalty Card</div>
+                    <?php if (!$isLoyaltyCardActive): ?>
+                        <div class="loyalty-card-status"><i class="fa-solid fa-circle-xmark"></i> Loyalty card deactivated</div>
+                    <?php endif; ?>
                     <div class="loyalty-level">Level 1</div>
                     <div class="beans-row">
                         <?php for ($i = 0; $i < 5; $i++): ?>
@@ -637,15 +642,17 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                     <div class="card-no-wrapper">
                         <span class="card-no">Card no: <?= $cardNo ?></span>
                         <div class="loyalty-card-actions">
-                            <?php if ($isLoyaltyCardComplete): ?>
+                            <?php if ($isLoyaltyCardActive && $isLoyaltyCardComplete): ?>
                                 <button class="reward-btn" type="button" onclick="openFreeDrinkModal()" title="Claim your free drink reward">
                                     <i class="fa-solid fa-gift" aria-hidden="true"></i>
                                     Rewards
                                 </button>
                             <?php endif; ?>
-                            <button class="qr-btn" type="button" onclick="openQRModal()" title="Show QR Code">
-                                <i class="fa-solid fa-qrcode"></i>
-                            </button>
+                            <?php if ($isLoyaltyCardActive): ?>
+                                <button class="qr-btn" type="button" onclick="openQRModal()" title="Show QR Code">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -1031,6 +1038,9 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                 const data = await response.json();
                 if (data.success) {
                     const newStamps = data.loyalty_stamps;
+                    const isCardActive = String(data.loyalty_card_status || 'active').toLowerCase() === 'active';
+                    const card = document.getElementById('loyaltyCard');
+                    if (card) card.classList.toggle('loyalty-card-inactive', !isCardActive);
                     
                     // Only update UI if stamps actually changed
                     if (newStamps !== currentStamps) {

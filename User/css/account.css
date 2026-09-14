@@ -1818,3 +1818,30 @@ html {
     background: #692727;
     color: #fff;
 }
+
+.loyalty-card-inactive {
+    position: relative;
+    filter: grayscale(0.35);
+}
+
+.loyalty-card-inactive::after {
+    content: 'LOYALTY CARD DEACTIVATED';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.72);
+    color: #8b2020;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+
+.loyalty-card-status {
+    color: #8b2020;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 4px 0 6px;
+}

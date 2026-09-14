@@ -345,6 +345,20 @@ function boycold_inventory_restock_status(?int $remainingServings): string
     return $remainingServings <= 9 ? 'critical' : 'soon';
 }
 
+function boycold_inventory_serving_status(int $remainingServings): string
+{
+    if ($remainingServings <= 0) {
+        return 'unavailable';
+    }
+    if ($remainingServings < 15) {
+        return 'low';
+    }
+    if ($remainingServings < 25) {
+        return 'insufficient';
+    }
+    return 'sufficient';
+}
+
 /**
  * Build ingredient serving capacities from the live Inventory stock and the
  * existing product_ingredients recipe quantities.  When one ingredient is
@@ -801,7 +815,6 @@ function boycold_get_product_inventory_availability(
         $details = [];
         $availableServings = null;
         $canOrder = (int) ($product['is_available'] ?? 0) === 1;
-        $isLow = false;
         $reasons = [];
 
         if (!$canOrder) {
@@ -825,8 +838,6 @@ function boycold_get_product_inventory_availability(
             if ($amount <= 0 || $stock + 0.0001 < $amount) {
                 $canOrder = false;
                 $reasons[] = $ingredient['name'] . ($stock <= 0 ? ' is out of stock' : ' is insufficient');
-            } elseif ($stock <= $minStock) {
-                $isLow = true;
             }
 
             $details[] = [
@@ -837,22 +848,23 @@ function boycold_get_product_inventory_availability(
                 'stock' => $stock,
                 'min_stock' => $minStock,
                 'servings' => $servings,
-                'status' => boycold_inventory_ingredient_status($stock, $minStock, $amount),
+                'status' => boycold_inventory_serving_status($servings),
             ];
         }
 
         $availableServings = $availableServings ?? 0;
+        $servingStatus = boycold_inventory_serving_status($availableServings);
         $status = 'available';
         $label = 'Available';
         $ingredientLabel = 'Sufficient';
-        if (!$canOrder) {
+        if (!$rows || $servingStatus === 'unavailable' || !$canOrder && $availableServings <= 0) {
             $status = 'unavailable';
             $label = 'Unavailable';
-            $ingredientLabel = $rows ? 'Insufficient' : 'No mapping';
-        } elseif ($isLow) {
-            $status = 'low';
-            $label = 'Low Stock';
-            $ingredientLabel = 'Low';
+            $ingredientLabel = $rows ? 'Unavailable' : 'No mapping';
+        } elseif ($servingStatus === 'low') {
+            $ingredientLabel = 'Low ingredients';
+        } elseif ($servingStatus === 'insufficient') {
+            $ingredientLabel = 'Insufficient';
         }
 
         $availability[$productKey] = [
