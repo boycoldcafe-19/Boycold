@@ -339,10 +339,22 @@ try {
             $image = trim((string)($data['image'] ?? ''));
             $available = !empty($data['is_available']) ? 1 : 0;
             $stmt = $connect->prepare('INSERT INTO products (product_name, description, price, image, category, is_available) VALUES (?, ?, ?, ?, ?, ?)');
+            if (!$stmt) {
+                response(['success' => false, 'error' => 'Could not prepare menu item insert: ' . $connect->error], 500);
+            }
             $description = '';
             $stmt->bind_param('ssdssi', $name, $description, $price, $image, $category, $available);
-            $stmt->execute();
-            response(['success' => true, 'id' => $connect->insert_id]);
+            if (!$stmt->execute()) {
+                $error = $stmt->error ?: $connect->error;
+                $stmt->close();
+                response(['success' => false, 'error' => 'Menu item could not be saved: ' . $error], 409);
+            }
+            $newProductId = (int) $stmt->insert_id;
+            $stmt->close();
+            if ($newProductId < 1) {
+                response(['success' => false, 'error' => 'Menu item was not saved because no database ID was returned.'], 500);
+            }
+            response(['success' => true, 'id' => $newProductId, 'product_name' => $name]);
 
         case 'product_update':
             $id = (int)($data['id'] ?? 0);
@@ -376,8 +388,24 @@ try {
 
         case 'product_delete':
             $id = (int)($data['id'] ?? 0);
+            $productName = trim((string) ($data['product_name'] ?? ''));
+            if ($id < 1 && $productName === '') {
+                response(['success' => false, 'error' => 'Product ID or product name is required.'], 422);
+            }
             if ($id < 1) {
-                response(['success' => false, 'error' => 'Invalid product ID.'], 422);
+                $lookupStmt = $connect->prepare(
+                    'SELECT id FROM products WHERE LOWER(TRIM(product_name)) = LOWER(TRIM(?)) LIMIT 1'
+                );
+                if (!$lookupStmt) {
+                    response(['success' => false, 'error' => 'Could not prepare product lookup: ' . $connect->error], 500);
+                }
+                $lookupStmt->bind_param('s', $productName);
+                $lookupStmt->execute();
+                $id = (int) ($lookupStmt->get_result()->fetch_assoc()['id'] ?? 0);
+                $lookupStmt->close();
+                if ($id < 1) {
+                    response(['success' => false, 'error' => 'Product was not found in the database.'], 404);
+                }
             }
             $stmt = $connect->prepare('DELETE FROM products WHERE id = ?');
             if (!$stmt) {

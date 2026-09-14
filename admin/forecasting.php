@@ -2,8 +2,12 @@
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
-// Get branch filter
-$branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
+// Match admin/dashboard.php: branch-scoped admins see their branch by default;
+// all-branch admins can explicitly use the all-branches view.
+$sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
+$branchId = isset($_GET['branch_id'])
+    ? (string) $_GET['branch_id']
+    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
 
 // Fetch available branches
 $branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";

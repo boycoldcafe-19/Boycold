@@ -4847,8 +4847,13 @@ boycold_ensure_inventory_schema($connect);
                     fetch('admin_data_api.php?action=product_create', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ product_name: name, category, price, image: imgSrc, is_available: document.getElementById('productStatus').checked ? 1 : 0 })
-                    }).then(response => response.json()).then(result => {
-                        if (!result.success) throw new Error(result.error || 'Product could not be saved');
+                    }).then(async response => {
+                        const result = await response.json();
+                        if (!response.ok || !result.success || !Number.isInteger(Number(result.id)) || Number(result.id) < 1) {
+                            throw new Error(result.error || 'Menu item could not be saved to the database.');
+                        }
+                        return result;
+                    }).then(() => {
                         window.location.reload();
                     }).catch(error => alert(error.message));
                     return;
@@ -5157,15 +5162,18 @@ boycold_ensure_inventory_schema($connect);
 
                     const cardToDelete = currentDeletingCard;
                     const productId = Number(cardToDelete.dataset.id);
-                    if (!Number.isInteger(productId) || productId <= 0) {
-                        alert('This menu item has an invalid database ID. Please reload the page and try again.');
+                    const productName = cardToDelete.querySelector('.card-name')?.textContent.trim() || '';
+                    if ((!Number.isInteger(productId) || productId <= 0) && !productName) {
+                        alert('This menu item has no database identifier. Please reload the page and try again.');
                         return;
                     }
 
                     confirmDeleteBtn.disabled = true;
                     fetch('admin_data_api.php?action=product_delete', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: productId })
+                        body: JSON.stringify(Number.isInteger(productId) && productId > 0
+                            ? { id: productId }
+                            : { product_name: productName })
                     }).then(response => response.json()).then(result => {
                         if (!result.success) throw new Error(result.error || 'Product could not be deleted');
                         cardToDelete.remove();

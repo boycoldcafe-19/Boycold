@@ -21,48 +21,37 @@ function analyticsDateOrDefault($value, string $fallback): string
     return $date && $date->format('Y-m-d') === $value ? $value : $fallback;
 }
 
-// Get branch filter (default to all branches).
-$requestedBranchId = $_GET['branch_id'] ?? 'all';
-$branchId = is_string($requestedBranchId) && ctype_digit($requestedBranchId) && (int) $requestedBranchId > 0
-    ? (string) (int) $requestedBranchId
-    : 'all';
+// Keep branch and date defaults identical to admin/dashboard.php.
+$sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
+$branchId = isset($_GET['branch_id'])
+    ? (string) $_GET['branch_id']
+    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
 
-// Get date range for analytics. With no user-selected range, show the latest
-// seven-day window that contains sales instead of an empty current-week view
-// when the database's newest order is from an earlier date.
-$today = date('Y-m-d');
-$hasRequestedDateRange = isset($_GET['start_date']) || isset($_GET['end_date']);
-$defaultEndDate = $today;
-if (!$hasRequestedDateRange) {
-        $latestOrderQuery = "SELECT DATE(MAX(created_at)) AS latest_order_date
-                                                 FROM orders
-                                                 WHERE (status IN ('completed', 'delivered') OR payment_status = 'paid')
-                                                     AND status != 'cancelled'
-                                                     AND payment_status NOT IN ('failed', 'expired', 'cancelled')";
+$startDate = (string) ($_GET['start_date'] ?? '');
+$endDate = (string) ($_GET['end_date'] ?? '');
+if ($startDate === '' && $endDate === '') {
+    $latestSalesQuery = "SELECT MAX(DATE(created_at)) AS latest_date
+        FROM orders
+        WHERE (status IN ('completed', 'delivered') OR payment_status = 'paid')
+          AND status <> 'cancelled'
+          AND payment_status NOT IN ('failed', 'expired', 'cancelled')";
+    if ($branchId !== 'all') $latestSalesQuery .= ' AND branch_id = ?';
+    $latestSalesStmt = $connect->prepare($latestSalesQuery);
     if ($branchId !== 'all') {
-        $latestOrderQuery .= ' AND branch_id = ?';
+        $latestBranchId = (int) $branchId;
+        $latestSalesStmt->bind_param('i', $latestBranchId);
     }
-
-    $latestOrderStmt = $connect->prepare($latestOrderQuery);
-    if ($branchId !== 'all') {
-        $branchParam = (int) $branchId;
-        $latestOrderStmt->bind_param('i', $branchParam);
-    }
-    $latestOrderStmt->execute();
-    $latestOrderDate = (string) ($latestOrderStmt->get_result()->fetch_assoc()['latest_order_date'] ?? '');
-    $latestOrderStmt->close();
-
-    if ($latestOrderDate !== '' && $latestOrderDate <= $today) {
-        $defaultEndDate = $latestOrderDate;
-    }
+    $latestSalesStmt->execute();
+    $latestSalesDate = (string) ($latestSalesStmt->get_result()->fetch_assoc()['latest_date'] ?? '');
+    $latestSalesStmt->close();
+    $endDate = $latestSalesDate !== '' ? $latestSalesDate : date('Y-m-d');
+    $startDate = date('Y-m-d', strtotime($endDate . ' -6 days'));
 }
 
-$defaultStartDate = date('Y-m-d', strtotime($defaultEndDate . ' -6 days'));
-$startDate = analyticsDateOrDefault(
-    $_GET['start_date'] ?? null,
-    $defaultStartDate
-);
-$endDate = analyticsDateOrDefault($_GET['end_date'] ?? null, $defaultEndDate);
+if ($startDate === '') $startDate = $endDate;
+if ($endDate === '') $endDate = $startDate;
+$defaultStartDate = $startDate;
+$defaultEndDate = $endDate;
 if ($startDate > $endDate) {
     [$startDate, $endDate] = [$endDate, $startDate];
 }

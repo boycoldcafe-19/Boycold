@@ -17,8 +17,11 @@ require_once __DIR__ . '/../../config/inventory_service.php';
 
 boycold_ensure_inventory_schema($connect);
 
-// Get parameters
-$branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
+// Match admin/dashboard.php branch scope when the caller does not provide one.
+$sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
+$branchId = isset($_GET['branch_id'])
+    ? (string) $_GET['branch_id']
+    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
 $forecastDays = isset($_GET['forecast_days']) ? intval($_GET['forecast_days']) : 14;
 $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_days']) : 28;
 $forecastDays = max(1, min($forecastDays, 90));
