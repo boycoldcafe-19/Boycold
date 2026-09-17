@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/loyalty-card.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -49,7 +50,6 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -186,6 +186,7 @@
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -207,7 +208,6 @@
                         <input type="text" id="searchInput" placeholder="Search orders, customer or customer ID..">
                     </div>
                 </div>
-
                 <div class="filters-row">
                     <!-- Status Filter Dropdown -->
                     <div class="custom-select-wrap" style="position: relative;">
@@ -237,8 +237,7 @@
                 </div>
 
                 <!-- MAIN TABLE CONTAINER -->
-                <div class="content-container">
-                    <div class="table-section" id="tableSection">
+                <div class="table-section" id="tableSection">
                         <table class="loyalty-table-card">
                             <thead>
                                 <tr>
@@ -256,7 +255,6 @@
                         </table>
                     </div>
                 </div>
-
             </div>
 
             <!-- OVERLAY BACKDROP -->
@@ -450,7 +448,7 @@
         // Generate Coffee Beans SVG Stamps
         function generateBeansHTML(count) {
             let beans = '';
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < 10; i++) {
                 const isFilled = i < count;
                 beans += `
                     <span class="bean-svg-wrapper ${isFilled ? 'filled' : 'empty'}">
@@ -737,6 +735,7 @@
         };
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
 </body>
 
 </html>

@@ -622,6 +622,5 @@ $branchStmt->close();
         </main>
     </div>
 
-    <script src="inventory-warning.js"></script>
 </body>
 </html>

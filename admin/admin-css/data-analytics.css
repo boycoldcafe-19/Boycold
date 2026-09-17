@@ -704,6 +704,7 @@ button {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
 }
 
 .chart-card-title {
@@ -1310,6 +1311,21 @@ button {
 }
 
 
+.chart-card,
+.stat-card,
+.chart-canvas-wrap,
+.top-items-list,
+.insights-card {
+    min-width: 0;
+}
+
+.top-item,
+.item-content,
+.item-name,
+.item-top-row {
+    min-width: 0;
+}
+
 @media (max-width: 1080px) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1319,11 +1335,41 @@ button {
     }
 }
 
+@media (max-width: 900px) {
+    .chart-card-header {
+        align-items: flex-start;
+    }
+
+    .top-item {
+        gap: 10px;
+    }
+
+    .item-name {
+        white-space: normal;
+    }
+}
+
 @media (max-width: 640px) {
     .stats-grid {
         grid-template-columns: 1fr;
     }
     .page-content {
         padding: 24px 18px 36px;
+    }
+    .chart-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .chart-period-select {
+        width: 100%;
+    }
+    .period-dropdown,
+    .date-range-picker {
+        width: 100%;
+    }
+    .period-trigger,
+    .branch-trigger {
+        width: 100%;
+        min-width: 0;
     }
 }

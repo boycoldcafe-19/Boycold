@@ -1,3 +1,10 @@
 {
-    "liveServer.settings.port": 5501
+    "liveServer.settings.port": 5501,
+    "php.validate.executablePath": "C:/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe",
+    "php.version": "8.3",
+    "intelephense.environment.phpVersion": "8.3.0",
+    "intelephense.diagnostics.ignoredCodes": [
+        "PHP1405",
+        "PHP6501"
+    ]
 }

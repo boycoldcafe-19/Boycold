@@ -579,7 +579,6 @@ function orderhis_format_group_label(string $dateStr): string {
         }
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
     <script>

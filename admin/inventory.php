@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/admin_guard.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/inventory_service.php';
@@ -12,6 +12,7 @@ boycold_ensure_inventory_schema($connect);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/inventory.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="/public/assets/icons/LOGO 2.png">
@@ -49,7 +50,6 @@ boycold_ensure_inventory_schema($connect);
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8882 1H3.31469C2.03632 1 1 2.03632 1 3.31469V18.3602C1 19.6386 2.03632 20.6749 3.31469 20.6749H14.8882C16.1665 20.6749 17.2029 19.6386 17.2029 18.3602V3.31469C17.2029 2.03632 16.1665 1 14.8882 1Z" stroke="currentColor" stroke-width="2"/><path d="M5.62939 6.78662H12.5735M5.62939 11.416H12.5735M5.62939 16.0454H10.2588" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
@@ -151,6 +151,7 @@ boycold_ensure_inventory_schema($connect);
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -573,12 +574,23 @@ boycold_ensure_inventory_schema($connect);
             function updateStockWarning(items) {
                 const warning = document.getElementById("inventoryStockWarning");
                 const warningText = document.getElementById("inventoryStockWarningText");
-                const lowStockItems = (items || []).filter((item) => item.sufficiency_status !== 'sufficient');
+                const lowStockItems = (items || []).filter((item) => {
+                    const status = String(item?.sufficiency_status ?? '').trim().toLowerCase();
+                    if (status === 'sufficient') return false;
+                    if (status === 'low' || status === 'insufficient') return true;
+                    const stock = Number(item?.stock ?? 0);
+                    const minStock = Number(item?.min_stock ?? 0);
+                    return stock <= minStock;
+                });
 
+                if (!warning || !warningText) return;
                 warning.hidden = lowStockItems.length === 0;
-                if (!lowStockItems.length) return;
+                if (!lowStockItems.length) {
+                    warningText.textContent = "";
+                    return;
+                }
 
-                const names = lowStockItems.slice(0, 5).map((item) => item.name).join(", ");
+                const names = lowStockItems.slice(0, 5).map((item) => item.name || 'Ingredient').join(", ");
                 const remaining = lowStockItems.length - Math.min(lowStockItems.length, 5);
                 warningText.textContent = `${lowStockItems.length} ingredient${lowStockItems.length === 1 ? "" : "s"} need attention: ${names}${remaining > 0 ? ` and ${remaining} more` : ""}.`;
             }
@@ -828,7 +840,14 @@ boycold_ensure_inventory_schema($connect);
                 fetch('admin_data_api.php?action=ingredient_create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, category, unit, min_stock: minStock, stock: currentStock })
+                    body: JSON.stringify({
+                        name,
+                        category,
+                        unit,
+                        min_stock: minStock,
+                        stock: currentStock,
+                        branch_id: window.currentInventoryBranchId || '1'
+                    })
                 }).then(response => response.json()).then(result => {
                     if (!result.success) throw new Error(result.error || 'Ingredient could not be saved');
 
@@ -1198,6 +1217,7 @@ boycold_ensure_inventory_schema($connect);
 
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
     <script src="admin-js/logout-modal.js"></script>
 </body>
 

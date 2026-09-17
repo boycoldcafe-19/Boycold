@@ -1,4 +1,4 @@
-﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
+<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/orders.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -48,7 +49,6 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php" class="active">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -185,6 +185,7 @@
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -393,7 +394,7 @@
                     </div>
                     <div class="receipt-row">
                         <span class="r-label">CASHIER:</span>
-                        <span class="r-val">Admin (Sta. Barbara)</span>
+                        <span class="r-val" id="modalCashier">Admin (Sta. Barbara)</span>
                     </div>
                     <div class="receipt-row">
                         <span class="r-label">CUSTOMER:</span>
@@ -521,6 +522,7 @@
                 </button>
 
                 <button class="logout-yes" id="logoutYes">
+                                <li><a href="orders.php"><span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8882 1H3.31469C2.03632 1 1 2.03632 1 3.31469V18.3602C1 19.6386 2.03632 20.6749 3.31469 20.6749H14.8882C16.1665 20.6749 17.2029 19.6386 17.2029 18.3602V3.31469C17.2029 2.03632 16.1665 1 14.8882 1Z" stroke="currentColor" stroke-width="2" /></svg></span><span class="nav-label">Orders</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                     Yes
                 </button>
 
@@ -674,7 +676,14 @@
                     const orderType = online ? 'Online' : 'Physical';
                     const payment = String(order.payment_method || 'cod').toLowerCase() === 'qrph' ? 'QRPh' : 'COD';
                     const customerName = order.customer_name || order.user_name || 'Unknown customer';
-                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(customerName)}" data-time="${escapeOrderText(order.created_at)}" data-payment="${payment}" data-payment-status="${escapeOrderText(order.payment_status || '')}" data-reference="${escapeOrderText(order.payment_reference || '')}" data-status="${escapeOrderText(order.status || '')}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
+                    const branchName = order.branch_name || 'Unassigned';
+                    const branchCashier = Number(order.branch_id) === 2
+                        ? 'Admin (Bustos)'
+                        : Number(order.branch_id) === 1
+                            ? 'Admin (Sta. Barbara)'
+                            : 'Admin';
+                    const cashierName = order.cashier_name || branchCashier;
+                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(customerName)}" data-time="${escapeOrderText(order.created_at)}" data-branch="${escapeOrderText(branchName)}" data-cashier="${escapeOrderText(cashierName)}" data-payment="${payment}" data-payment-status="${escapeOrderText(order.payment_status || '')}" data-reference="${escapeOrderText(order.payment_reference || '')}" data-status="${escapeOrderText(order.status || '')}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
                         <td class="order-id">#ORDER-${String(order.id).padStart(4, '0')}</td>
                         <td class="customer-name">${escapeOrderText(customerName)}</td>
                         <td class="order-time">${escapeOrderText(order.created_at)}</td>
@@ -731,6 +740,7 @@
                 const paymentStatus = (row.getAttribute('data-payment-status') || 'unpaid').toUpperCase();
                 const tenderedAttr = parseFloat(row.getAttribute('data-tendered'));
                 document.getElementById('modalBranch').textContent = row.getAttribute('data-branch') || 'Branch information unavailable';
+                document.getElementById('modalCashier').textContent = row.getAttribute('data-cashier') || 'Admin';
 
                 // Parse line items JSON
                 let items = [];
@@ -842,6 +852,7 @@
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
 </body>
 
 </html>

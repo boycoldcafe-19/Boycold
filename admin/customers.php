@@ -1,4 +1,4 @@
-﻿<?php require_once __DIR__ . '/admin_guard.php'; ?>
+<?php require_once __DIR__ . '/admin_guard.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/customers.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -49,7 +50,6 @@
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -186,6 +186,7 @@
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -245,7 +246,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -291,7 +292,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -337,7 +338,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -383,7 +384,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -429,7 +430,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -475,7 +476,7 @@
                             <tr data-status="active">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -521,7 +522,7 @@
                             <tr data-status="inactive">
                                 <td>
                                     <div class="customer-cell">
-                                        <span class="avatar">AD</span>
+                                        <img class="avatar" src="../img/LOGO.png" alt="BoyCold Cafe">
                                         <span class="customer-cell-text">
                                             <span class="customer-name">Alyssa Dionisio</span>
                                             <span class="customer-joined">Joined Apr 12, 2026</span>
@@ -591,6 +592,7 @@
                         </button>
 
                         <button class="logout-yes" id="logoutYes">
+                                        <li><a href="orders.php"><span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8882 1H3.31469C2.03632 1 1 2.03632 1 3.31469V18.3602C1 19.6386 2.03632 20.6749 3.31469 20.6749H14.8882C16.1665 20.6749 17.2029 19.6386 17.2029 18.3602V3.31469C17.2029 2.03632 16.1665 1 14.8882 1Z" stroke="currentColor" stroke-width="2" /></svg></span><span class="nav-label">Orders</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                             Yes
                         </button>
 
@@ -730,22 +732,11 @@
 
         statusFilter.addEventListener('change', applyFilters);
 
-        function getCustomerAvatar(avatar) {
-            const value = String(avatar || '').trim();
-            if (!value) return '';
-            if (/^(https?:\/\/|\/)/i.test(value)) return value;
-            return '../User/' + value.replace(/^\/+/, '');
-        }
-
         function renderCustomerAvatar(avatar, name) {
-            const imageUrl = getCustomerAvatar(avatar);
             const safeName = String(name || 'Customer').replace(/[&<>"']/g, character => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             }[character]));
-            if (!imageUrl) {
-                return `<span class="avatar avatar-placeholder" aria-label="${safeName} profile placeholder"><i class="fa-solid fa-user"></i></span>`;
-            }
-            return `<img class="avatar" src="${imageUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile picture" onerror="this.onerror=null;this.src='../img/LOGO.png';">`;
+            return `<img class="avatar" src="../img/LOGO.png" alt="${safeName} profile picture">`;
         }
 
         const customerTableBody = document.getElementById('customerTableBody');
@@ -761,7 +752,6 @@
                     const active = customer.account_status === 'active';
                     const orderCount = Number(customer.order_count || 0);
                     const member = orderCount > 0 && Boolean(customer.card_no);
-                    const avatar = getCustomerAvatar(customer.avatar);
                     return `<tr data-id="${customer.id}" data-status="${customer.account_status}">
                         <td><div class="customer-cell">${renderCustomerAvatar(customer.avatar, name)}<span class="customer-cell-text"><span class="customer-name">${name}</span><span class="customer-joined">Joined ${new Date(customer.created_at).toLocaleDateString()}</span></span></div></td>
                         <td><span class="cell-stack"><span>${customer.email}</span><span class="badge badge-verified">${Number(customer.is_verified) ? 'Verified' : 'Unverified'}</span></span></td>
@@ -1010,6 +1000,7 @@
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
 </body>
 
 </html>

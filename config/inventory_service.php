@@ -165,6 +165,174 @@ function boycold_ensure_inventory_schema(mysqli $connect): void
         boycold_inventory_add_column_if_missing($connect, 'orders', 'inventory_deduction_error', 'VARCHAR(255) NULL DEFAULT NULL');
         boycold_inventory_add_index_if_missing($connect, 'orders', 'idx_orders_inventory_deducted_at', '`inventory_deducted_at`');
     }
+
+    boycold_inventory_sync_branch_ingredient_rows($connect);
+}
+
+function boycold_inventory_active_branch_ids(mysqli $connect): array
+{
+    $ids = [];
+    if (!boycold_inventory_table_exists($connect, 'branches')) {
+        return $ids;
+    }
+
+    $result = $connect->query("SELECT id FROM branches WHERE status = 'active' ORDER BY id");
+    while ($result && ($row = $result->fetch_assoc())) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+
+    return $ids;
+}
+
+function boycold_inventory_sync_branch_ingredient_rows(mysqli $connect): void
+{
+    if (!boycold_inventory_table_exists($connect, 'ingredients')) {
+        return;
+    }
+
+    $connect->query('UPDATE ingredients SET branch_id = 1 WHERE branch_id IS NULL OR branch_id <= 0');
+
+    $branchIds = boycold_inventory_active_branch_ids($connect);
+    if (!$branchIds) {
+        return;
+    }
+
+    $hasCategory = boycold_inventory_column_exists($connect, 'ingredients', 'category');
+    $hasMinStock = boycold_inventory_column_exists($connect, 'ingredients', 'min_stock');
+    $hasMaxStock = boycold_inventory_column_exists($connect, 'ingredients', 'max_stock');
+
+    $catalog = [];
+    $existing = [];
+    $result = $connect->query('SELECT * FROM ingredients ORDER BY id');
+    while ($result && ($row = $result->fetch_assoc())) {
+        $name = (string) ($row['name'] ?? '');
+        $key = boycold_inventory_duplicate_key($name);
+        if ($key === '') {
+            continue;
+        }
+        if (!isset($catalog[$key])) {
+            $catalog[$key] = $row;
+        }
+        $branchId = (int) ($row['branch_id'] ?? 0);
+        if ($branchId > 0) {
+            $existing[$branchId . '|' . $key] = true;
+        }
+    }
+
+    if (!$catalog) {
+        return;
+    }
+
+    $columns = ['name', 'unit', 'branch_id', 'stock'];
+    $values = ['?', '?', '?', '0'];
+    $types = 'ssi';
+    if ($hasCategory) {
+        array_splice($columns, 1, 0, ['category']);
+        array_splice($values, 1, 0, ['?']);
+        $types = 'sssi';
+    }
+    if ($hasMinStock) {
+        $columns[] = 'min_stock';
+        $values[] = '?';
+        $types .= 'd';
+    }
+    if ($hasMaxStock) {
+        $columns[] = 'max_stock';
+        $values[] = '?';
+        $types .= 'd';
+    }
+
+    $insert = $connect->prepare(
+        'INSERT INTO ingredients (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')'
+    );
+
+    foreach ($branchIds as $branchId) {
+        foreach ($catalog as $key => $source) {
+            if (!empty($existing[$branchId . '|' . $key])) {
+                continue;
+            }
+
+            $name = (string) $source['name'];
+            $unit = (string) ($source['unit'] ?? 'unit');
+            $params = $hasCategory
+                ? [$name, (string) ($source['category'] ?? 'Other'), $unit, $branchId]
+                : [$name, $unit, $branchId];
+            if ($hasMinStock) {
+                $params[] = (float) ($source['min_stock'] ?? 0);
+            }
+            if ($hasMaxStock) {
+                $params[] = (float) ($source['max_stock'] ?? 0);
+            }
+
+            boycold_inventory_bind($insert, $types, $params);
+            $insert->execute();
+            $existing[$branchId . '|' . $key] = true;
+        }
+    }
+
+    $insert->close();
+}
+
+function boycold_inventory_replicate_ingredient_catalog(
+    mysqli $connect,
+    string $name,
+    string $category,
+    string $unit,
+    float $minStock,
+    int $sourceBranchId
+): void {
+    $branchIds = boycold_inventory_active_branch_ids($connect);
+    $key = boycold_inventory_duplicate_key($name);
+    if ($key === '' || !$branchIds) {
+        return;
+    }
+
+    $hasCategory = boycold_inventory_column_exists($connect, 'ingredients', 'category');
+    $hasMinStock = boycold_inventory_column_exists($connect, 'ingredients', 'min_stock');
+
+    foreach ($branchIds as $branchId) {
+        if ($branchId === $sourceBranchId) {
+            continue;
+        }
+
+        $existing = $connect->prepare('SELECT id, name FROM ingredients WHERE branch_id = ?');
+        $existing->bind_param('i', $branchId);
+        $existing->execute();
+        $found = false;
+        $result = $existing->get_result();
+        while ($row = $result->fetch_assoc()) {
+            if (boycold_inventory_duplicate_key((string) $row['name']) === $key) {
+                $found = true;
+                break;
+            }
+        }
+        $existing->close();
+        if ($found) {
+            continue;
+        }
+
+        if ($hasCategory && $hasMinStock) {
+            $insert = $connect->prepare(
+                'INSERT INTO ingredients (name, category, unit, stock, min_stock, branch_id) VALUES (?, ?, ?, 0, ?, ?)'
+            );
+            $insert->bind_param('sssdi', $name, $category, $unit, $minStock, $branchId);
+        } elseif ($hasCategory) {
+            $insert = $connect->prepare(
+                'INSERT INTO ingredients (name, category, unit, stock, branch_id) VALUES (?, ?, ?, 0, ?)'
+            );
+            $insert->bind_param('sssi', $name, $category, $unit, $branchId);
+        } else {
+            $insert = $connect->prepare(
+                'INSERT INTO ingredients (name, unit, stock, branch_id) VALUES (?, ?, 0, ?)'
+            );
+            $insert->bind_param('ssi', $name, $unit, $branchId);
+        }
+        $insert->execute();
+        $insert->close();
+    }
 }
 
 function boycold_inventory_bind(mysqli_stmt $stmt, string $types, array $params): void
@@ -245,58 +413,76 @@ function boycold_inventory_fetch_mapping_rows(mysqli $connect, array $names): ar
     return $rows;
 }
 
+function boycold_inventory_branch_ingredient_map(mysqli $connect, int $branchId): array
+{
+    static $maps = [];
+    if ($branchId <= 0) {
+        return [];
+    }
+    if (isset($maps[$branchId])) {
+        return $maps[$branchId];
+    }
+
+    $map = [];
+    $stmt = $connect->prepare(
+        'SELECT id, name, unit, branch_id, stock, min_stock FROM ingredients WHERE branch_id = ? ORDER BY id'
+    );
+    $stmt->bind_param('i', $branchId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $key = boycold_inventory_duplicate_key((string) ($row['name'] ?? ''));
+        if ($key === '' || isset($map[$key])) {
+            continue;
+        }
+        $map[$key] = $row;
+    }
+    $stmt->close();
+
+    $maps[$branchId] = $map;
+    return $map;
+}
+
 function boycold_inventory_resolve_ingredient_for_branch(mysqli $connect, array $mappingRow, int $branchId): array
 {
-    $ingredient = [
-        'id' => (int) $mappingRow['ingredient_id'],
-        'name' => (string) $mappingRow['ingredient_name'],
+    $name = (string) ($mappingRow['ingredient_name'] ?? '');
+    $unavailable = [
+        'id' => 0,
+        'name' => $name,
         'unit' => (string) ($mappingRow['unit'] ?? ''),
-        'branch_id' => isset($mappingRow['branch_id']) ? (int) $mappingRow['branch_id'] : null,
-        'stock' => (float) ($mappingRow['stock'] ?? 0),
-        'min_stock' => (float) ($mappingRow['min_stock'] ?? 0),
+        'branch_id' => $branchId,
+        'stock' => 0.0,
+        'min_stock' => 0.0,
+        'branch_available' => false,
     ];
 
-    if ($branchId <= 0 || $ingredient['name'] === '') {
-        return $ingredient;
+    if ($branchId <= 0 || $name === '') {
+        return $unavailable;
     }
 
-    $mappedBranchId = $ingredient['branch_id'] ?? 0;
-    if ((int) $mappedBranchId === $branchId) {
-        return $ingredient;
+    $mappedBranchId = isset($mappingRow['branch_id']) ? (int) $mappingRow['branch_id'] : 0;
+    if ($mappedBranchId === $branchId && (int) ($mappingRow['ingredient_id'] ?? 0) > 0) {
+        return [
+            'id' => (int) $mappingRow['ingredient_id'],
+            'name' => $name,
+            'unit' => (string) ($mappingRow['unit'] ?? ''),
+            'branch_id' => $branchId,
+            'stock' => (float) ($mappingRow['stock'] ?? 0),
+            'min_stock' => (float) ($mappingRow['min_stock'] ?? 0),
+            'branch_available' => true,
+        ];
     }
 
-    static $cache = [];
-    $cacheKey = $branchId . '|' . boycold_inventory_normalize_name($ingredient['name']);
-    if (!array_key_exists($cacheKey, $cache)) {
-        $stmt = $connect->prepare(
-            "SELECT id, name, unit, branch_id, stock, min_stock
-             FROM ingredients
-             WHERE LOWER(name) = LOWER(?) AND branch_id = ?
-             LIMIT 1"
-        );
-        $stmt->bind_param('si', $ingredient['name'], $branchId);
-        $stmt->execute();
-        $cache[$cacheKey] = $stmt->get_result()->fetch_assoc() ?: null;
-        $stmt->close();
+    $row = boycold_inventory_branch_ingredient_map($connect, $branchId)[boycold_inventory_duplicate_key($name)] ?? null;
+    if (!$row) {
+        return $unavailable;
     }
 
-    if (!$cache[$cacheKey]) {
-        // Never use another branch's stock as a fallback. A missing branch
-        // record means this recipe cannot be produced at the requested branch.
-        if ($mappedBranchId > 0) {
-            $ingredient['stock'] = 0.0;
-            $ingredient['branch_id'] = $branchId;
-            $ingredient['branch_available'] = false;
-        }
-        return $ingredient;
-    }
-
-    $row = $cache[$cacheKey];
     return [
         'id' => (int) $row['id'],
         'name' => (string) $row['name'],
         'unit' => (string) ($row['unit'] ?? ''),
-        'branch_id' => isset($row['branch_id']) ? (int) $row['branch_id'] : null,
+        'branch_id' => (int) ($row['branch_id'] ?? $branchId),
         'stock' => (float) ($row['stock'] ?? 0),
         'min_stock' => (float) ($row['min_stock'] ?? 0),
         'branch_available' => true,
@@ -446,33 +632,6 @@ function boycold_get_ingredient_restock_capacities(mysqli $connect, int $branchI
         $ingredientStmt->close();
     }
 
-    if ($branchId === 0) {
-        $combined = [];
-        foreach ($capacities as $capacity) {
-            $key = boycold_inventory_normalize_name((string) $capacity['name']);
-            if (!isset($combined[$key])) {
-                $combined[$key] = $capacity;
-                continue;
-            }
-
-            $combined[$key]['stock'] = round(
-                (float) $combined[$key]['stock'] + (float) $capacity['stock'],
-                3
-            );
-            $combined[$key]['remaining_servings'] += (int) $capacity['remaining_servings'];
-            $combined[$key]['branch_servings'] = array_merge(
-                $combined[$key]['branch_servings'],
-                $capacity['branch_servings']
-            );
-            if ($capacity['status'] === 'critical' || $combined[$key]['status'] === 'critical') {
-                $combined[$key]['status'] = 'critical';
-            } elseif ($capacity['status'] === 'soon' || $combined[$key]['status'] === 'soon') {
-                $combined[$key]['status'] = 'soon';
-            }
-        }
-        $capacities = array_values($combined);
-    }
-
     usort($capacities, static function (array $a, array $b): int {
         $servingComparison = $a['remaining_servings'] <=> $b['remaining_servings'];
         return $servingComparison !== 0 ? $servingComparison : strcasecmp($a['name'], $b['name']);
@@ -483,7 +642,7 @@ function boycold_get_ingredient_restock_capacities(mysqli $connect, int $branchI
 
 function boycold_inventory_add_requirement(array &$requirements, array $ingredient, float $amount, string $sourceName): void
 {
-    if ($amount <= 0 || empty($ingredient['id'])) {
+    if ($amount <= 0 || empty($ingredient['id']) || ($ingredient['branch_available'] ?? true) === false) {
         return;
     }
 
@@ -491,6 +650,7 @@ function boycold_inventory_add_requirement(array &$requirements, array $ingredie
     if (!isset($requirements[$ingredientId])) {
         $requirements[$ingredientId] = [
             'ingredient_id' => $ingredientId,
+            'branch_id' => (int) ($ingredient['branch_id'] ?? 0),
             'name' => (string) $ingredient['name'],
             'unit' => (string) ($ingredient['unit'] ?? ''),
             'required' => 0.0,
@@ -663,6 +823,10 @@ function boycold_inventory_calculate_requirements(
         foreach ($rows as $row) {
             $amount = (float) ($row['amount'] ?? 0) * (int) $product['qty'];
             $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
+            if ((int) ($ingredient['id'] ?? 0) <= 0 || ($ingredient['branch_available'] ?? false) === false) {
+                $unavailableProducts[] = $product['name'] . ' cannot use ' . ($ingredient['name'] ?: 'a required ingredient') . ' at this branch.';
+                continue;
+            }
             boycold_inventory_add_requirement($requirements, $ingredient, $amount, $product['name']);
         }
     }
@@ -687,6 +851,10 @@ function boycold_inventory_calculate_requirements(
         foreach ($selectedRows as $row) {
             $amount = (float) ($row['amount'] ?? 0) * (int) $group['qty'];
             $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
+            if ((int) ($ingredient['id'] ?? 0) <= 0 || ($ingredient['branch_available'] ?? false) === false) {
+                $unavailableProducts[] = $sourceName . ' cannot use ' . ($ingredient['name'] ?: 'a required ingredient') . ' at this branch.';
+                continue;
+            }
             boycold_inventory_add_requirement($requirements, $ingredient, $amount, $sourceName);
         }
     }
@@ -698,7 +866,7 @@ function boycold_inventory_calculate_requirements(
     ];
 }
 
-function boycold_inventory_refresh_requirement_stocks(mysqli $connect, array &$requirements, bool $lockRows): void
+function boycold_inventory_refresh_requirement_stocks(mysqli $connect, array &$requirements, int $branchId, bool $lockRows): void
 {
     if (!$requirements) {
         return;
@@ -706,27 +874,70 @@ function boycold_inventory_refresh_requirement_stocks(mysqli $connect, array &$r
 
     $ids = array_map('intval', array_keys($requirements));
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    if ($branchId <= 0) {
+        foreach ($requirements as &$requirement) {
+            $requirement['stock'] = 0.0;
+        }
+        unset($requirement);
+        return;
+    }
     $lockSql = $lockRows ? ' FOR UPDATE' : '';
     $stmt = $connect->prepare(
-        "SELECT id, name, unit, stock, min_stock
+        "SELECT id, name, unit, stock, min_stock, branch_id
          FROM ingredients
-         WHERE id IN ($placeholders)$lockSql"
+         WHERE id IN ($placeholders) AND branch_id = ?$lockSql"
     );
-    boycold_inventory_bind($stmt, str_repeat('i', count($ids)), $ids);
+    $bindValues = $ids;
+    $bindValues[] = $branchId;
+    boycold_inventory_bind($stmt, str_repeat('i', count($ids)) . 'i', $bindValues);
     $stmt->execute();
     $result = $stmt->get_result();
 
+    $found = [];
     while ($row = $result->fetch_assoc()) {
         $id = (int) $row['id'];
         if (!isset($requirements[$id])) {
             continue;
         }
+        $found[$id] = true;
         $requirements[$id]['name'] = (string) $row['name'];
         $requirements[$id]['unit'] = (string) ($row['unit'] ?? '');
         $requirements[$id]['stock'] = (float) ($row['stock'] ?? 0);
         $requirements[$id]['min_stock'] = (float) ($row['min_stock'] ?? 0);
+        $requirements[$id]['branch_id'] = (int) ($row['branch_id'] ?? 0);
     }
     $stmt->close();
+
+    foreach ($requirements as $id => &$requirement) {
+        if (empty($found[$id])) {
+            $requirement['stock'] = 0.0;
+            $requirement['branch_id'] = $branchId;
+        }
+    }
+    unset($requirement);
+}
+
+/**
+ * Update an ingredient only when it belongs to the order's branch.
+ *
+ * Every deduction and reservation is calculated from branch-specific stock.
+ * Keeping the same branch condition in the UPDATE is a final database-level
+ * guard against a malformed recipe mapping ever changing another branch.
+ */
+function boycold_inventory_set_branch_stock(
+    mysqli_stmt $statement,
+    float $stock,
+    int $ingredientId,
+    int $branchId
+): void {
+    if ($ingredientId <= 0 || $branchId <= 0) {
+        throw new RuntimeException('Inventory stock update requires a valid ingredient and branch.');
+    }
+
+    $statement->bind_param('dii', $stock, $ingredientId, $branchId);
+    if (!$statement->execute() || $statement->affected_rows !== 1) {
+        throw new RuntimeException('Ingredient does not belong to the order branch.');
+    }
 }
 
 function boycold_inventory_format_requirement_products(array $products): string
@@ -769,7 +980,7 @@ function boycold_validate_inventory_for_items(
 ): array {
     $calculated = boycold_inventory_calculate_requirements($connect, $items, $branchId, $requireBaseMappings);
     $requirements = $calculated['requirements'];
-    boycold_inventory_refresh_requirement_stocks($connect, $requirements, $lockRows);
+    boycold_inventory_refresh_requirement_stocks($connect, $requirements, $branchId, $lockRows);
 
     $insufficient = [];
     foreach ($requirements as $requirement) {
@@ -826,18 +1037,34 @@ function boycold_get_product_inventory_availability(
 
         foreach ($rows as $row) {
             $amount = max(0.0, (float) ($row['amount'] ?? 0));
-            $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
+            if ($branchId > 0) {
+                $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
+            } else {
+                $ingredient = [
+                    'id' => (int) ($row['ingredient_id'] ?? 0),
+                    'name' => (string) ($row['ingredient_name'] ?? ''),
+                    'unit' => (string) ($row['unit'] ?? ''),
+                    'branch_id' => 0,
+                    'stock' => null,
+                    'min_stock' => 0.0,
+                    'branch_available' => true,
+                ];
+            }
             $stock = (float) ($ingredient['stock'] ?? 0);
             $minStock = (float) ($ingredient['min_stock'] ?? 0);
-            $servings = boycold_inventory_remaining_servings($stock, $amount) ?? 0;
+            $servings = $branchId > 0 ? (boycold_inventory_remaining_servings($stock, $amount) ?? 0) : 999;
 
             if ($availableServings === null || $servings < $availableServings) {
                 $availableServings = $servings;
             }
 
-            if ($amount <= 0 || $stock + 0.0001 < $amount) {
+            if ($branchId > 0 && ($amount <= 0 || $stock + 0.0001 < $amount || empty($ingredient['branch_available']))) {
                 $canOrder = false;
-                $reasons[] = $ingredient['name'] . ($stock <= 0 ? ' is out of stock' : ' is insufficient');
+                $reasons[] = $ingredient['name'] . (
+                    empty($ingredient['branch_available'])
+                        ? ' is not stocked at this branch'
+                        : ($stock <= 0 ? ' is out of stock' : ' is insufficient')
+                );
             }
 
             $details[] = [
@@ -955,6 +1182,12 @@ function boycold_deduct_inventory_for_order_in_transaction(
     }
 
     $branchId = (int) ($order['branch_id'] ?? 0);
+    if ($branchId <= 0) {
+        return [
+            'success' => false,
+            'error' => 'Inventory deduction requires a valid order branch.',
+        ];
+    }
     $validation = boycold_validate_inventory_for_items($connect, $items, $branchId, true, true);
     if (!$validation['success']) {
         $message = substr((string) $validation['error'], 0, 255);
@@ -970,7 +1203,7 @@ function boycold_deduct_inventory_for_order_in_transaction(
         ];
     }
 
-    $updateStock = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ?');
+    $updateStock = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ? AND branch_id = ?');
     $insertMovement = $connect->prepare(
         "INSERT INTO ingredient_stock_movements
             (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, product_name, reference, created_by)
@@ -990,8 +1223,7 @@ function boycold_deduct_inventory_for_order_in_transaction(
         $productNames = boycold_inventory_format_requirement_products((array) ($requirement['products'] ?? []));
         $actorParam = $actorId && $actorId > 0 ? $actorId : null;
 
-        $updateStock->bind_param('di', $newStock, $ingredientId);
-        $updateStock->execute();
+        boycold_inventory_set_branch_stock($updateStock, $newStock, $ingredientId, $branchId);
 
         $insertMovement->bind_param(
             'iddisssi',
@@ -1093,12 +1325,17 @@ function boycold_reserve_inventory_for_order_in_transaction(
     $items = $itemsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $itemsStmt->close();
 
-    $validation = boycold_validate_inventory_for_items($connect, $items, (int) $order['branch_id'], true, true);
+    $branchId = (int) ($order['branch_id'] ?? 0);
+    if ($branchId <= 0) {
+        return ['success' => false, 'error' => 'Inventory reservation requires a valid order branch.'];
+    }
+
+    $validation = boycold_validate_inventory_for_items($connect, $items, $branchId, true, true);
     if (!$validation['success']) {
         return $validation + ['reserved' => false];
     }
 
-    $updateStock = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ?');
+    $updateStock = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ? AND branch_id = ?');
     $insertMovement = $connect->prepare(
         "INSERT INTO ingredient_stock_movements
             (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, product_name, reference, created_by)
@@ -1112,8 +1349,7 @@ function boycold_reserve_inventory_for_order_in_transaction(
         $newStock = max(0.0, (float) $requirement['stock'] - $required);
         $productNames = boycold_inventory_format_requirement_products((array) $requirement['products']);
         $actor = $actorId && $actorId > 0 ? $actorId : null;
-        $updateStock->bind_param('di', $newStock, $ingredientId);
-        $updateStock->execute();
+        boycold_inventory_set_branch_stock($updateStock, $newStock, $ingredientId, $branchId);
         $insertMovement->bind_param('iddissi', $ingredientId, $required, $newStock, $orderId, $productNames, $reference, $actor);
         $insertMovement->execute();
     }
@@ -1136,7 +1372,7 @@ function boycold_restore_reserved_inventory_for_order_in_transaction(mysqli $con
     boycold_ensure_inventory_schema($connect);
 
     $orderStmt = $connect->prepare(
-        "SELECT inventory_deducted_at, inventory_deduction_source, inventory_restored_at
+        "SELECT branch_id, inventory_deducted_at, inventory_deduction_source, inventory_restored_at
          FROM orders WHERE id = ? LIMIT 1 FOR UPDATE"
     );
     $orderStmt->bind_param('i', $orderId);
@@ -1146,6 +1382,11 @@ function boycold_restore_reserved_inventory_for_order_in_transaction(mysqli $con
 
     if (!$order || $order['inventory_deduction_source'] !== 'online_reservation' || !empty($order['inventory_restored_at'])) {
         return ['success' => true, 'restored' => false];
+    }
+
+    $branchId = (int) ($order['branch_id'] ?? 0);
+    if ($branchId <= 0) {
+        return ['success' => false, 'error' => 'Inventory restoration requires a valid order branch.'];
     }
 
     $movementStmt = $connect->prepare(
@@ -1159,8 +1400,8 @@ function boycold_restore_reserved_inventory_for_order_in_transaction(mysqli $con
     $movements = $movementStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $movementStmt->close();
 
-    $stockStmt = $connect->prepare('SELECT stock FROM ingredients WHERE id = ? FOR UPDATE');
-    $updateStmt = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ?');
+    $stockStmt = $connect->prepare('SELECT stock FROM ingredients WHERE id = ? AND branch_id = ? FOR UPDATE');
+    $updateStmt = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ? AND branch_id = ?');
     $insertStmt = $connect->prepare(
         "INSERT INTO ingredient_stock_movements
             (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, reference)
@@ -1170,13 +1411,14 @@ function boycold_restore_reserved_inventory_for_order_in_transaction(mysqli $con
     foreach ($movements as $movement) {
         $ingredientId = (int) $movement['ingredient_id'];
         $quantity = (float) $movement['quantity'];
-        $stockStmt->bind_param('i', $ingredientId);
+        $stockStmt->bind_param('ii', $ingredientId, $branchId);
         $stockStmt->execute();
         $stockRow = $stockStmt->get_result()->fetch_assoc();
-        if (!$stockRow) continue;
+        if (!$stockRow) {
+            throw new RuntimeException('Reserved ingredient does not belong to the order branch.');
+        }
         $newStock = (float) $stockRow['stock'] + $quantity;
-        $updateStmt->bind_param('di', $newStock, $ingredientId);
-        $updateStmt->execute();
+        boycold_inventory_set_branch_stock($updateStmt, $newStock, $ingredientId, $branchId);
         $insertStmt->bind_param('iddis', $ingredientId, $quantity, $newStock, $orderId, $reference);
         $insertStmt->execute();
     }

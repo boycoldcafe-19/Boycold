@@ -70,11 +70,11 @@ function getInventory(mysqli $connect, int $branchId): array {
     
     // Ensure all required keys exist with defaults
     $defaults = [
-        'coffeeBeans' => ['current' => 1000, 'max' => 1000, 'unit' => 'g'],
-        'milk' => ['current' => 1000, 'max' => 1000, 'unit' => 'ml'],
-        'matcha' => ['current' => 1000, 'max' => 1000, 'unit' => 'g'],
-        'chocolate' => ['current' => 1000, 'max' => 1000, 'unit' => 'g'],
-        'cups' => ['current' => 100, 'max' => 100, 'unit' => 'pcs']
+        'coffeeBeans' => ['current' => 0, 'max' => 1000, 'unit' => 'g'],
+        'milk' => ['current' => 0, 'max' => 1000, 'unit' => 'ml'],
+        'matcha' => ['current' => 0, 'max' => 1000, 'unit' => 'g'],
+        'chocolate' => ['current' => 0, 'max' => 1000, 'unit' => 'g'],
+        'cups' => ['current' => 0, 'max' => 100, 'unit' => 'pcs']
     ];
     
     foreach ($defaults as $key => $default) {

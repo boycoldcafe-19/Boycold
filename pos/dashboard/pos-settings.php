@@ -643,7 +643,6 @@ if ($branchId > 0) {
         };
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

@@ -1201,7 +1201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     });
   </script>
-  <script src="inventory-warning.js"></script>
   <script src="order-notify.js"></script>
   <script src="shift-monitor.js"></script>
 </body>

@@ -908,6 +908,7 @@ button {
     justify-content: space-between;
     gap: 12px;
     overflow: visible;
+    flex-wrap: wrap;
 }
 
 .chart-period-select {
@@ -1684,7 +1685,32 @@ button {
     background: var(--border);
 }
 
+.chart-card,
+.stat-card,
+.chart-canvas-wrap,
+.demand-table,
+.peak-table,
+.trending-list,
+.insights-card,
+.forecast-left-stack,
+.forecast-side-stack {
+    min-width: 0;
+}
+
+.demand-row,
+.peak-row,
+.trending-row,
+.insight-item,
+.item-progress-track,
+.forest-canvas-wrap {
+    min-width: 0;
+}
+
 @media (max-width: 1080px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .secondary-grid {
         grid-template-columns: 1fr;
     }
@@ -1693,5 +1719,64 @@ button {
     .forecast-side-stack {
         grid-column: auto;
         gap: 20px;
+    }
+}
+
+@media (max-width: 760px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .demand-table-head {
+        display: none;
+    }
+
+    .demand-row {
+        grid-template-columns: 42px 1fr auto;
+        grid-template-rows: auto auto;
+    }
+
+    .demand-item-name {
+        grid-column: 2;
+        white-space: normal;
+    }
+
+    .demand-orders,
+    .demand-trend {
+        grid-column: 3;
+    }
+
+    .demand-progress {
+        grid-column: 2 / -1;
+    }
+
+    .peak-table-head {
+        display: none;
+    }
+
+    .peak-row {
+        grid-template-columns: 100px 1fr 60px;
+    }
+
+    .period-dropdown,
+    .date-range-picker {
+        width: 100%;
+    }
+
+    .period-trigger,
+    .branch-trigger {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-content {
+        padding: 24px 18px 36px;
     }
 }

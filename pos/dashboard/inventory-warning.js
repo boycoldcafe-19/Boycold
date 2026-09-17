@@ -31,7 +31,7 @@
         const stockWarnings = Object.values(inventory || {}).filter((item) => {
             const current = Number(item.current || 0);
             const minimum = Number(item.min || 0);
-            return current <= minimum || (Number(item.max || 0) > 0 && current / Number(item.max) <= 0.2);
+            return current <= minimum;
         });
         const warningsByName = new Map();
         [...capacityWarnings, ...stockWarnings].forEach((item) => {

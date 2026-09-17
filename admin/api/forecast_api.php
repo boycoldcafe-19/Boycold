@@ -204,7 +204,7 @@ $demandQuery = "SELECT
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
 WHERE {$successfulSaleCondition}
-    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
+    AND DATE(o.created_at) BETWEEN DATE_SUB($forecastAnchorSql, INTERVAL 6 DAY) AND $forecastAnchorSql
     $branchCondition
 GROUP BY oi.product_name
 ORDER BY total_orders DESC
@@ -212,9 +212,7 @@ LIMIT 10";
 
 $stmt = $connect->prepare($demandQuery);
 if ($branchId !== 'all') {
-    $stmt->bind_param('i' . $types, $histDaysParam, ...$params);
-} else {
-    $stmt->bind_param('i', $histDaysParam);
+    $stmt->bind_param($types, ...$params);
 }
 $stmt->execute();
 $result = $stmt->get_result();

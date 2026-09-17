@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/admin_guard.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/inventory_service.php';
@@ -16,6 +16,7 @@ boycold_ensure_inventory_schema($connect);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/menu-management.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -57,7 +58,6 @@ boycold_ensure_inventory_schema($connect);
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none"
@@ -194,6 +194,7 @@ boycold_ensure_inventory_schema($connect);
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5278,6 +5279,7 @@ boycold_ensure_inventory_schema($connect);
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
 </body>
 
 </html>

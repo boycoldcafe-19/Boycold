@@ -266,6 +266,28 @@ try {
             }
             response(['success' => true, 'ingredients' => $ingredients, 'branch_id' => $branchId, 'view' => $view]);
 
+        case 'ingredient_library':
+            $result = $connect->query(
+                "SELECT name, unit
+                 FROM ingredients
+                 WHERE name <> ''
+                 ORDER BY name, id"
+            );
+            $library = [];
+            $seen = [];
+            while ($result && ($row = $result->fetch_assoc())) {
+                $key = boycold_inventory_duplicate_key((string) $row['name']);
+                if ($key === '' || isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $library[] = [
+                    'name' => $row['name'],
+                    'unit' => $row['unit'],
+                ];
+            }
+            response(['success' => true, 'ingredients' => $library]);
+
         case 'branches':
             $result = $connect->query("SELECT id, branch_code, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name, id");
             $branches = [];
@@ -308,11 +330,14 @@ try {
                                     u.email AS customer_email,
                                     o.status, o.order_type, o.payment_method, o.payment_status,
                                               o.payment_reference, o.subtotal, o.delivery_fee, o.tax, o.total,
-                                              o.branch_id, b.branch_code, b.branch_name, o.address, o.notes,
+                                              o.branch_id, b.branch_code, b.branch_name,
+                                              o.cashier_id, e.employee_name AS cashier_name,
+                                              o.address, o.notes,
                                               o.created_at, o.updated_at
                                        FROM orders o
                                 LEFT JOIN users u ON u.id = o.user_id
                                        LEFT JOIN branches b ON b.id = o.branch_id
+                                       LEFT JOIN employees e ON e.id = o.cashier_id
                                        ORDER BY o.created_at DESC, o.id DESC");
             $orders = [];
             $itemsStmt = $connect->prepare('SELECT product_name, quantity, unit_price, line_total, milk, addons, notes FROM order_items WHERE order_id = ? ORDER BY id');
@@ -444,14 +469,24 @@ try {
             $stmt = $connect->prepare('INSERT INTO ingredients (name, category, unit, stock, min_stock, branch_id) VALUES (?, ?, ?, ?, ?, ?)');
             $stmt->bind_param('sssddi', $name, $category, $unit, $stock, $minStock, $branch);
             $stmt->execute();
-            response(['success' => true, 'id' => $connect->insert_id]);
+            $newId = (int) $connect->insert_id;
+            boycold_inventory_replicate_ingredient_catalog($connect, $name, $category, $unit, $minStock, $branch);
+            response(['success' => true, 'id' => $newId]);
 
         case 'ingredient_update':
             $id = (int)($data['id'] ?? 0);
             if ($id < 1) response(['success' => false, 'error' => 'Invalid ingredient.'], 422);
             $unit = validateIngredientUnit($data);
-            $stmt = $connect->prepare('UPDATE ingredients SET unit = ? WHERE id = ?');
-            $stmt->bind_param('si', $unit, $id);
+            $branchId = isset($data['branch_id']) && (int) $data['branch_id'] > 0
+                ? (int) $data['branch_id']
+                : (int) ($_SESSION['branch_id'] ?? 0);
+            if ($branchId > 0) {
+                $stmt = $connect->prepare('UPDATE ingredients SET unit = ? WHERE id = ? AND branch_id = ?');
+                $stmt->bind_param('sii', $unit, $id, $branchId);
+            } else {
+                $stmt = $connect->prepare('UPDATE ingredients SET unit = ? WHERE id = ?');
+                $stmt->bind_param('si', $unit, $id);
+            }
             if (!$stmt->execute()) {
                 response(['success' => false, 'error' => 'Unable to update the unit of measure.'], 500);
             }
@@ -467,8 +502,16 @@ try {
 
         case 'ingredient_delete':
             $id = (int)($data['id'] ?? 0);
-            $stmt = $connect->prepare('DELETE FROM ingredients WHERE id = ?');
-            $stmt->bind_param('i', $id);
+            $branchId = isset($data['branch_id']) && (int) $data['branch_id'] > 0
+                ? (int) $data['branch_id']
+                : (int) ($_SESSION['branch_id'] ?? 0);
+            if ($branchId > 0) {
+                $stmt = $connect->prepare('DELETE FROM ingredients WHERE id = ? AND branch_id = ?');
+                $stmt->bind_param('ii', $id, $branchId);
+            } else {
+                $stmt = $connect->prepare('DELETE FROM ingredients WHERE id = ?');
+                $stmt->bind_param('i', $id);
+            }
             $stmt->execute();
             response(['success' => true]);
 
@@ -539,7 +582,9 @@ try {
                 throw new RuntimeException('Could not delete the existing mapping: ' . $delete->error);
             }
 
-            $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? LIMIT 1');
+            $lookup = $connect->prepare(
+                'SELECT id FROM ingredients WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) ORDER BY id LIMIT 1'
+            );
             if (!$lookup) {
                 throw new RuntimeException('Could not prepare ingredient lookup: ' . $connect->error);
             }

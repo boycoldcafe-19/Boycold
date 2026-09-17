@@ -784,7 +784,6 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
         });
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
 </body>
 

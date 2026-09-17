@@ -181,7 +181,9 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
         FROM order_items oi
         INNER JOIN orders o ON oi.order_id = o.id
         WHERE DATE(o.created_at) BETWEEN ? AND ?
-        AND o.status != 'cancelled'
+        AND (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
+        AND o.status <> 'cancelled'
+        AND o.payment_status NOT IN ('failed', 'expired', 'cancelled')
         $branchCondition
         GROUP BY oi.product_name
         ORDER BY total_quantity DESC
@@ -312,6 +314,7 @@ if (($_GET['format'] ?? '') === 'json') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/data-analytics.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../pos/img/LOGO 2.png">
@@ -351,7 +354,6 @@ if (($_GET['format'] ?? '') === 'json') {
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
                         </li>
-                        <li><a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a></li>
                         <li>
                             <a href="orders.php">
                                 <span class="nav-icon"><svg width="19" height="22" viewBox="0 0 19 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8882 1H3.31469C2.03632 1 1 2.03632 1 3.31469V18.3602C1 19.6386 2.03632 20.6749 3.31469 20.6749H14.8882C16.1665 20.6749 17.2029 19.6386 17.2029 18.3602V3.31469C17.2029 2.03632 16.1665 1 14.8882 1Z" stroke="currentColor" stroke-width="2"/><path d="M5.62939 6.78662H12.5735M5.62939 11.416H12.5735M5.62939 16.0454H10.2588" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
@@ -453,6 +455,7 @@ if (($_GET['format'] ?? '') === 'json') {
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1551,6 +1554,7 @@ if (($_GET['format'] ?? '') === 'json') {
 
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
     <script src="admin-js/logout-modal.js"></script>
 </body>
 

@@ -657,11 +657,11 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
 
             // Fallback defaults
             return {
-                coffeeBeans: { current: 1000, max: 1000, unit: 'g' },
-                milk: { current: 1000, max: 1000, unit: 'ml' },
-                matcha: { current: 1000, max: 1000, unit: 'g' },
-                chocolate: { current: 1000, max: 1000, unit: 'g' },
-                cups: { current: 100, max: 100, unit: 'pcs' }
+                coffeeBeans: { current: 0, max: 1000, unit: 'g' },
+                milk: { current: 0, max: 1000, unit: 'ml' },
+                matcha: { current: 0, max: 1000, unit: 'g' },
+                chocolate: { current: 0, max: 1000, unit: 'g' },
+                cups: { current: 0, max: 100, unit: 'pcs' }
             };
         }
 
@@ -1108,7 +1108,6 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
 
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="inventory-warning.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
 </body>

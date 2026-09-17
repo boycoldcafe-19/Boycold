@@ -8,6 +8,7 @@ require_once __DIR__ . '/admin_guard.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="admin-css/adminsettings.css">
+    <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -50,9 +51,6 @@ require_once __DIR__ . '/admin_guard.php';
                                 <span class="nav-label">Dashboard</span>
                                 <i class="fa-solid fa-chevron-right nav-chevron"></i>
                             </a>
-                        </li>
-                        <li>
-                            <a href="sales.php"><span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span><span class="nav-label">Sales</span><i class="fa-solid fa-chevron-right nav-chevron"></i></a>
                         </li>
                         <li>
                             <a href="orders.php">
@@ -190,6 +188,7 @@ require_once __DIR__ . '/admin_guard.php';
         <div class="main-panel">
 
             <div class="top-header">
+                <div class="notif-wrap"><button class="icon-btn" id="notifBtn" type="button" aria-label="Inventory warnings" aria-expanded="false"><i class="fa-solid fa-triangle-exclamation"></i></button></div>
                 <button class="profile-btn" aria-label="Admin profile">
                     <div class="profile-avatar">
                         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -506,6 +505,7 @@ require_once __DIR__ . '/admin_guard.php';
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
 </body>
 
 </html>
