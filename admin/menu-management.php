@@ -3974,6 +3974,20 @@ boycold_ensure_inventory_schema($connect);
                         </div>
                     </div>
 
+                    <div class="panel">
+                        <h3>Milk Choice</h3>
+                        <div class="milk-choice-list">
+                            <div class="milk-choice-row">
+                                <input class="milk-choice-name" type="text" value="Original" readonly>
+                                <div class="price-input"><span>₱</span><input type="number" value="0.00" readonly></div>
+                            </div>
+                            <div class="milk-choice-row">
+                                <input class="milk-choice-name" type="text" value="Oat Milk" readonly>
+                                <div class="price-input"><span>₱</span><input type="number" value="15.00" readonly></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="panel toggle-field">
                         <div class="toggle-row">
                             <label class="switch">
@@ -4108,6 +4122,20 @@ boycold_ensure_inventory_schema($connect);
                             <span>Price</span>
                         </div>
                         <div class="addon-list" id="editAddonList"></div>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Milk Choice</h3>
+                        <div class="milk-choice-list">
+                            <div class="milk-choice-row">
+                                <input class="milk-choice-name" type="text" value="Original" readonly>
+                                <div class="price-input"><span>₱</span><input type="number" value="0.00" readonly></div>
+                            </div>
+                            <div class="milk-choice-row">
+                                <input class="milk-choice-name" type="text" value="Oat Milk" readonly>
+                                <div class="price-input"><span>₱</span><input type="number" value="15.00" readonly></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

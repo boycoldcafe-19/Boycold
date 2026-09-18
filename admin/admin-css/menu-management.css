@@ -2139,6 +2139,36 @@ button {
     margin-bottom: 10px;
 }
 
+.milk-choice-list {
+    display: grid;
+    gap: 8px;
+}
+
+.milk-choice-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.milk-choice-name {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: #f8f6f4;
+}
+
+.milk-choice-row .price-input {
+    background: #f8f6f4;
+}
+
+.milk-choice-row input[readonly] {
+    cursor: default;
+}
+
 .addon-name {
     padding: 8px 10px;
     border: 1px solid var(--border);
