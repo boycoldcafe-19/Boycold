@@ -300,16 +300,16 @@ try {
 
         case 'products':
             $result = $connect->query(
-                "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available, p.addons_configured,
+                "SELECT p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available, p.addons_configured, p.milk_choices_configured,
                         COUNT(pi.id) AS mapping_count
                  FROM products p
                  LEFT JOIN product_ingredients pi ON pi.product_name = p.product_name
-                 GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available, p.addons_configured
+                 GROUP BY p.id, p.product_name, p.description, p.price, p.image, p.category, p.popular_category, p.is_available, p.addons_configured, p.milk_choices_configured
                  ORDER BY p.category, p.product_name"
             );
             $products = [];
             while ($row = $result->fetch_assoc()) $products[] = $row;
-            $addonsByProduct = boycold_menu_get_product_addons($connect, array_column($products, 'id'));
+            $modifiersByProduct = boycold_menu_get_product_modifiers($connect, array_column($products, 'id'));
             $branchId = isset($_GET['branch_id']) ? (int) $_GET['branch_id'] : 0;
             $availability = boycold_get_product_inventory_availability(
                 $connect,
@@ -326,7 +326,10 @@ try {
                 $product['inventory_can_order'] = !empty($info['can_order']);
                 $product['ingredient_details'] = $info['ingredients'] ?? [];
                 $product['addons_configured'] = !empty($product['addons_configured']);
-                $product['addons'] = $addonsByProduct[(int) $product['id']] ?? [];
+                $product['milk_choices_configured'] = !empty($product['milk_choices_configured']);
+                $modifiers = $modifiersByProduct[(int) $product['id']] ?? ['addons' => [], 'milk_choices' => []];
+                $product['addons'] = $modifiers['addons'];
+                $product['milk_choices'] = $modifiers['milk_choices'];
             }
             unset($product);
             response([
@@ -463,17 +466,19 @@ try {
             boycold_menu_ensure_category($connect, $category);
             $price = max(0, (float)($data['price'] ?? 0));
             $addons = boycold_menu_normalize_addons($data['addons'] ?? []);
+            $milkChoices = boycold_menu_normalize_addons($data['milk_choices'] ?? []);
             $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
             $image = $uploadedImage ?? '';
             $available = !empty($data['is_available']) ? 1 : 0;
             $addonsConfigured = 1;
-            $stmt = $connect->prepare('INSERT INTO products (product_name, description, price, image, category, is_available, addons_configured) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $milkChoicesConfigured = 1;
+            $stmt = $connect->prepare('INSERT INTO products (product_name, description, price, image, category, is_available, addons_configured, milk_choices_configured) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
             if (!$stmt) {
                 if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
                 response(['success' => false, 'error' => 'Could not prepare menu item insert: ' . $connect->error], 500);
             }
             $description = '';
-            $stmt->bind_param('ssdssii', $name, $description, $price, $image, $category, $available, $addonsConfigured);
+            $stmt->bind_param('ssdssiii', $name, $description, $price, $image, $category, $available, $addonsConfigured, $milkChoicesConfigured);
             $saved = false;
             try {
                 $saved = $stmt->execute();
@@ -496,6 +501,7 @@ try {
             }
             try {
                 boycold_menu_save_product_addons($connect, $newProductId, $addons);
+                boycold_menu_save_product_milk_choices($connect, $newProductId, $milkChoices);
             } catch (Throwable $error) {
                 $cleanup = $connect->prepare('DELETE FROM products WHERE id = ?');
                 if ($cleanup) {
@@ -506,7 +512,7 @@ try {
                 if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
                 response(['success' => false, 'error' => 'Menu item add-ons could not be saved: ' . $error->getMessage()], 409);
             }
-            response(['success' => true, 'id' => $newProductId, 'product_name' => $name, 'addons' => $addons]);
+            response(['success' => true, 'id' => $newProductId, 'product_name' => $name, 'addons' => $addons, 'milk_choices' => $milkChoices]);
 
         case 'product_update':
             $id = (int)($data['id'] ?? 0);
@@ -518,8 +524,10 @@ try {
             $price = max(0, (float)($data['price'] ?? 0));
             $addonsProvided = array_key_exists('addons', $data);
             $addons = $addonsProvided ? boycold_menu_normalize_addons($data['addons']) : [];
+            $milkChoicesProvided = array_key_exists('milk_choices', $data);
+            $milkChoices = $milkChoicesProvided ? boycold_menu_normalize_addons($data['milk_choices']) : [];
             $available = !empty($data['is_available']) ? 1 : 0;
-            $currentStmt = $connect->prepare('SELECT id, image, is_available FROM products WHERE id = ? LIMIT 1');
+            $currentStmt = $connect->prepare('SELECT id, image, is_available, addons_configured, milk_choices_configured FROM products WHERE id = ? LIMIT 1');
             $currentStmt->bind_param('i', $id);
             $currentStmt->execute();
             $currentProduct = $currentStmt->get_result()->fetch_assoc();
@@ -528,14 +536,10 @@ try {
             $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
             $removeImage = !empty($data['remove_image']);
             $image = $uploadedImage ?? ($removeImage ? '' : (string) ($currentProduct['image'] ?? ''));
-            if ($addonsProvided) {
-                $addonsConfigured = 1;
-                $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ?, addons_configured = ? WHERE id = ?');
-                $stmt->bind_param('ssdsiii', $name, $category, $price, $image, $available, $addonsConfigured, $id);
-            } else {
-                $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ? WHERE id = ?');
-                $stmt->bind_param('ssdsii', $name, $category, $price, $image, $available, $id);
-            }
+            $addonsConfigured = $addonsProvided ? 1 : (int) ($currentProduct['addons_configured'] ?? 0);
+            $milkChoicesConfigured = $milkChoicesProvided ? 1 : (int) ($currentProduct['milk_choices_configured'] ?? 0);
+            $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ?, addons_configured = ?, milk_choices_configured = ? WHERE id = ?');
+            $stmt->bind_param('ssdsiiii', $name, $category, $price, $image, $available, $addonsConfigured, $milkChoicesConfigured, $id);
             $updated = false;
             try {
                 $updated = $stmt->execute();
@@ -553,6 +557,9 @@ try {
             $stmt->close();
             if ($addonsProvided) {
                 boycold_menu_save_product_addons($connect, $id, $addons);
+            }
+            if ($milkChoicesProvided) {
+                boycold_menu_save_product_milk_choices($connect, $id, $milkChoices);
             }
             if (($uploadedImage || $removeImage) && $image !== (string) ($currentProduct['image'] ?? '')) {
                 boycold_menu_remove_uploaded_image((string) ($currentProduct['image'] ?? ''));

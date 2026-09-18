@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/menu_catalog_service.php';
 
 // Session guard — redirect to login if not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -34,24 +35,42 @@ $availableServings = isset($_GET['servings']) ? max(0, (int) $_GET['servings']) 
 $selectedBranchId = isset($_GET['branch_id']) ? max(1, (int) $_GET['branch_id']) : (int) ($_SESSION['branch_id'] ?? 1);
 
 // Product category controls customization; order_type is only the pickup/delivery choice.
+$requestedProductId = isset($_GET['product_id']) ? max(0, (int) $_GET['product_id']) : 0;
 $productCategory = '';
-$categoryStmt = $connect->prepare('SELECT category FROM products WHERE product_name = ? LIMIT 1');
-$categoryStmt->bind_param('s', $productNameRaw);
+if ($requestedProductId > 0) {
+    $categoryStmt = $connect->prepare(
+        'SELECT id, category, addons_configured, milk_choices_configured FROM products WHERE id = ? LIMIT 1'
+    );
+    $categoryStmt->bind_param('i', $requestedProductId);
+} else {
+    $categoryStmt = $connect->prepare(
+        'SELECT id, category, addons_configured, milk_choices_configured FROM products WHERE product_name = ? LIMIT 1'
+    );
+    $categoryStmt->bind_param('s', $productNameRaw);
+}
 $categoryStmt->execute();
 $categoryRow = $categoryStmt->get_result()->fetch_assoc();
 $categoryStmt->close();
+$productId = (int) ($categoryRow['id'] ?? 0);
 $productCategory = strtolower(trim((string) ($categoryRow['category'] ?? '')));
 if ($productCategory === 'bites') {
     $productCategory = 'light-snack';
 } elseif ($productCategory === 'waffle') {
     $productCategory = 'waffles';
 }
+$modifierGroups = $productId > 0 ? boycold_menu_get_product_modifiers($connect, [$productId]) : [];
+$productModifiers = $modifierGroups[$productId] ?? ['addons' => [], 'milk_choices' => []];
+$productAddons = $productModifiers['addons'];
+$milkChoices = $productModifiers['milk_choices'];
+$addonsConfigured = !empty($categoryRow['addons_configured']);
+$milkChoicesConfigured = !empty($categoryRow['milk_choices_configured']);
+$hasSavedModifierSettings = $addonsConfigured || $milkChoicesConfigured;
 $simpleCategories = ['rice-meal', 'light-snack', 'pasta'];
 $isSimpleCategory = in_array($productCategory, $simpleCategories, true);
 
 // Bites items: use addon system, hide milk/espresso options
 $bitesItems  = ['French Fries', 'Chicken Poppers', 'Chicken poppers and fries', 'Fries and Chicken Poppers'];
-$isBitesItem = !$isSimpleCategory && in_array($productNameRaw, $bitesItems, true);
+$isBitesItem = !$hasSavedModifierSettings && !$isSimpleCategory && in_array($productNameRaw, $bitesItems, true);
 
 // Sauce/flavor options per item [label => price]
 $sauceOptions = [];
@@ -92,7 +111,10 @@ $noAddonItems = [
     'Messy Tuna Quesadilla',
     'Beef Natchos',
 ];
-$isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, true);
+$isNoAddonItem = !$hasSavedModifierSettings && ($isSimpleCategory || in_array($productNameRaw, $noAddonItems, true));
+
+$showMilkChoices = !$isBitesItem && !$isNoAddonItem && !empty($milkChoices);
+$showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
 ?>
 
 <!DOCTYPE html>
@@ -210,8 +232,8 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                     </div>
                     <div class="mini-info">
                         <h4><?= $productName ?></h4>
-                        <p id="miniMilk"><?= ($isBitesItem || $isNoAddonItem) ? '' : 'Original Milk' ?></p>
-                        <p id="miniAddons"><?= $isBitesItem ? ($productAddon ?: 'No Sauce') . ' • Pick-Up' : ($isNoAddonItem ? 'Pick-Up' : 'No Add-ons • Pick-Up') ?></p>
+                        <p id="miniMilk"><?= $showMilkChoices ? htmlspecialchars((string) ($milkChoices[0]['name'] ?? '')) : '' ?></p>
+                        <p id="miniAddons"><?= $isBitesItem ? ($productAddon ?: 'No Sauce') . ' • Pick-Up' : 'No Add-ons • Pick-Up' ?></p>
                         <p id="miniQty">Qty: 1</p>
                     </div>
                 </div>
@@ -223,7 +245,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                 <div class="price">₱<?= $productPrice ?></div>
 
                 <!-- Milk Choice — hidden for bites/food items -->
-                <?php if (!$isBitesItem && !$isNoAddonItem): ?>
+                <?php if ($showMilkChoices): ?>
                     <div class="section" id="section-milk">
                         <div class="section-title">
                             <i class="fa-solid fa-bottle-water"></i>
@@ -236,7 +258,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                     </div>
                 <?php endif; ?>
 
-                <?php if (!$isNoAddonItem): ?>
+                <?php if ($showAddonChoices): ?>
                     <div class="section" id="section-addons">
                         <div class="section-title">
                             <i class="fa-solid fa-circle-plus"></i>
@@ -356,10 +378,35 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
         const isNoAddonItem = <?= $isNoAddonItem ? 'true' : 'false' ?>;
         const isSimpleCategory = <?= $isSimpleCategory ? 'true' : 'false' ?>;
         const hasSauceOptions = <?= $hasSauceOptions ? 'true' : 'false' ?>;
+        const showMilkChoices = <?= $showMilkChoices ? 'true' : 'false' ?>;
+        const showAddonChoices = <?= $showAddonChoices ? 'true' : 'false' ?>;
+        const savedMilkChoices = <?= json_encode($milkChoices, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const savedProductAddons = <?= json_encode($productAddons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
         let addOnTotal = 0;
         const availableServings = <?= (int) $availableServings ?>;
         const selectedBranchId = <?= (int) $selectedBranchId ?>;
+
+        function optionText(name, price) {
+            return `${name}${Number(price) > 0 ? ` +₱${Number(price).toFixed(2)}` : ''}`;
+        }
+
+        function renderDatabaseOptions(sectionId, items, singleSelect) {
+            const group = document.querySelector(`${sectionId} .option-group`);
+            if (!group) return;
+            group.innerHTML = '';
+            items.forEach((item, index) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `option${singleSelect && index === 0 ? ' active' : ''}`;
+                button.dataset.price = String(Number(item?.price) || 0);
+                button.textContent = optionText(String(item?.name || ''), item?.price);
+                group.appendChild(button);
+            });
+        }
+
+        if (showMilkChoices) renderDatabaseOptions('#section-milk', savedMilkChoices, true);
+        if (!isBitesItem && showAddonChoices) renderDatabaseOptions('#section-addons', savedProductAddons, false);
 
         // If this item has sauce radio buttons, wire them up
         if (hasSauceOptions) {
@@ -412,11 +459,11 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
 
             // Milk row — only for drinks
             const miniMilk = document.getElementById('miniMilk');
-            if (!isBitesItem && !isNoAddonItem) {
+            if (showMilkChoices) {
                 const milkGroup = document.querySelector('#section-milk .option-group');
                 const activeMilk = milkGroup ? milkGroup.querySelector('.option.active') : null;
-                const milkText = activeMilk ? activeMilk.textContent.replace(/\s*\+₱\d+/, '').trim() : 'Original';
-                miniMilk.textContent = milkText + ' Milk';
+                const milkText = activeMilk ? activeMilk.textContent.replace(/\s*\+\u20B1[\d.]+/, '').trim() : 'Original';
+                miniMilk.textContent = milkText;
             } else {
                 miniMilk.textContent = '';
             }
@@ -425,12 +472,12 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
             let addonText;
             if (isBitesItem) {
                 addonText = passedAddon;
-            } else if (isNoAddonItem) {
+            } else if (!showAddonChoices) {
                 addonText = '';
             } else {
                 const activeAddons = [...document.querySelectorAll('#section-addons .option.active')];
                 addonText = activeAddons.length ?
-                    activeAddons.map(b => b.textContent.replace(/\s*\+₱\d+/, '').trim()).join(', ') :
+                    activeAddons.map(b => b.textContent.replace(/\s*\+\u20B1[\d.]+/, '').trim()).join(', ') :
                     'No Add-ons';
             }
 
@@ -465,18 +512,18 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
 
             // Milk
             let milk = '';
-            if (!isBitesItem && !isNoAddonItem) {
+            if (showMilkChoices) {
                 const activeMilk = document.querySelector('#section-milk .option.active');
-                milk = activeMilk ? activeMilk.textContent.replace(/\s*\+₱\d+/, '').trim() + ' Milk' : 'Original Milk';
+                milk = activeMilk ? activeMilk.textContent.replace(/\s*\+\u20B1[\d.]+/, '').trim() : '';
             }
 
             // Add-ons
             let addons = '';
             if (isBitesItem) {
                 addons = passedAddon && passedAddon !== 'No Sauce' ? passedAddon : '';
-            } else if (!isNoAddonItem) {
+            } else if (showAddonChoices) {
                 const active = [...document.querySelectorAll('#section-addons .option.active')];
-                addons = active.map(b => b.textContent.replace(/\s*\+₱\d+/, '').trim()).join(', ');
+                addons = active.map(b => b.textContent.replace(/\s*\+\u20B1[\d.]+/, '').trim()).join(', ');
             }
 
             // Order type

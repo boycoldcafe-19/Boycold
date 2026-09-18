@@ -425,7 +425,8 @@ document.addEventListener('click', async function(e) {
             return;
         }
 
-        const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId });
+        const productId = card.dataset.productId || '';
+        const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId, product_id: productId });
         window.location.href = 'ordercustom.php?' + params.toString();
         return;
     }

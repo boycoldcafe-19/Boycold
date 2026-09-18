@@ -244,7 +244,7 @@ if ($shiftResult) {
 
                             <div class="options-panel">
 
-                                <div class="option-group">
+                                <div class="option-group" id="milkOptionGroup">
                                     <div class="option-label"><i class="fa-solid fa-mug-saucer"></i> Milk Choice</div>
                                     <div class="option-buttons" id="milkOptions">
                                         <button class="option-btn active" data-value="Original" data-price="0" type="button">Original</button>
@@ -252,7 +252,7 @@ if ($shiftResult) {
                                     </div>
                                 </div>
 
-                                <div class="option-group">
+                                <div class="option-group" id="addonOptionGroup">
                                     <div class="option-label"><i class="fa-solid fa-plus"></i> Add - ons</div>
                                     <div class="option-buttons multi" id="addonOptions">
                                         <button class="option-btn" data-value="Espresso Shot" data-price="15" type="button">Espresso Shot <span>+₱15</span></button>
@@ -515,6 +515,7 @@ if ($shiftResult) {
         ];
 
         function getProductType(product) {
+            if (product?.modifiersConfigured) return 'default';
             const category = (product.category || '').trim().toLowerCase();
             const noCustomizationCategories = new Set([
                 'rice-meal',
@@ -540,18 +541,63 @@ if ($shiftResult) {
 
         // Kept for the spots that only care about the hide-everything case.
         function isNoCustomizationProduct(product) {
-            return getProductType(product) === 'no-customization';
+            return !productHasSavedModifierSettings && getProductType(product) === 'no-customization';
         }
 
-        const productType = getProductType(currentProduct);
+        const configuredMilkChoices = Array.isArray(currentProduct.milkChoices) ? currentProduct.milkChoices : [];
+        const configuredAddons = Array.isArray(currentProduct.addons) ? currentProduct.addons : [];
+        const productHasSavedModifierSettings = Boolean(
+            currentProduct.milkChoicesConfigured || currentProduct.addonsConfigured
+        );
+        const productType = productHasSavedModifierSettings ? 'configured' : getProductType(currentProduct);
         const isNoCustomization = productType === 'no-customization';
         const hideMilkOnly = productType === 'fries' || productType === 'poppers';
+        const milkOptions = document.getElementById('milkOptions');
+        const addonOptions = document.getElementById('addonOptions');
+        const milkOptionGroup = document.getElementById('milkOptionGroup');
+        const addonOptionGroup = document.getElementById('addonOptionGroup');
+
+        function renderModifierButtons(container, items, isSingleSelect) {
+            container.innerHTML = '';
+            items.forEach((item, index) => {
+                const name = String(item?.name || item?.value || '');
+                const price = Number(item?.price) || 0;
+                const button = document.createElement('button');
+                button.className = `option-btn${isSingleSelect && index === 0 ? ' active' : ''}`;
+                button.dataset.value = name;
+                button.dataset.price = String(price);
+                button.type = 'button';
+                button.append(document.createTextNode(name));
+                if (price > 0) {
+                    const surcharge = document.createElement('span');
+                    surcharge.textContent = `+${String.fromCharCode(8369)}${price.toFixed(2)}`;
+                    button.append(document.createTextNode(' '), surcharge);
+                }
+                container.appendChild(button);
+            });
+        }
+
+        const showMilkOptions = !isNoCustomization && !hideMilkOnly
+            && (!currentProduct.milkChoicesConfigured || configuredMilkChoices.length > 0);
+        const showAddonOptions = !isNoCustomization
+            && (!currentProduct.addonsConfigured || configuredAddons.length > 0);
 
         if (isNoCustomization) {
-            document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
-            document.querySelector('.option-group:nth-of-type(2)').style.display = 'none'; // Add-ons
+            milkOptionGroup.style.display = 'none';
+            addonOptionGroup.style.display = 'none';
         } else if (hideMilkOnly) {
-            document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
+            milkOptionGroup.style.display = 'none';
+        } else if (!showMilkOptions) {
+            milkOptionGroup.style.display = 'none';
+        }
+        if (!showAddonOptions) {
+            addonOptionGroup.style.display = 'none';
+        }
+        if (currentProduct.milkChoicesConfigured && showMilkOptions) {
+            renderModifierButtons(milkOptions, configuredMilkChoices, true);
+        }
+        if (currentProduct.addonsConfigured && showAddonOptions) {
+            renderModifierButtons(addonOptions, configuredAddons, false);
         }
 
         // ── Option state ──
@@ -561,7 +607,6 @@ if ($shiftResult) {
         let quantity = 1;
 
         // Milk (single-select)
-        const milkOptions = document.getElementById('milkOptions');
         milkOptions.querySelectorAll('.option-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 milkOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
@@ -570,12 +615,19 @@ if ($shiftResult) {
                 updateTotal();
             });
         });
+        const initialMilkButton = milkOptions.querySelector('.option-btn.active');
+        if (initialMilkButton) {
+            selectedMilk = {
+                value: initialMilkButton.dataset.value || '',
+                price: parseFloat(initialMilkButton.dataset.price) || 0
+            };
+        } else {
+            selectedMilk = { value: '', price: 0 };
+        }
 
         // Add-ons (multi-select) — swap in the fries/poppers add-on set
         // when applicable, otherwise use the default buttons already in
         // the markup.
-        const addonOptions = document.getElementById('addonOptions');
-
         function bindAddonButtonEvents() {
             addonOptions.querySelectorAll('.option-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -789,19 +841,16 @@ if ($shiftResult) {
                 return null;
             }
 
-            const confirmProductType = getProductType(currentProduct);
-            const isNoCustomization = confirmProductType === 'no-customization';
-            const hideMilk = isNoCustomization || confirmProductType === 'fries' || confirmProductType === 'poppers';
-
             return {
                 product_id: currentProduct.id,
                 name: currentProduct.name,
                 img: currentProduct.img,
                 category: currentProduct.category,
                 basePrice: currentProduct.price,
-                milk: hideMilk ? '' : selectedMilk.value,
-                milkPrice: hideMilk ? 0 : selectedMilk.price,
-                addons: isNoCustomization ? [] : selectedAddons,
+                modifiersConfigured: productHasSavedModifierSettings,
+                milk: showMilkOptions ? selectedMilk.value : '',
+                milkPrice: showMilkOptions ? selectedMilk.price : 0,
+                addons: showAddonOptions ? selectedAddons : [],
                 orderType: selectedOrderType,
                 qty: quantity,
                 itemTotal: calculateItemTotal()
@@ -826,8 +875,16 @@ if ($shiftResult) {
                 selectedAddons = [];
                 addonOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
                 milkOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
-                milkOptions.querySelector('.option-btn').classList.add('active');
-                selectedMilk = { value: 'Original', price: 0 };
+                const firstMilkButton = milkOptions.querySelector('.option-btn');
+                if (firstMilkButton) {
+                    firstMilkButton.classList.add('active');
+                    selectedMilk = {
+                        value: firstMilkButton.dataset.value || '',
+                        price: parseFloat(firstMilkButton.dataset.price) || 0
+                    };
+                } else {
+                    selectedMilk = { value: '', price: 0 };
+                }
                 orderTypeOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
                 orderTypeOptions.querySelector('.option-btn').classList.add('active');
                 selectedOrderType = 'Dine In';

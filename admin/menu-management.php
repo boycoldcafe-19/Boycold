@@ -15,7 +15,7 @@ boycold_ensure_inventory_schema($connect);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="admin-css/menu-management.css">
+    <link rel="stylesheet" href="admin-css/menu-management.css?v=<?= @filemtime(__DIR__ . '/admin-css/menu-management.css') ?: time() ?>">
     <link rel="stylesheet" href="admin-css/dashboard.css">
     <link rel="stylesheet" href="admin-css/admin-sidebar.css">
     <link rel="stylesheet" href="admin-css/admin-responsive.css">
@@ -3975,8 +3975,12 @@ boycold_ensure_inventory_schema($connect);
                     </div>
 
                     <div class="panel">
-                        <h3>Milk Choice</h3>
-                        <div class="milk-choice-list">
+                        <div class="panel-header-row">
+                            <h3>Milk Choice <span class="optional">(Optional)</span></h3>
+                            <button type="button" class="btn-addon" id="addMilkChoiceBtn"><i class="fa-solid fa-plus"></i> Add</button>
+                        </div>
+                        <p class="optional">Milk choices are single-select and saved separately from add-ons.</p>
+                        <div class="addon-list milk-choice-list" id="milkChoiceList">
                             <div class="milk-choice-row">
                                 <input class="milk-choice-name" type="text" value="Original" readonly>
                                 <div class="price-input"><span>₱</span><input type="number" value="0.00" readonly></div>
@@ -4125,8 +4129,12 @@ boycold_ensure_inventory_schema($connect);
                     </div>
 
                     <div class="panel">
-                        <h3>Milk Choice</h3>
-                        <div class="milk-choice-list">
+                        <div class="panel-header-row">
+                            <h3>Milk Choice</h3>
+                            <button type="button" class="btn-addon" id="editAddMilkChoiceBtn"><i class="fa-solid fa-plus"></i> Add</button>
+                        </div>
+                        <p class="optional" id="editMilkChoiceSource">Shown separately as a single-select choice.</p>
+                        <div class="addon-list milk-choice-list" id="editMilkChoiceList">
                             <div class="milk-choice-row">
                                 <input class="milk-choice-name" type="text" value="Original" readonly>
                                 <div class="price-input"><span>₱</span><input type="number" value="0.00" readonly></div>
@@ -4917,13 +4925,25 @@ boycold_ensure_inventory_schema($connect);
                 addons.forEach(addon => appendAddonRow(addonList, addon));
             }
 
-            // New products begin with the same defaults that their menu type
-            // already offers. Admins can freely remove or change any row.
+            function collectModifierRows(list, label) {
+                const modifiers = [];
+                list?.querySelectorAll('.addon-row').forEach(row => {
+                    const name = row.querySelector('.addon-name')?.value.trim() || '';
+                    const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
+                    if (!name && !priceRaw) return;
+                    const price = Number(priceRaw);
+                    if (!name || !Number.isFinite(price) || price < 0) {
+                        throw new Error(`Each ${label} needs a name and a valid price.`);
+                    }
+                    modifiers.push({ name, price });
+                });
+                return modifiers;
+            }
+
+            // New products remain empty until the administrator adds choices.
+            // An intentionally blank list must not regain legacy defaults.
             function populateAddons(category) {
-                const addonList = document.getElementById('addonList');
-                if (!addonList || addonList.children.length) return;
-                const productName = document.getElementById('productName')?.value || '';
-                renderAddonRows(addonList, menuAddonsForProduct(productName, category));
+                void category;
             }
 
             // Populate add-ons when category changes
@@ -4932,8 +4952,7 @@ boycold_ensure_inventory_schema($connect);
                 productCategory.addEventListener('change', function() {
                     populateAddons(this.value);
                 });
-                // Initial population
-                populateAddons(productCategory.value);
+                // Do not inject category defaults for a new product.
             }
 
             document.getElementById('productName')?.addEventListener('input', () => {
@@ -4969,18 +4988,18 @@ boycold_ensure_inventory_schema($connect);
             }
 
             function collectProductAddons() {
-                const addons = [];
-                document.querySelectorAll('#addonList .addon-row').forEach(row => {
-                    const name = row.querySelector('.addon-name')?.value.trim() || '';
-                    const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
-                    if (!name && !priceRaw) return;
-                    const price = Number(priceRaw);
-                    if (!name || !Number.isFinite(price) || price < 0) {
-                        throw new Error('Each add-on needs a name and a valid price.');
-                    }
-                    addons.push({ name, price });
-                });
-                return addons;
+                return collectModifierRows(document.getElementById('addonList'), 'add-on');
+            }
+
+            const milkChoiceList = document.getElementById('milkChoiceList');
+            const addMilkChoiceBtn = document.getElementById('addMilkChoiceBtn');
+            // Clear the old static HTML. Persisted milk choices use the same
+            // row controls as add-ons, but are saved in a separate group.
+            renderAddonRows(milkChoiceList, []);
+            addMilkChoiceBtn?.addEventListener('click', () => appendAddonRow(milkChoiceList));
+
+            function collectProductMilkChoices() {
+                return collectModifierRows(milkChoiceList, 'milk choice');
             }
 
             if (productImageInput && imagePreview && imagePreviewBox) {
@@ -5033,8 +5052,10 @@ boycold_ensure_inventory_schema($connect);
                     const cups = stockQtyInput.value ? stockQtyInput.value + ' pcs' : '40 pcs';
                     const servings = servingsQtyInput.value ? servingsQtyInput.value : '25';
                     let addons;
+                    let milkChoices;
                     try {
                         addons = collectProductAddons();
+                        milkChoices = collectProductMilkChoices();
                     } catch (error) {
                         alert(error.message);
                         return;
@@ -5045,6 +5066,7 @@ boycold_ensure_inventory_schema($connect);
                     formData.append('price', price);
                     formData.append('is_available', document.getElementById('productStatus').checked ? '1' : '0');
                     formData.append('addons', JSON.stringify(addons));
+                    formData.append('milk_choices', JSON.stringify(milkChoices));
                     const imageFile = productImageInput?.files?.[0];
                     if (imageFile) formData.append('image_file', imageFile);
 
@@ -5142,6 +5164,9 @@ boycold_ensure_inventory_schema($connect);
             const editAddonList = document.getElementById('editAddonList');
             const editAddAddonBtn = document.getElementById('editAddAddonBtn');
             const editAddonSource = document.getElementById('editAddonSource');
+            const editMilkChoiceList = document.getElementById('editMilkChoiceList');
+            const editAddMilkChoiceBtn = document.getElementById('editAddMilkChoiceBtn');
+            const editMilkChoiceSource = document.getElementById('editMilkChoiceSource');
             let editImageChanged = false;
             let editImageRemoved = false;
 
@@ -5211,22 +5236,27 @@ boycold_ensure_inventory_schema($connect);
                 };
             }
 
+            function getEditProductMilkChoices(product) {
+                const savedChoices = Array.isArray(product?.milk_choices) ? product.milk_choices : [];
+                if (savedChoices.length || product?.milk_choices_configured) {
+                    return { choices: savedChoices, source: 'Saved for this product' };
+                }
+                return {
+                    choices: [],
+                    source: 'No milk choices configured for this product'
+                };
+            }
+
             function collectEditProductAddons() {
-                const addons = [];
-                editAddonList?.querySelectorAll('.addon-row').forEach(row => {
-                    const name = row.querySelector('.addon-name')?.value.trim() || '';
-                    const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
-                    if (!name && !priceRaw) return;
-                    const price = Number(priceRaw);
-                    if (!name || !Number.isFinite(price) || price < 0) {
-                        throw new Error('Each add-on needs a name and a valid price.');
-                    }
-                    addons.push({ name, price });
-                });
-                return addons;
+                return collectModifierRows(editAddonList, 'add-on');
+            }
+
+            function collectEditProductMilkChoices() {
+                return collectModifierRows(editMilkChoiceList, 'milk choice');
             }
 
             editAddAddonBtn?.addEventListener('click', () => appendAddonRow(editAddonList));
+            editAddMilkChoiceBtn?.addEventListener('click', () => appendAddonRow(editMilkChoiceList));
 
             function openEditModal(card) {
                 if (!card) return;
@@ -5253,6 +5283,9 @@ boycold_ensure_inventory_schema($connect);
                 const addOnInfo = getEditProductAddons(product, name, category);
                 renderAddonRows(editAddonList, addOnInfo.addons);
                 if (editAddonSource) editAddonSource.textContent = addOnInfo.source;
+                const milkChoiceInfo = getEditProductMilkChoices(product);
+                renderAddonRows(editMilkChoiceList, milkChoiceInfo.choices);
+                if (editMilkChoiceSource) editMilkChoiceSource.textContent = milkChoiceInfo.source;
 
                 const currentImage = card.querySelector('.card-image img');
                 if (editImagePreview) editImagePreview.src = currentImage?.src || '';
@@ -5338,8 +5371,10 @@ boycold_ensure_inventory_schema($connect);
                     }
 
                     let addons;
+                    let milkChoices;
                     try {
                         addons = collectEditProductAddons();
+                        milkChoices = collectEditProductMilkChoices();
                     } catch (error) {
                         alert(error.message);
                         return;
@@ -5353,6 +5388,7 @@ boycold_ensure_inventory_schema($connect);
                     formData.append('price', String(priceValue));
                     formData.append('is_available', newStatus === 'unavailable' ? '0' : '1');
                     formData.append('addons', JSON.stringify(addons));
+                    formData.append('milk_choices', JSON.stringify(milkChoices));
                     if (editImageChanged && editProductImageInput?.files?.[0]) {
                         formData.append('image_file', editProductImageInput.files[0]);
                     }

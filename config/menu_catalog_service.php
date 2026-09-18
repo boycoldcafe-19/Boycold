@@ -206,21 +206,60 @@ function boycold_ensure_product_addons_schema(mysqli $connect): void
         }
     }
 
+    // Milk choices are modifiers too, but have a single-select UI.  Keep a
+    // separate flag so an intentionally empty list does not fall back to the
+    // legacy, hard-coded Original/Oat Milk choices.
+    $milkConfiguredColumn = $connect->query("SHOW COLUMNS FROM products LIKE 'milk_choices_configured'");
+    if (!$milkConfiguredColumn || $milkConfiguredColumn->num_rows === 0) {
+        if (!$connect->query(
+            'ALTER TABLE products ADD COLUMN milk_choices_configured TINYINT(1) NOT NULL DEFAULT 0 AFTER addons_configured'
+        )) {
+            throw new RuntimeException('Could not prepare product milk-choice settings: ' . $connect->error);
+        }
+    }
+
     $sql = "CREATE TABLE IF NOT EXISTS product_addons (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         product_id INT NOT NULL,
+        modifier_type ENUM('addon', 'milk') NOT NULL DEFAULT 'addon',
         addon_name VARCHAR(100) NOT NULL,
         price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         display_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        UNIQUE KEY uq_product_addons_name (product_id, addon_name),
-        KEY idx_product_addons_product_order (product_id, display_order)
+        UNIQUE KEY uq_product_addons_type_name (product_id, modifier_type, addon_name),
+        KEY idx_product_addons_product_order (product_id, modifier_type, display_order)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
     if (!$connect->query($sql)) {
         throw new RuntimeException('Could not prepare product add-ons: ' . $connect->error);
+    }
+
+    $modifierColumn = $connect->query("SHOW COLUMNS FROM product_addons LIKE 'modifier_type'");
+    if (!$modifierColumn || $modifierColumn->num_rows === 0) {
+        if (!$connect->query(
+            "ALTER TABLE product_addons ADD COLUMN modifier_type ENUM('addon', 'milk') NOT NULL DEFAULT 'addon' AFTER product_id"
+        )) {
+            throw new RuntimeException('Could not prepare product milk choices: ' . $connect->error);
+        }
+    }
+
+    // The original uniqueness rule did not allow the same label in the two
+    // separate groups.  Replace it with a type-aware key without altering
+    // any existing add-on records (they remain type=addon by default).
+    $legacyIndex = $connect->query("SHOW INDEX FROM product_addons WHERE Key_name = 'uq_product_addons_name'");
+    if ($legacyIndex && $legacyIndex->num_rows > 0
+        && !$connect->query('ALTER TABLE product_addons DROP INDEX uq_product_addons_name')) {
+        throw new RuntimeException('Could not update the product modifier index: ' . $connect->error);
+    }
+    $typeIndex = $connect->query("SHOW INDEX FROM product_addons WHERE Key_name = 'uq_product_addons_type_name'");
+    if (!$typeIndex || $typeIndex->num_rows === 0) {
+        if (!$connect->query(
+            'ALTER TABLE product_addons ADD UNIQUE KEY uq_product_addons_type_name (product_id, modifier_type, addon_name)'
+        )) {
+            throw new RuntimeException('Could not finish the product modifier setup: ' . $connect->error);
+        }
     }
 }
 
@@ -272,6 +311,15 @@ function boycold_menu_normalize_addons(mixed $value): array
 /** @return array<int, array<int, array{name: string, price: float}>> */
 function boycold_menu_get_product_addons(mysqli $connect, array $productIds): array
 {
+    $modifiers = boycold_menu_get_product_modifiers($connect, $productIds);
+    return array_map(static fn (array $groups): array => $groups['addons'], $modifiers);
+}
+
+/**
+ * @return array<int, array{addons: array<int, array{name: string, price: float}>, milk_choices: array<int, array{name: string, price: float}>}>
+ */
+function boycold_menu_get_product_modifiers(mysqli $connect, array $productIds): array
+{
     boycold_ensure_product_addons_schema($connect);
     $ids = array_values(array_unique(array_filter(array_map('intval', $productIds), static fn (int $id): bool => $id > 0)));
     if (!$ids) {
@@ -279,64 +327,83 @@ function boycold_menu_get_product_addons(mysqli $connect, array $productIds): ar
     }
 
     $result = $connect->query(
-        'SELECT product_id, addon_name, price FROM product_addons WHERE product_id IN (' . implode(',', $ids) . ') ORDER BY product_id, display_order, id'
+        'SELECT product_id, modifier_type, addon_name, price FROM product_addons WHERE product_id IN (' . implode(',', $ids) . ') ORDER BY product_id, modifier_type, display_order, id'
     );
     if (!$result) {
         throw new RuntimeException('Could not load product add-ons: ' . $connect->error);
     }
 
-    $addons = [];
+    $modifiers = [];
     while ($row = $result->fetch_assoc()) {
         $productId = (int) $row['product_id'];
-        $addons[$productId][] = [
+        if (!isset($modifiers[$productId])) {
+            $modifiers[$productId] = ['addons' => [], 'milk_choices' => []];
+        }
+        $group = ($row['modifier_type'] ?? 'addon') === 'milk' ? 'milk_choices' : 'addons';
+        $modifiers[$productId][$group][] = [
             'name' => (string) $row['addon_name'],
             'price' => (float) $row['price'],
         ];
     }
-    return $addons;
+    return $modifiers;
+}
+
+/** @param array<int, array{name: string, price: float}> $modifiers */
+function boycold_menu_save_product_modifier_group(mysqli $connect, int $productId, array $modifiers, string $modifierType): void
+{
+    boycold_ensure_product_addons_schema($connect);
+    if ($productId < 1) {
+        throw new RuntimeException('A product ID is required to save modifiers.');
+    }
+    if (!in_array($modifierType, ['addon', 'milk'], true)) {
+        throw new RuntimeException('Invalid product modifier type.');
+    }
+
+    $delete = $connect->prepare('DELETE FROM product_addons WHERE product_id = ? AND modifier_type = ?');
+    if (!$delete) {
+        throw new RuntimeException('Could not prepare existing modifiers for replacement.');
+    }
+    $delete->bind_param('is', $productId, $modifierType);
+    if (!$delete->execute()) {
+        $error = $delete->error;
+        $delete->close();
+        throw new RuntimeException('Could not replace product modifiers: ' . $error);
+    }
+    $delete->close();
+
+    if (!$modifiers) {
+        return;
+    }
+    $insert = $connect->prepare(
+        'INSERT INTO product_addons (product_id, modifier_type, addon_name, price, display_order) VALUES (?, ?, ?, ?, ?)'
+    );
+    if (!$insert) {
+        throw new RuntimeException('Could not prepare product modifier save.');
+    }
+    foreach ($modifiers as $position => $modifier) {
+        $name = (string) $modifier['name'];
+        $price = (float) $modifier['price'];
+        $displayOrder = (int) $position;
+        $insert->bind_param('issdi', $productId, $modifierType, $name, $price, $displayOrder);
+        if (!$insert->execute()) {
+            $error = $insert->error;
+            $insert->close();
+            throw new RuntimeException('Could not save product modifiers: ' . $error);
+        }
+    }
+    $insert->close();
 }
 
 /** @param array<int, array{name: string, price: float}> $addons */
 function boycold_menu_save_product_addons(mysqli $connect, int $productId, array $addons): void
 {
-    boycold_ensure_product_addons_schema($connect);
-    if ($productId < 1) {
-        throw new RuntimeException('A product ID is required to save add-ons.');
-    }
+    boycold_menu_save_product_modifier_group($connect, $productId, $addons, 'addon');
+}
 
-    $delete = $connect->prepare('DELETE FROM product_addons WHERE product_id = ?');
-    if (!$delete) {
-        throw new RuntimeException('Could not prepare existing add-ons for replacement.');
-    }
-    $delete->bind_param('i', $productId);
-    if (!$delete->execute()) {
-        $error = $delete->error;
-        $delete->close();
-        throw new RuntimeException('Could not replace product add-ons: ' . $error);
-    }
-    $delete->close();
-
-    if (!$addons) {
-        return;
-    }
-    $insert = $connect->prepare(
-        'INSERT INTO product_addons (product_id, addon_name, price, display_order) VALUES (?, ?, ?, ?)'
-    );
-    if (!$insert) {
-        throw new RuntimeException('Could not prepare product add-on save.');
-    }
-    foreach ($addons as $position => $addon) {
-        $name = (string) $addon['name'];
-        $price = (float) $addon['price'];
-        $displayOrder = (int) $position;
-        $insert->bind_param('isdi', $productId, $name, $price, $displayOrder);
-        if (!$insert->execute()) {
-            $error = $insert->error;
-            $insert->close();
-            throw new RuntimeException('Could not save product add-ons: ' . $error);
-        }
-    }
-    $insert->close();
+/** @param array<int, array{name: string, price: float}> $milkChoices */
+function boycold_menu_save_product_milk_choices(mysqli $connect, int $productId, array $milkChoices): void
+{
+    boycold_menu_save_product_modifier_group($connect, $productId, $milkChoices, 'milk');
 }
 
 /**

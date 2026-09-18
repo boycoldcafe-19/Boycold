@@ -49,7 +49,7 @@ $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Fetch all products from database
 boycold_ensure_inventory_schema($connect);
-$productsStmt = $connect->prepare("SELECT id, product_name, description, price, image, category, is_available FROM products WHERE is_available = 1 ORDER BY category, product_name");
+$productsStmt = $connect->prepare("SELECT id, product_name, description, price, image, category, is_available, addons_configured, milk_choices_configured FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsStmt->execute();
 $productsResult = $productsStmt->get_result();
 $products = [];
@@ -57,6 +57,7 @@ while ($row = $productsResult->fetch_assoc()) {
     $products[] = $row;
 }
 $productsStmt->close();
+$productModifiers = boycold_menu_get_product_modifiers($connect, array_column($products, 'id'));
 $productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($products, 'product_name'));
 $menuCategories = boycold_menu_get_categories($connect);
 
@@ -274,6 +275,10 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                              data-category="<?= htmlspecialchars($product['category'], ENT_QUOTES) ?>"
                              data-id="<?= (int) $product['id'] ?>"
                              data-product-name="<?= htmlspecialchars($product['product_name'], ENT_QUOTES) ?>"
+                             data-addons="<?= htmlspecialchars(json_encode($productModifiers[(int) $product['id']]['addons'] ?? []), ENT_QUOTES) ?>"
+                             data-milk-choices="<?= htmlspecialchars(json_encode($productModifiers[(int) $product['id']]['milk_choices'] ?? []), ENT_QUOTES) ?>"
+                             data-addons-configured="<?= !empty($product['addons_configured']) ? '1' : '0' ?>"
+                             data-milk-choices-configured="<?= !empty($product['milk_choices_configured']) ? '1' : '0' ?>"
                              data-can-order="<?= $canOrder ? '1' : '0' ?>"
                              data-stock-status="<?= $stockStatus ?>"
                              data-available-servings="<?= $servings ?>"
@@ -853,6 +858,15 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             });
         }
 
+        function parseProductModifierGroup(value) {
+            try {
+                const parsed = JSON.parse(value || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
         function attachOrderButtonHandlers() {
             document.querySelectorAll('.product-card').forEach(card => {
                 const orderBtn = card.querySelector('.btn-order');
@@ -876,7 +890,18 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                     const category = card.getAttribute('data-category') || '';
                     const availableServings = Number(card.dataset.availableServings || 0);
 
-                    const product = { id, name, price, img, category, availableServings };
+                    const product = {
+                        id,
+                        name,
+                        price,
+                        img,
+                        category,
+                        availableServings,
+                        addons: parseProductModifierGroup(card.dataset.addons),
+                        milkChoices: parseProductModifierGroup(card.dataset.milkChoices),
+                        addonsConfigured: card.dataset.addonsConfigured === '1',
+                        milkChoicesConfigured: card.dataset.milkChoicesConfigured === '1'
+                    };
                     // Only clear cart if this is a fresh start (not continuing an existing order)
                     // Check if we have items in cart - if yes, we're continuing an order
                     fetch('../api/pos_cart_api.php?action=get_cart')
