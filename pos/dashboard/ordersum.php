@@ -244,7 +244,7 @@ if ($shiftResult) {
 
                             <div class="options-panel">
 
-                                <div class="option-group" id="milkOptionGroup">
+                                <div class="option-group">
                                     <div class="option-label"><i class="fa-solid fa-mug-saucer"></i> Milk Choice</div>
                                     <div class="option-buttons" id="milkOptions">
                                         <button class="option-btn active" data-value="Original" data-price="0" type="button">Original</button>
@@ -252,9 +252,13 @@ if ($shiftResult) {
                                     </div>
                                 </div>
 
-                                <div class="option-group" id="addonOptionGroup">
+                                <div class="option-group">
                                     <div class="option-label"><i class="fa-solid fa-plus"></i> Add - ons</div>
-                                    <div class="option-buttons multi" id="addonOptions"></div>
+                                    <div class="option-buttons multi" id="addonOptions">
+                                        <button class="option-btn" data-value="Espresso Shot" data-price="15" type="button">Espresso Shot <span>+₱15</span></button>
+                                        <button class="option-btn" data-value="Whipped Cream" data-price="15" type="button">Whipped Cream <span>+₱15</span></button>
+                                        <button class="option-btn" data-value="Chocolate Drizzle" data-price="15" type="button">Chocolate Drizzle <span>+₱15</span></button>
+                                    </div>
                                 </div>
 
                                 <div class="option-group">
@@ -490,25 +494,65 @@ if ($shiftResult) {
         document.getElementById('productName').textContent = currentProduct.name;
         document.getElementById('productPrice').textContent = `₱${currentProduct.price.toFixed(2)}`;
 
-        // Add-ons must always come from Menu Management. Empty or stale menu
-        // metadata must never restore the old hard-coded choices.
-        const productAddons = (Array.isArray(currentProduct.addons) ? currentProduct.addons : [])
-            .map((addon) => ({
-                name: String(addon?.name ?? addon?.value ?? '').trim(),
-                price: Number(addon?.price)
-            }))
-            .filter((addon) => addon.name && Number.isFinite(addon.price) && addon.price >= 0);
-        const hasProductAddons = productAddons.length > 0;
-        const noMilkCategories = new Set(['rice-meal', 'light-snack', 'pasta', 'waffle', 'waffles', 'quesadilla', 'snacks']);
-        const showMilkChoices = hasProductAddons
-            && !noMilkCategories.has(String(currentProduct.category || '').trim().toLowerCase());
-        const milkOptionGroup = document.getElementById('milkOptionGroup');
-        const addonOptionGroup = document.getElementById('addonOptionGroup');
+        // Bites/snacks customization rules:
+        // - Waffles, quesadillas, beef nachos, and the Messy Tuna Spinach
+        //   are served as-is — no milk or add-on options at all.
+        // - French Fries gets a set of flavor add-ons (cheese sauce, cheese
+        //   powder, BBQ powder, sour cream powder), all the same price.
+        // - Both "poppers" items (Chicken Poppers, and the Fries and
+        //   Chicken Poppers combo) only offer a cheese sauce dip, priced
+        //   differently from the fries flavor add-ons.
+        // Everything else (coffee/drinks) keeps the default Milk Choice +
+        // generic Add-ons already in the markup.
+        const FRIES_ADDONS = [
+            { value: 'Cheese Sauce', price: 30 },
+            { value: 'Cheese Powder', price: 30 },
+            { value: 'BBQ Powder', price: 30 },
+            { value: 'Sour Cream Powder', price: 30 }
+        ];
+        const POPPERS_ADDONS = [
+            { value: 'Cheese Sauce', price: 40 }
+        ];
 
-        // An item with no configured add-ons has no modifiers: only order
-        // type and quantity remain visible.
-        if (!showMilkChoices) milkOptionGroup.style.display = 'none';
-        if (!hasProductAddons) addonOptionGroup.style.display = 'none';
+        function getProductType(product) {
+            const category = (product.category || '').trim().toLowerCase();
+            const noCustomizationCategories = new Set([
+                'rice-meal',
+                'light-snack',
+                'pasta',
+                'waffle',
+                'waffles',
+                'quesadilla'
+            ]);
+
+            if (noCustomizationCategories.has(category)) return 'no-customization';
+            if (category !== 'snacks') return 'default';
+
+            const name = (product.name || '').toLowerCase();
+            const id = (product.id || '').toLowerCase();
+            const has = (needle) => name.includes(needle) || id.includes(needle);
+
+            if (has('waffle') || has('quesadilla') || has('nachos') || has('tuna')) return 'no-customization';
+            if (has('poppers')) return 'poppers'; // Chicken Poppers + Fries and Chicken Poppers
+            if (has('fries')) return 'fries'; // French Fries only (poppers combo already matched above)
+            return 'default';
+        }
+
+        // Kept for the spots that only care about the hide-everything case.
+        function isNoCustomizationProduct(product) {
+            return getProductType(product) === 'no-customization';
+        }
+
+        const productType = getProductType(currentProduct);
+        const isNoCustomization = productType === 'no-customization';
+        const hideMilkOnly = productType === 'fries' || productType === 'poppers';
+
+        if (isNoCustomization) {
+            document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
+            document.querySelector('.option-group:nth-of-type(2)').style.display = 'none'; // Add-ons
+        } else if (hideMilkOnly) {
+            document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
+        }
 
         // ── Option state ──
         let selectedMilk = { value: 'Original', price: 0 };
@@ -527,7 +571,9 @@ if ($shiftResult) {
             });
         });
 
-        // Add-ons (multi-select) from the administrator-managed list.
+        // Add-ons (multi-select) — swap in the fries/poppers add-on set
+        // when applicable, otherwise use the default buttons already in
+        // the markup.
         const addonOptions = document.getElementById('addonOptions');
 
         function bindAddonButtonEvents() {
@@ -552,7 +598,11 @@ if ($shiftResult) {
             ).join('');
         }
 
-        if (hasProductAddons) renderAddonButtons(productAddons);
+        if (productType === 'fries') {
+            renderAddonButtons(FRIES_ADDONS);
+        } else if (productType === 'poppers') {
+            renderAddonButtons(POPPERS_ADDONS);
+        }
         bindAddonButtonEvents();
 
         // Order type (single-select)
@@ -586,9 +636,12 @@ if ($shiftResult) {
         });
 
         function calculateItemTotal() {
+            if (isNoCustomizationProduct(currentProduct)) {
+                return currentProduct.price * quantity;
+            }
+
             const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-            const milkPrice = showMilkChoices ? selectedMilk.price : 0;
-            return (currentProduct.price + milkPrice + addonsTotal) * quantity;
+            return (currentProduct.price + selectedMilk.price + addonsTotal) * quantity;
         }
 
         function updateTotal() {
@@ -673,19 +726,31 @@ if ($shiftResult) {
                             ? item.addons.split(',').map(value => ({ value: value.trim(), price: 0 })).filter(a => a.value)
                             : [];
                     
-                    const addonsText = addons
-                        .map(a => a?.value || a?.name || a)
-                        .filter(Boolean)
-                        .join(', ');
-                    const milkLine = item.milk ? `<li>${item.milk}</li>` : '';
-                    const detailsHtml = `
-                        <ul>
-                            ${milkLine}
-                            ${addonsText ? `<li>${addonsText}</li>` : ''}
-                            <li>Order Type: ${item.orderType}</li>
-                            <li>Qty: ${item.qty}</li>
-                        </ul>
-                    `;
+                    // For waffles/quesadillas/nachos, don't show milk/addons, just quantity.
+                    // For fries/poppers, show addons but skip the milk line (doesn't apply to food).
+                    const itemType = getProductType(item);
+                    let detailsHtml = '';
+                    if (itemType === 'no-customization') {
+                        detailsHtml = `
+                            <ul>
+                                <li>Order Type: ${item.orderType}</li>
+                                <li>Qty: ${item.qty}</li>
+                            </ul>
+                        `;
+                    } else {
+                        const addonsText = addons.length
+                            ? addons.map(a => a.value).join(', ')
+                            : 'No Add-ons';
+                        const milkLine = itemType === 'default' ? `<li>${item.milk}</li>` : '';
+                        detailsHtml = `
+                            <ul>
+                                ${milkLine}
+                                <li>${addonsText}</li>
+                                <li>Order Type: ${item.orderType}</li>
+                                <li>Qty: ${item.qty}</li>
+                            </ul>
+                        `;
+                    }
                     
                     el.innerHTML = `
                         <img src="${item.img}" alt="">
@@ -724,15 +789,19 @@ if ($shiftResult) {
                 return null;
             }
 
+            const confirmProductType = getProductType(currentProduct);
+            const isNoCustomization = confirmProductType === 'no-customization';
+            const hideMilk = isNoCustomization || confirmProductType === 'fries' || confirmProductType === 'poppers';
+
             return {
                 product_id: currentProduct.id,
                 name: currentProduct.name,
                 img: currentProduct.img,
                 category: currentProduct.category,
                 basePrice: currentProduct.price,
-                milk: showMilkChoices ? selectedMilk.value : '',
-                milkPrice: showMilkChoices ? selectedMilk.price : 0,
-                addons: hasProductAddons ? selectedAddons : [],
+                milk: hideMilk ? '' : selectedMilk.value,
+                milkPrice: hideMilk ? 0 : selectedMilk.price,
+                addons: isNoCustomization ? [] : selectedAddons,
                 orderType: selectedOrderType,
                 qty: quantity,
                 itemTotal: calculateItemTotal()

@@ -47,14 +47,12 @@ if (!isset($_SESSION['branch_id'])) {
 
 // Fetch all products from DB
 boycold_ensure_inventory_schema($connect);
-boycold_ensure_product_addons_schema($connect);
 $branchId = (int) $_SESSION['branch_id'];
-$productsResult = $connect->query("SELECT id, product_name, price, image, category, popular_category, addons_configured FROM products WHERE is_available = 1 ORDER BY category, product_name");
+$productsResult = $connect->query("SELECT id, product_name, price, image, category, popular_category FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsList = [];
 while ($productsResult && ($row = $productsResult->fetch_assoc())) {
     $productsList[] = $row;
 }
-$productAddons = boycold_menu_get_product_addons($connect, array_column($productsList, 'id'));
 $productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($productsList, 'product_name'));
 $menuCategories = boycold_menu_get_categories($connect);
 ?>
@@ -203,10 +201,6 @@ $menuCategories = boycold_menu_get_categories($connect);
                             $category = htmlspecialchars($categoryValue);
                             $popularCategory = strtolower(trim((string) ($product['popular_category'] ?? '')));
                             $popularCategory = htmlspecialchars($popularCategory);
-                            $addons = $productAddons[(int) $product['id']] ?? [];
-                            // Never expose legacy/default choices. A product has
-                            // add-ons only when the admin saved actual rows for it.
-                            $addonsConfigured = !empty($addons);
 
                             $dataCategory = $category;
                     ?>
@@ -222,9 +216,7 @@ $menuCategories = boycold_menu_get_categories($connect);
                                 data-can-order="<?= $canOrder ? '1' : '0' ?>"
                                 data-stock-status="<?= $stockStatus ?>"
                                 data-available-servings="<?= $servings ?>"
-                                data-stock-reason="<?= $stockReason ?>"
-                                data-addons-configured="<?= $addonsConfigured ? '1' : '0' ?>"
-                                data-addons="<?= htmlspecialchars(json_encode($addons), ENT_QUOTES, 'UTF-8') ?>">
+                                data-stock-reason="<?= $stockReason ?>">
                                 <div class="card-image">
                                     <div class="card-image-placeholder">
                                         <div class="card-top">

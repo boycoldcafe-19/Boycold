@@ -425,15 +425,7 @@ document.addEventListener('click', async function(e) {
             return;
         }
 
-        const params = new URLSearchParams({
-            name,
-            price,
-            image,
-            servings,
-            branch_id: branchId,
-            addons: card.dataset.addons || '[]',
-            addons_configured: card.dataset.addonsConfigured || '0'
-        });
+        const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId });
         window.location.href = 'ordercustom.php?' + params.toString();
         return;
     }
