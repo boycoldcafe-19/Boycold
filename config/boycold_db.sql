@@ -716,14 +716,16 @@ ALTER TABLE `orders`
   ADD KEY `idx_orders_shift_id` (`shift_id`),
   ADD KEY `idx_orders_created_at` (`created_at`),
   ADD KEY `idx_payment_reference` (`payment_reference`),
-  ADD KEY `idx_orders_status_created_at` (`status`,`created_at`);
+  ADD KEY `idx_orders_status_created_at` (`status`,`created_at`),
+  ADD KEY `idx_orders_forecast_branch_date` (`branch_id`,`created_at`,`status`,`payment_status`);
 
 --
 -- Indexes for table `order_items`
 --
 ALTER TABLE `order_items`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_items_order` (`order_id`);
+  ADD KEY `fk_items_order` (`order_id`),
+  ADD KEY `idx_order_items_order_product` (`order_id`,`product_name`);
 
 --
 -- Indexes for table `otp`
