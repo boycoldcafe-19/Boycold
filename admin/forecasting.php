@@ -449,9 +449,11 @@ while ($row = $branchesResult->fetch_assoc()) {
 
         // State
         let forecastChart = null;
-        let currentBranchId = '<?php echo $branchId; ?>';
+        let currentBranchId = <?php echo json_encode((string) $branchId); ?>;
         let historicalDays = 28;
         let autoRefreshInterval = null;
+        const forecastAdminId = <?php echo json_encode((string) $adminAccount['id']); ?>;
+        const forecastBranchPreferenceKey = `boycold.forecasting.branch.${forecastAdminId}`;
         const demandRangeFromAnalytics = {
             startDate: <?php echo json_encode($_GET['demand_start_date'] ?? null); ?>,
             endDate: <?php echo json_encode($_GET['demand_end_date'] ?? null); ?>
@@ -472,7 +474,10 @@ while ($row = $branchesResult->fetch_assoc()) {
             }
             const url = `api/forecast_api.php?${params.toString()}`;
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
                 const data = await response.json();
                 if (data.success) {
                     updateDashboard(data);
@@ -1113,6 +1118,58 @@ while ($row = $branchesResult->fetch_assoc()) {
         const branchMenu = document.querySelector('.branch-menu');
         const branchOptions = document.querySelectorAll('.branch-option');
 
+        function branchOptionFor(value) {
+            return Array.from(branchOptions).find(option => option.dataset.value === String(value)) || null;
+        }
+
+        function selectForecastBranch(value, { persist = false, updateUrl = false } = {}) {
+            const option = branchOptionFor(value);
+            if (!option) {
+                return false;
+            }
+
+            currentBranchId = option.dataset.value;
+            branchTrigger.querySelector('.branch-trigger-label').textContent = option.textContent.trim();
+
+            if (persist) {
+                try {
+                    localStorage.setItem(forecastBranchPreferenceKey, currentBranchId);
+                } catch (error) {
+                    // A blocked browser storage setting should not stop reports.
+                }
+            }
+
+            if (updateUrl) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('branch_id', currentBranchId);
+                window.history.replaceState({}, '', url);
+            }
+
+            return true;
+        }
+
+        function restoreForecastBranch() {
+            const url = new URL(window.location.href);
+            const branchFromUrl = url.searchParams.get('branch_id');
+            let preferredBranch = branchFromUrl;
+
+            // A selected branch used to exist only in JavaScript, so it was
+            // lost after logout. Restore it for the same admin unless a link
+            // explicitly supplies another branch.
+            if (!preferredBranch) {
+                try {
+                    preferredBranch = localStorage.getItem(forecastBranchPreferenceKey);
+                } catch (error) {
+                    preferredBranch = null;
+                }
+            }
+
+            return selectForecastBranch(preferredBranch || currentBranchId, {
+                persist: Boolean(preferredBranch),
+                updateUrl: Boolean(preferredBranch) && !branchFromUrl
+            });
+        }
+
         branchTrigger?.addEventListener('click', (e) => {
             e.stopPropagation();
             branchMenu.classList.toggle('open');
@@ -1127,8 +1184,7 @@ while ($row = $branchesResult->fetch_assoc()) {
         branchOptions.forEach(option => {
             option.addEventListener('click', () => {
                 const branchId = option.getAttribute('data-value');
-                currentBranchId = branchId;
-                branchTrigger.querySelector('.branch-trigger-label').textContent = option.textContent;
+                selectForecastBranch(branchId, { persist: true, updateUrl: true });
                 branchMenu.classList.remove('open');
                 // Refresh data
                 fetchForecastData();
@@ -1216,6 +1272,8 @@ while ($row = $branchesResult->fetch_assoc()) {
         // INIT
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
+            restoreForecastBranch();
+
             // Initial fetch
             fetchForecastData();
 
