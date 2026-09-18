@@ -255,15 +255,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="../picture/LOGO.png" width="50px">
     </header>
 
-    <div class="pic1">
-        <img src="../picture/Mask group.png" width="750px">
-    </div>
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
-    <div class="otp-container">
-        <h1 class="font">OTP Verification</h1>
-        <p class="p1">Enter the 6-digit verification code sent to your email</p>
+    <main class="otp-layout">
+        <section class="otp-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
+            <div class="otp-container">
+                <h1 class="font">OTP Verification</h1>
+                <p class="p1">Enter the 6-digit verification code sent to your email</p>
 
         <?php if ($error): ?>
             <p style="color:red;font-size:14px;"><?= htmlspecialchars($error) ?></p>
@@ -377,7 +376,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }, 1000);
                 }
             };
-        </script>
+            </script>
+            </div>
+        </section>
+
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="BoyCold Café promotion">
+        </div>
+    </main>
 </body>
 
 </html>

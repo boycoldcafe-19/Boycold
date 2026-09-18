@@ -124,18 +124,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
     </header>
 
-    <div class="pic1">
-        <img src="../picture/Mask group.png">
-    </div>
+    <main class="register-layout">
+        <section class="register-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
 
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
-
-    <div id="registerSection">
-        <h1 class="font">Create an Account</h1>
-        <p class="p1">Please create an account for continue using our app</p>
-        <p class="p2">* Indicates a required field</p>
+            <div id="registerSection">
+                <h1 class="font">Create an Account</h1>
+                <p class="p1">Please create an account for continue using our app</p>
+                <p class="p2">* Indicates a required field</p>
 
         <?php if ($googleMessage): ?>
             <p class="google-message"><?= htmlspecialchars($googleMessage) ?></p>
@@ -145,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="error-msg" style="color:red;"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
 
-        <form action="register.php" method="post" id="registerForm">
+            <form action="register.php" method="post" id="registerForm">
             <h4>Personal Information</h4>
             <input type="text" name="Firstname" id="Firstname" placeholder="*First Name" value="<?= htmlspecialchars($googleGivenName) ?>" required><br><br>
             <input type="text" name="Lastname" id="Lastname" placeholder="*Last Name" value="<?= htmlspecialchars($googleFamilyName) ?>" required><br><br>
@@ -186,8 +184,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span>Continue with Google</span>
                 </a>
             </div>
-        </form>
-    </div>
+                </form>
+            </div>
+        </section>
+
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="BoyCold Café promotion">
+        </div>
+    </main>
 
     <!-- ── Terms & Conditions  ── -->
     <div id="tcOverlay" role="dialog" aria-modal="true" aria-labelledby="tcTitle">

@@ -56,22 +56,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
     </header>
 
-    <div class="pic1">
-        <img src="../picture/Mask group.png" alt="Sign Up Image" width="690px">
-    </div>
+    <main class="newpassword-layout">
+        <section class="newpassword-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
 
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
-
-    <h1 class="font">New Password</h1>
-    <p class="p1">Enter new password</p><br>
+            <h1 class="font">New Password</h1>
+            <p class="p1">Enter new password</p><br>
 
     <?php if ($error): ?>
         <p style="color:red;font-size:14px;padding-left: 122px;"><?= htmlspecialchars($error) ?></p>
     <?php endif; ?>
 
-    <form action="newpassword.php" method="post">
+            <form action="newpassword.php" method="post">
         <label for="password"></label>
         <div class="password-container">
             <input type="password" id="password" name="password" placeholder="*New Password" required>
@@ -97,7 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit">Reset Password</button>
             <p>Don't have an account? <a href="register.php">Create an Account</a></p>
         </div>
-    </form>
+            </form>
+        </section>
+
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="BoyCold Café promotion">
+        </div>
+    </main>
 
     <script>
         const hideIcons = document.querySelectorAll('.hide-icon');

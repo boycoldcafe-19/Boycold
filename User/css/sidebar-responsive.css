@@ -1,6 +1,37 @@
 /* Shared responsive navigation for authenticated User pages. */
 
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
 @media (max-width: 900px) {
+    #mainNav {
+        grid-template-columns: auto 1fr auto;
+        padding: 0 16px;
+    }
+
+    #mainNav .logo {
+        min-width: 0;
+    }
+
+    #mainNav .logo img {
+        height: 42px;
+    }
+
+    #mainNav .nav-right-group {
+        gap: 16px;
+        padding-right: 0;
+    }
+
     #mainNav .nav-links {
         display: none;
     }
@@ -115,6 +146,14 @@
 
     .sidebar-user-email {
         font-size: 11px;
+    }
+
+    main,
+    section,
+    .content,
+    .main-content,
+    .page-content {
+        max-width: 100%;
     }
 
     .sidebar-overlay.open {

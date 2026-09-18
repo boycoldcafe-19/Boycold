@@ -20,19 +20,24 @@ if (empty($_SESSION['otp_email']) || ($_SESSION['otp_type'] ?? '') !== 'register
         <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
     </header>
 
-    <div class="pic1">
-        <img src="../picture/Mask group.png" alt="Sign Up Image" width="690px">
-    </div>
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
-    <div class="otp">
-        <div class="pic2">
-            <img src="../picture/otp.png" alt="OTP Image">
+    <main class="verifyotp-layout">
+        <section class="verifyotp-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
+            <div class="otp">
+                <div class="pic2">
+                    <img src="../picture/otp.png" alt="OTP Image">
+                </div>
+                <p class="p1">Thanks - if you have a BoyCold account,
+                    we've sent you an email.</p>
+                <a href="otp.php?mode=register"><button type="button">Verify OTP</button></a>
+            </div>
+        </section>
+
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="BoyCold Café promotion">
         </div>
-        <p class="p1">Thanks - if you have a BoyCold account,
-            we've sent you an email.</p>
-        <a href="otp.php?mode=register"><button type="button">Verify OTP</button></a>
-    </div>
+    </main>
 </body>
 </html>
