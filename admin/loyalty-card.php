@@ -462,14 +462,8 @@
             return beans;
         }
 
-        function getProfileAvatar(avatar, name) {
-            const value = String(avatar || '').trim();
-            const safeName = String(name || 'Customer').replace(/[&<>"']/g, character => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[character]));
-            if (!value) return `<div class="avatar-circle" aria-label="${safeName} profile placeholder"><i class="fa-solid fa-user"></i></div>`;
-            const imageUrl = /^(https?:\/\/|\/)/i.test(value) ? value : `../User/${value.replace(/^\/+/, '')}`;
-            return `<img class="avatar-circle avatar-image" src="${imageUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="${safeName} profile" onerror="this.onerror=null;this.src='../img/LOGO.png'">`;
+        function getProfileAvatar() {
+            return '<img class="avatar-circle avatar-image" src="../img/LOGO.png" alt="BoyCold Cafe">';
         }
 
         // Filter and Render Logic
@@ -605,12 +599,7 @@
 
         function openDrawer(item) {
             const drawerAvatar = document.getElementById('drawerAvatar');
-            if (item.avatar) {
-                const imageUrl = /^(https?:\/\/|\/)/i.test(item.avatar) ? item.avatar : `../User/${item.avatar.replace(/^\/+/, '')}`;
-                drawerAvatar.innerHTML = `<img class="avatar-circle avatar-image" src="${imageUrl}" alt="${item.customer} profile" onerror="this.onerror=null;this.src='../img/LOGO.png'">`;
-            } else {
-                drawerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
-            }
+            drawerAvatar.innerHTML = '<img class="avatar-circle avatar-image" src="../img/LOGO.png" alt="BoyCold Cafe">';
             document.getElementById('drawerCustomerName').innerText = item.customer;
             document.getElementById('drawerCustomerPhone').innerText = item.phone;
             document.getElementById('drawerCardId').innerText = item.id;

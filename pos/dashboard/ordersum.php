@@ -749,12 +749,12 @@ if ($shiftResult) {
                     } else {
                         const addonsText = addons.length
                             ? addons.map(a => a.value).join(', ')
-                            : 'No Add-ons';
+                            : '';
                         const milkLine = itemType === 'default' ? `<li>${item.milk}</li>` : '';
                         detailsHtml = `
                             <ul>
                                 ${milkLine}
-                                <li>${addonsText}</li>
+                                ${addonsText ? `<li>${addonsText}</li>` : ''}
                                 <li>Order Type: ${item.orderType}</li>
                                 <li>Qty: ${item.qty}</li>
                             </ul>

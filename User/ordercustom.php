@@ -119,7 +119,6 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/ordercustom.css">
     <link rel="stylesheet" href="css/sidebar-responsive.css">
-    <link rel="stylesheet" href="css/free-drink-nav.css">
     <link rel="icon" href="../picture/icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -228,7 +227,7 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                     <div class="mini-info">
                         <h4><?= $productName ?></h4>
                         <p id="miniMilk"><?= ($isBitesItem || $isNoAddonItem) ? '' : 'Original Milk' ?></p>
-                        <p id="miniAddons"><?= $isBitesItem ? ($productAddon ?: 'No Sauce') . ' • Pick-Up' : ($isNoAddonItem ? 'Pick-Up' : 'No Add-ons • Pick-Up') ?></p>
+                        <p id="miniAddons"><?= $isBitesItem ? ($productAddon ?: 'No Sauce') . ' • Pick-Up' : (($isNoAddonItem || !$hasProductAddons) ? 'Pick-Up' : 'No Add-ons • Pick-Up') ?></p>
                         <p id="miniQty">Qty: 1</p>
                     </div>
                 </div>
@@ -451,7 +450,7 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
             let addonText;
             if (isBitesItem) {
                 addonText = passedAddon;
-            } else if (isNoAddonItem) {
+            } else if (isNoAddonItem || !hasProductAddons) {
                 addonText = '';
             } else {
                 const activeAddons = [...document.querySelectorAll('#section-addons .option.active')];
@@ -669,7 +668,6 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
         });
     </script>
 
-    <script src="../scr/free-drink-nav.js"></script>
 </body>
 
 </html>
