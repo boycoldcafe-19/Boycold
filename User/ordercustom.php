@@ -113,6 +113,22 @@ $noAddonItems = [
 ];
 $isNoAddonItem = !$hasSavedModifierSettings && ($isSimpleCategory || in_array($productNameRaw, $noAddonItems, true));
 
+// Preserve the legacy choices for products created before per-product
+// modifier settings existed. Explicitly configured products keep their exact
+// database values, including an intentionally empty list.
+if (!$addonsConfigured && !$isBitesItem && !$isNoAddonItem) {
+    $productAddons = [
+        ['name' => 'Espresso Shot', 'price' => 15],
+        ['name' => 'Whipped Cream', 'price' => 15],
+        ['name' => 'Chocolate Drizzle', 'price' => 15],
+    ];
+}
+if (!$milkChoicesConfigured && !$isBitesItem && !$isNoAddonItem) {
+    $milkChoices = [
+        ['name' => 'Original', 'price' => 0],
+        ['name' => 'Oat Milk', 'price' => 15],
+    ];
+}
 $showMilkChoices = !$isBitesItem && !$isNoAddonItem && !empty($milkChoices);
 $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
 ?>

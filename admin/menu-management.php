@@ -5242,8 +5242,11 @@ boycold_ensure_inventory_schema($connect);
                     return { choices: savedChoices, source: 'Saved for this product' };
                 }
                 return {
-                    choices: [],
-                    source: 'No milk choices configured for this product'
+                    choices: [
+                        { name: 'Original', price: 0 },
+                        { name: 'Oat Milk', price: 15 }
+                    ],
+                    source: 'Legacy choices currently shown in the User and POS menus'
                 };
             }
 
