@@ -195,8 +195,9 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 
 // ==========================================
 // 3. DEMAND FORECAST (Top Menu Items)
-// Keep this source aligned with admin/data-analytics.php: the latest seven
-// database days, successful sales only, and the five highest-volume items.
+// Keep this source aligned with admin/data-analytics.php: the selected
+// historical calendar range, successful sales only, and the five
+// highest-volume items.
 // ==========================================
 $demandQuery = "SELECT 
     oi.product_name,
@@ -206,7 +207,7 @@ $demandQuery = "SELECT
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
 WHERE {$successfulSaleCondition}
-    AND DATE(o.created_at) BETWEEN DATE_SUB($forecastAnchorSql, INTERVAL 6 DAY) AND $forecastAnchorSql
+    AND DATE(o.created_at) BETWEEN DATE_SUB($forecastAnchorSql, INTERVAL " . ($historicalDays - 1) . " DAY) AND $forecastAnchorSql
     $branchCondition
 GROUP BY oi.product_name
 ORDER BY total_orders DESC
@@ -233,7 +234,8 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Forecast demand for each top item using proportion of total
+// Forecast demand for each top item using the overall sales forecast factor.
+// Use calendar days for the daily rate so sparse item sales are not inflated.
 $totalHistoricalSales = array_sum(array_column($historicalSales, 'sales'));
 $totalForecastedSales = array_sum($forecastedSales);
 
@@ -245,7 +247,7 @@ if ($totalHistoricalSales > 0) {
 
 $demandForecast = [];
 foreach ($demandItems as $item) {
-    $avgDailyOrders = $item['days_sold'] > 0 ? $item['total_orders'] / min($item['days_sold'], $historicalDays) : 0;
+    $avgDailyOrders = $historicalDays > 0 ? $item['total_orders'] / $historicalDays : 0;
     $forecastedOrders = round($avgDailyOrders * $forecastDays * $salesGrowthFactor);
     
     // Determine trend
