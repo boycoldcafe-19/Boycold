@@ -387,7 +387,7 @@ function awardLoyaltyForCompletedOrder(
         $orderUserId = (int) ($order['user_id'] ?? 0);
         if ($orderUserId > 0) {
             $userStmt = $connect->prepare(
-                "SELECT id, card_no, loyalty_beans, loyalty_stamps
+                "SELECT id, card_no, loyalty_beans, loyalty_stamps, loyalty_card_status
                  FROM users
                  WHERE id = ?
                  LIMIT 1
@@ -396,7 +396,7 @@ function awardLoyaltyForCompletedOrder(
             $userStmt->bind_param('i', $orderUserId);
         } else {
             $userStmt = $connect->prepare(
-                "SELECT id, card_no, loyalty_beans, loyalty_stamps
+                "SELECT id, card_no, loyalty_beans, loyalty_stamps, loyalty_card_status
                  FROM users
                  WHERE user_name = ?
                  LIMIT 1
@@ -414,6 +414,14 @@ function awardLoyaltyForCompletedOrder(
                 $connect->commit();
             }
             return false;
+        }
+
+        if (strtolower((string) ($user['loyalty_card_status'] ?? 'active')) === 'inactive') {
+            setOrderLoyaltyAwarded($connect, $orderId, (int) $user['id']);
+            if ($manageTransaction) {
+                $connect->commit();
+            }
+            return true;
         }
 
         $userId = (int) $user['id'];

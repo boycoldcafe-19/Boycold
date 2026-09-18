@@ -474,6 +474,7 @@ try {
             }
             $description = '';
             $stmt->bind_param('ssdssii', $name, $description, $price, $image, $category, $available, $addonsConfigured);
+            $saved = false;
             try {
                 $saved = $stmt->execute();
             } catch (Throwable $error) {
@@ -524,18 +525,6 @@ try {
             $currentProduct = $currentStmt->get_result()->fetch_assoc();
             $currentStmt->close();
             if (!$currentProduct) response(['success' => false, 'error' => 'Menu item was not found.'], 404);
-            if ($available === 1 && (int) ($currentProduct['is_available'] ?? 0) !== 1) {
-                $availability = boycold_get_product_inventory_availability($connect, 0, [$name]);
-                $info = $availability[boycold_inventory_normalize_name($name)] ?? null;
-                if ($info && empty($info['can_order'])) {
-                    response([
-                        'success' => false,
-                        'error' => 'Cannot activate this menu item. One or more required ingredients are insufficient.',
-                        'inventory_reason' => $info['reason'],
-                        'ingredients' => $info['ingredients'],
-                    ], 422);
-                }
-            }
             $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
             $removeImage = !empty($data['remove_image']);
             $image = $uploadedImage ?? ($removeImage ? '' : (string) ($currentProduct['image'] ?? ''));
@@ -547,6 +536,7 @@ try {
                 $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ? WHERE id = ?');
                 $stmt->bind_param('ssdsii', $name, $category, $price, $image, $available, $id);
             }
+            $updated = false;
             try {
                 $updated = $stmt->execute();
             } catch (Throwable $error) {
