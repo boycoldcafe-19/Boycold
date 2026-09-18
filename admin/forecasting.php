@@ -455,8 +455,8 @@ while ($row = $branchesResult->fetch_assoc()) {
         const forecastAdminId = <?php echo json_encode((string) $adminAccount['id']); ?>;
         const forecastBranchPreferenceKey = `boycold.forecasting.branch.${forecastAdminId}`;
         const demandRangeFromAnalytics = {
-            startDate: <?php echo json_encode($_GET['demand_start_date'] ?? null); ?>,
-            endDate: <?php echo json_encode($_GET['demand_end_date'] ?? null); ?>
+            startDate: <?php echo json_encode($_GET['analytics_start_date'] ?? $_GET['demand_start_date'] ?? null); ?>,
+            endDate: <?php echo json_encode($_GET['analytics_end_date'] ?? $_GET['demand_end_date'] ?? null); ?>
         };
 
         // ==========================================
@@ -468,11 +468,11 @@ while ($row = $branchesResult->fetch_assoc()) {
                 historical_days: historicalDays,
                 forecast_days: 14
             });
-            const demandStartDate = demandRangeFromAnalytics.startDate;
-            const demandEndDate = demandRangeFromAnalytics.endDate;
-            if (demandStartDate && demandEndDate) {
-                params.set('demand_start_date', demandStartDate);
-                params.set('demand_end_date', demandEndDate);
+            const analyticsStartDate = demandRangeFromAnalytics.startDate;
+            const analyticsEndDate = demandRangeFromAnalytics.endDate;
+            if (analyticsStartDate && analyticsEndDate) {
+                params.set('analytics_start_date', analyticsStartDate);
+                params.set('analytics_end_date', analyticsEndDate);
             }
             const url = `api/forecast_api.php?${params.toString()}`;
             try {
