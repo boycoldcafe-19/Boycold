@@ -546,11 +546,14 @@ if ($shiftResult) {
         const productType = getProductType(currentProduct);
         const isNoCustomization = productType === 'no-customization';
         const hideMilkOnly = productType === 'fries' || productType === 'poppers';
+        const productHasConfiguredAddons = currentProduct.addonsConfigured === true;
+        const productAddons = Array.isArray(currentProduct.addons) ? currentProduct.addons : [];
+        const addonGroup = document.querySelector('.option-group:nth-of-type(2)');
 
-        if (isNoCustomization) {
+        if (isNoCustomization && !productHasConfiguredAddons) {
             document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
-            document.querySelector('.option-group:nth-of-type(2)').style.display = 'none'; // Add-ons
-        } else if (hideMilkOnly) {
+            addonGroup.style.display = 'none';
+        } else if (hideMilkOnly && !productHasConfiguredAddons) {
             document.querySelector('.option-group:nth-of-type(1)').style.display = 'none'; // Milk Choice
         }
 
@@ -594,11 +597,17 @@ if ($shiftResult) {
 
         function renderAddonButtons(items) {
             addonOptions.innerHTML = items.map(item =>
-                `<button class="option-btn" data-value="${item.value}" data-price="${item.price}" type="button">${item.value} <span>+₱${item.price}</span></button>`
+                `<button class="option-btn" data-value="${item.value || item.name}" data-price="${item.price}" type="button">${item.value || item.name} ${Number(item.price) > 0 ? `<span>+₱${Number(item.price).toFixed(2)}</span>` : ''}</button>`
             ).join('');
         }
 
-        if (productType === 'fries') {
+        if (productHasConfiguredAddons) {
+            if (productAddons.length) {
+                renderAddonButtons(productAddons);
+            } else {
+                addonGroup.style.display = 'none';
+            }
+        } else if (productType === 'fries') {
             renderAddonButtons(FRIES_ADDONS);
         } else if (productType === 'poppers') {
             renderAddonButtons(POPPERS_ADDONS);

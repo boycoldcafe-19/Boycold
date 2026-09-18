@@ -214,38 +214,44 @@ while ($row = $branchesResult->fetch_assoc()) {
                 <div class="stats-grid">
 
                     <div class="stat-card" id="predictedSalesCard">
-                        <div class="stat-card-top">
-                            <span class="stat-label">Predicted Sales (14 Days)</span>
-                            <span class="stat-icon stat-icon-peach"><i class="fa-solid fa-chart-column"></i></span>
-                        </div>
-                        <div class="stat-value" id="predictedSalesValue">₱ 0.00</div>
-                        <div class="stat-trend" id="predictedSalesTrend">
-                            <i class="fa-solid fa-arrow-up"></i>
-                            <span class="trend-percent" id="predictedSalesPercent">0%</span>
-                            <span class="trend-note">vs last 14 days</span>
+                        <span class="stat-icon stat-icon-peach"><i class="fa-solid fa-chart-column"></i></span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">Predicted Sales (14 Days)</span>
+                            </div>
+                            <div class="stat-value" id="predictedSalesValue">₱ 0.00</div>
+                            <div class="stat-trend" id="predictedSalesTrend">
+                                <i class="fa-solid fa-arrow-up"></i>
+                                <span class="trend-percent" id="predictedSalesPercent">0%</span>
+                                <span class="trend-note">vs last 14 days</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="stat-card" id="restockCard">
-                        <div class="stat-card-top">
-                            <span class="stat-label">Ingredients to Restock</span>
-                            <span class="stat-icon stat-icon-orange"><i class="fa-solid fa-bag-shopping"></i></span>
-                        </div>
-                        <div class="stat-value" id="restockCount">0</div>
-                        <div class="restock-status">
-                            <span class="restock-critical" id="restockCritical">0 Critical</span>
-                            <span class="restock-dot">&bull;</span>
-                            <span class="restock-soon" id="restockSoon">0 Soon</span>
+                        <span class="stat-icon stat-icon-orange"><i class="fa-solid fa-bag-shopping"></i></span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">Ingredients to Restock</span>
+                            </div>
+                            <div class="stat-value" id="restockCount">0</div>
+                            <div class="restock-status">
+                                <span class="restock-critical" id="restockCritical">0 Critical</span>
+                                <span class="restock-dot">&bull;</span>
+                                <span class="restock-soon" id="restockSoon">0 Soon</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="stat-card" id="highestDemandCard">
-                        <div class="stat-card-top">
-                            <span class="stat-label">Highest Demand Item</span>
-                            <span class="stat-icon stat-icon-purple"><i class="fa-regular fa-star"></i></span>
+                        <span class="stat-icon stat-icon-purple"><i class="fa-regular fa-star"></i></span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">Highest Demand Item</span>
+                            </div>
+                            <div class="stat-value stat-value-name" id="highestDemandItem">Loading...</div>
+                            <div class="forecast-note" id="highestDemandQty">0 units (forecast)</div>
                         </div>
-                        <div class="stat-value stat-value-name" id="highestDemandItem">Loading...</div>
-                        <div class="forecast-note" id="highestDemandQty">0 units (forecast)</div>
                     </div>
 
                 </div>

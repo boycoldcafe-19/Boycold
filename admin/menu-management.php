@@ -3970,7 +3970,7 @@ boycold_ensure_inventory_schema($connect);
                             <span>Price</span>
                         </div>
                         <div class="addon-list" id="addonList">
-                            <!-- Add-ons will be populated based on category -->
+                            <!-- Add-ons are optional and added manually. -->
                         </div>
                     </div>
 
@@ -4791,11 +4791,17 @@ boycold_ensure_inventory_schema($connect);
 
             // Function to populate add-ons based on category
             function populateAddons(category) {
+                // Add-ons are manually chosen for a product. Changing its
+                // category must not add defaults or discard manual rows.
+                return;
                 const addonList = document.getElementById('addonList');
                 if (!addonList) return;
 
                 addonList.innerHTML = '';
-                const addons = categoryAddons[category] || [];
+                // Do not infer add-ons from the category. An empty list is a
+                // deliberate setting and means no add-ons in the public menu
+                // and POS for the new product.
+                const addons = [];
 
                 addons.forEach(addon => {
                     const addonRow = document.createElement('div');
@@ -4853,6 +4859,21 @@ boycold_ensure_inventory_schema($connect);
                 });
             }
 
+            function collectProductAddons() {
+                const addons = [];
+                document.querySelectorAll('#addonList .addon-row').forEach(row => {
+                    const name = row.querySelector('.addon-name')?.value.trim() || '';
+                    const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
+                    if (!name && !priceRaw) return;
+                    const price = Number(priceRaw);
+                    if (!name || !Number.isFinite(price) || price < 0) {
+                        throw new Error('Each add-on needs a name and a valid price.');
+                    }
+                    addons.push({ name, price });
+                });
+                return addons;
+            }
+
             if (productImageInput && imagePreview && imagePreviewBox) {
                 productImageInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
@@ -4902,11 +4923,19 @@ boycold_ensure_inventory_schema($connect);
                     const price = parseFloat(priceInput.value).toFixed(2);
                     const cups = stockQtyInput.value ? stockQtyInput.value + ' pcs' : '40 pcs';
                     const servings = servingsQtyInput.value ? servingsQtyInput.value : '25';
+                    let addons;
+                    try {
+                        addons = collectProductAddons();
+                    } catch (error) {
+                        alert(error.message);
+                        return;
+                    }
                     const formData = new FormData();
                     formData.append('product_name', name);
                     formData.append('category', category);
                     formData.append('price', price);
                     formData.append('is_available', document.getElementById('productStatus').checked ? '1' : '0');
+                    formData.append('addons', JSON.stringify(addons));
                     const imageFile = productImageInput?.files?.[0];
                     if (imageFile) formData.append('image_file', imageFile);
 

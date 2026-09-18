@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 
@@ -500,51 +500,68 @@ if (($_GET['format'] ?? '') === 'json') {
                 <div class="stats-grid">
 
                     <div class="stat-card">
-                        <div class="stat-card-top">
-                            <span class="stat-label">Total Sales</span>
-                            <span class="stat-icon stat-icon-peach"><svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M23.5643 0.519641C23.8118 0.271453 24.1274 0.102417 24.4711 0.0340065C24.8149 -0.0344043 25.1712 0.000897247 25.4948 0.135427L30.5084 2.21443C30.9408 2.39296 31.2848 2.73557 31.4651 3.16722C31.6453 3.59886 31.6471 4.08436 31.4702 4.51736L29.4218 9.531C29.2895 9.85475 29.0641 10.132 28.7741 10.3276C28.4842 10.5232 28.1428 10.6284 27.793 10.6299C27.4433 10.6315 27.1009 10.5292 26.8093 10.3361C26.5177 10.143 26.2899 9.86773 26.1548 9.54514L25.3463 7.61228L4.9853 16.3125C4.77172 16.4038 4.54224 16.4522 4.30997 16.4548C4.07769 16.4574 3.84718 16.4143 3.63158 16.3278C3.41598 16.2414 3.21953 16.1133 3.05343 15.9509C2.88732 15.7885 2.75483 15.595 2.66352 15.3814C2.5722 15.1678 2.52385 14.9384 2.52122 14.7061C2.51859 14.4738 2.56174 14.2433 2.6482 14.0277C2.73465 13.8121 2.86273 13.6156 3.02511 13.4495C3.1875 13.2834 3.381 13.151 3.59459 13.0596L23.9792 4.35L23.1872 2.4525C23.0512 2.12924 23.0145 1.77287 23.0817 1.42869C23.1488 1.08452 23.3168 0.768086 23.5643 0.519641ZM30.0535 12.9182C30.6787 12.9182 31.2782 13.1666 31.7203 13.6086C32.1623 14.0507 32.4107 14.6502 32.4107 15.2754V31.7754C32.4107 32.0879 32.2865 32.3877 32.0655 32.6087C31.8444 32.8298 31.5447 32.9539 31.2321 32.9539H25.3392C25.0267 32.9539 24.7269 32.8298 24.5059 32.6087C24.2848 32.3877 24.1607 32.0879 24.1607 31.7754V15.2754C24.1607 14.6502 24.409 14.0507 24.8511 13.6086C25.2931 13.1666 25.8927 12.9182 26.5178 12.9182H30.0535ZM19.9343 17.1422C19.492 16.701 18.8926 16.4534 18.2678 16.4539H14.7321C14.1069 16.4539 13.5074 16.7023 13.0653 17.1443C12.6233 17.5864 12.3749 18.1859 12.3749 18.8111V31.7754C12.3749 32.0879 12.4991 32.3877 12.7201 32.6087C12.9412 32.8298 13.2409 32.9539 13.5535 32.9539H19.4464C19.759 32.9539 20.0587 32.8298 20.2798 32.6087C20.5008 32.3877 20.6249 32.0879 20.6249 31.7754V18.8111C20.6252 18.5012 20.5643 18.1942 20.4458 17.9079C20.3273 17.6215 20.1535 17.3613 19.9343 17.1422ZM6.48209 19.9896C7.10724 19.9896 7.70679 20.238 8.14884 20.68C8.59089 21.1221 8.83923 21.7216 8.83923 22.3468V31.7754C8.83923 32.0879 8.71506 32.3877 8.49404 32.6087C8.27301 32.8298 7.97324 32.9539 7.66066 32.9539H1.7678C1.45523 32.9539 1.15545 32.8298 0.934429 32.6087C0.713404 32.3877 0.589233 32.0879 0.589233 31.7754V22.3468C0.589233 21.7216 0.837575 21.1221 1.27962 20.68C1.72167 20.238 2.32122 19.9896 2.94638 19.9896H6.48209Z" fill="#483121"/>
-                                </svg>
-                            </span>
-                        </div>
-                        <div class="stat-value" id="totalSalesValue">₱ <?php echo number_format($analytics['total_sales'], 2); ?></div>
-                        <div class="stat-trend <?php echo $analytics['sales_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
-                            <i class="fa-solid fa-arrow-<?php echo $analytics['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['sales_trend']); ?></span>
-                            <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-card-top">
-                            <span class="stat-label">Average Order Value</span>
-                            <span class="stat-icon stat-icon-red"><svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M26.2969 6.1875H6.70312C4.70972 6.1875 3.09375 7.80347 3.09375 9.79688V23.2031C3.09375 25.1965 4.70972 26.8125 6.70312 26.8125H26.2969C28.2903 26.8125 29.9062 25.1965 29.9062 23.2031V9.79688C29.9062 7.80347 28.2903 6.1875 26.2969 6.1875Z" stroke="#D81414" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M3.09375 12.375H29.9062M8.25 19.3359H11.3438V20.625H8.25V19.3359Z" stroke="#D81414" stroke-width="1.875" stroke-linejoin="round"/>
-                                </svg>
-                            </span>
-                        </div>
-                        <div class="stat-value">₱ <?php echo number_format($analytics['avg_order_value'], 2); ?></div>
-                        <div class="stat-trend <?php echo $analytics['avg_order_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
-                            <i class="fa-solid fa-arrow-<?php echo $analytics['avg_order_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['avg_order_trend']); ?></span>
-                            <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
+                        <span class="stat-icon stat-icon-peach">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M4 18.5V9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M10 18.5V5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M16 18.5V12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M22 18.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M3 20.5H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">Total Sales</span>
+                            </div>
+                            <div class="stat-value" id="totalSalesValue">₱ <?php echo number_format($analytics['total_sales'], 2); ?></div>
+                            <div class="stat-trend <?php echo $analytics['sales_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
+                                <i class="fa-solid fa-arrow-<?php echo $analytics['sales_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
+                                <span class="trend-percent"><?php echo analyticsReportPercent($analytics['sales_trend']); ?></span>
+                                <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-card-top">
-                            <span class="stat-label">New Customers</span>
-                            <span class="stat-icon stat-icon-purple"><svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4.81252 10.9999C4.81279 9.69627 5.15005 8.41486 5.79155 7.28001C6.43305 6.14515 7.35702 5.19539 8.47379 4.5229C9.59056 3.85041 10.8622 3.47802 12.1653 3.44187C13.4684 3.40572 14.7588 3.70704 15.9111 4.31659C17.0634 4.92614 18.0386 5.82321 18.7421 6.92076C19.4455 8.0183 19.8533 9.27904 19.9258 10.5806C19.9983 11.8822 19.7332 13.1805 19.1561 14.3494C18.579 15.5183 17.7095 16.5182 16.632 17.252C18.9523 18.103 20.9649 19.629 22.4107 21.6335C23.8564 23.6379 24.6692 26.0292 24.7445 28.4995C24.7413 28.7659 24.6353 29.0207 24.4487 29.2107C24.262 29.4007 24.0092 29.5113 23.7429 29.5193C23.4767 29.5273 23.2177 29.4321 23.02 29.2536C22.8223 29.0751 22.7012 28.8271 22.682 28.5614C22.6001 25.8821 21.4783 23.3401 19.5541 21.4738C17.63 19.6076 15.0548 18.5639 12.3743 18.5639C9.69384 18.5639 7.11867 19.6076 5.19454 21.4738C3.27041 23.3401 2.14853 25.8821 2.06665 28.5614C2.05288 28.8307 1.9342 29.0838 1.73604 29.2667C1.53788 29.4495 1.27599 29.5475 1.00649 29.5395C0.73698 29.5316 0.481289 29.4185 0.294192 29.2243C0.107095 29.0302 0.00347205 28.7705 0.00552304 28.5009C0.0805311 26.0303 0.893232 23.6388 2.33902 21.634C3.7848 19.6293 5.79749 18.1031 8.11802 17.252C7.09925 16.5582 6.26552 15.6258 5.68941 14.5361C5.1133 13.4465 4.81227 12.2325 4.81252 10.9999ZM12.375 5.49989C10.9163 5.49989 9.51739 6.07935 8.48594 7.1108C7.45449 8.14225 6.87502 9.5412 6.87502 10.9999C6.87502 12.4586 7.45449 13.8575 8.48594 14.889C9.51739 15.9204 10.9163 16.4999 12.375 16.4999C13.8337 16.4999 15.2327 15.9204 16.2641 14.889C17.2956 13.8575 17.875 12.4586 17.875 10.9999C17.875 9.5412 17.2956 8.14225 16.2641 7.1108C15.2327 6.07935 13.8337 5.49989 12.375 5.49989ZM23.7738 10.9999C23.5712 10.9999 23.3723 11.0136 23.177 11.0411C23.0407 11.0655 22.9009 11.0622 22.7658 11.0314C22.6308 11.0006 22.5034 10.9429 22.3912 10.8618C22.2789 10.7807 22.1842 10.6778 22.1126 10.5593C22.041 10.4407 21.994 10.309 21.9744 10.1719C21.9548 10.0348 21.963 9.89514 21.9986 9.76129C22.0341 9.62745 22.0963 9.50213 22.1813 9.39283C22.2663 9.28352 22.3725 9.19246 22.4935 9.12508C22.6145 9.0577 22.7478 9.01538 22.8855 9.00064C24.2531 8.80292 25.6475 9.06554 26.8495 9.74716C28.0514 10.4288 28.9926 11.4907 29.5249 12.7658C30.0571 14.041 30.1503 15.4569 29.7897 16.7908C29.4291 18.1246 28.6353 19.3008 27.533 20.134C29.1533 20.8595 30.529 22.0384 31.4942 23.5284C32.4594 25.0184 32.9728 26.7558 32.9725 28.5311C32.9725 28.8046 32.8639 29.0669 32.6705 29.2603C32.4771 29.4537 32.2148 29.5624 31.9413 29.5624C31.6678 29.5624 31.4055 29.4537 31.2121 29.2603C31.0187 29.0669 30.91 28.8046 30.91 28.5311C30.9105 26.9967 30.4164 25.5029 29.501 24.2714C28.5855 23.04 27.2975 22.1364 25.828 21.6946L25.0938 21.4746V19.1701L25.6575 18.8828C26.4932 18.4595 27.1618 17.7669 27.5554 16.9168C27.9491 16.0668 28.0448 15.1089 27.827 14.1978C27.6093 13.2867 27.0909 12.4756 26.3555 11.8953C25.62 11.3151 24.7105 10.9996 23.7738 10.9999Z" fill="#7C4CCC"/>
-                                </svg>
-                            </span>
+                        <span class="stat-icon stat-icon-red">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                                <path d="M3 9.5H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M8 14.5H10.5V16H8V14.5Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">Average Order Value</span>
+                            </div>
+                            <div class="stat-value">₱ <?php echo number_format($analytics['avg_order_value'], 2); ?></div>
+                            <div class="stat-trend <?php echo $analytics['avg_order_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
+                                <i class="fa-solid fa-arrow-<?php echo $analytics['avg_order_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
+                                <span class="trend-percent"><?php echo analyticsReportPercent($analytics['avg_order_trend']); ?></span>
+                                <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
+                            </div>
                         </div>
-                        <div class="stat-value"><?php echo $analytics['new_customers']; ?></div>
-                        <div class="stat-trend <?php echo $analytics['customers_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
-                            <i class="fa-solid fa-arrow-<?php echo $analytics['customers_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
-                            <span class="trend-percent"><?php echo analyticsReportPercent($analytics['customers_trend']); ?></span>
-                            <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
+                    </div>
+
+                    <div class="stat-card">
+                        <span class="stat-icon stat-icon-purple">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <circle cx="9" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/>
+                                <path d="M3.5 18C4.2 15.7 6.4 14 9 14C11.6 14 13.8 15.7 14.5 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M15.5 8.5H19.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M17.5 6.5V10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <div class="stat-body">
+                            <div class="stat-card-top">
+                                <span class="stat-label">New Customers</span>
+                            </div>
+                            <div class="stat-value"><?php echo $analytics['new_customers']; ?></div>
+                            <div class="stat-trend <?php echo $analytics['customers_trend'] >= 0 ? 'trend-up' : 'trend-down'; ?>">
+                                <i class="fa-solid fa-arrow-<?php echo $analytics['customers_trend'] >= 0 ? 'up' : 'down'; ?>"></i>
+                                <span class="trend-percent"><?php echo analyticsReportPercent($analytics['customers_trend']); ?></span>
+                                <span class="trend-note">vs <?php echo htmlspecialchars($previousPeriodLabel, ENT_QUOTES); ?></span>
+                            </div>
                         </div>
                     </div>
                     

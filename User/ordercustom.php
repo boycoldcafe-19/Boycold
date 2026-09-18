@@ -30,6 +30,21 @@ $productName  = htmlspecialchars($productNameRaw);
 $productPrice = isset($_GET['price']) ? htmlspecialchars(strip_tags($_GET['price'])) : '0.00';
 $productImage = isset($_GET['image']) ? htmlspecialchars(strip_tags($_GET['image'])) : '../picture/SC-Einspanner Latte _ 149 1.png';
 $productAddon = isset($_GET['addon']) ? htmlspecialchars(strip_tags($_GET['addon'])) : '';
+$addonsConfigured = ($_GET['addons_configured'] ?? '0') === '1';
+$productAddons = [];
+if ($addonsConfigured) {
+    $decodedAddons = json_decode((string) ($_GET['addons'] ?? '[]'), true);
+    if (is_array($decodedAddons)) {
+        foreach ($decodedAddons as $addon) {
+            if (!is_array($addon)) continue;
+            $addonName = trim((string) ($addon['name'] ?? $addon['value'] ?? ''));
+            $addonPrice = $addon['price'] ?? null;
+            if ($addonName !== '' && is_numeric($addonPrice) && (float) $addonPrice >= 0) {
+                $productAddons[] = ['name' => $addonName, 'price' => (float) $addonPrice];
+            }
+        }
+    }
+}
 $availableServings = isset($_GET['servings']) ? max(0, (int) $_GET['servings']) : 0;
 $selectedBranchId = isset($_GET['branch_id']) ? max(1, (int) $_GET['branch_id']) : (int) ($_SESSION['branch_id'] ?? 1);
 
@@ -93,6 +108,7 @@ $noAddonItems = [
     'Beef Natchos',
 ];
 $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, true);
+$hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCategory && !$isNoAddonItem);
 ?>
 
 <!DOCTYPE html>
@@ -237,14 +253,22 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
                     </div>
                 <?php endif; ?>
 
-                <?php if (!$isNoAddonItem): ?>
+                <?php if ($hasProductAddons): ?>
                     <div class="section" id="section-addons">
                         <div class="section-title">
                             <i class="fa-solid fa-circle-plus"></i>
                             <?= $isBitesItem ? 'Sauce / Flavor' : 'Add-ons' ?>
                         </div>
 
-                        <?php if ($isBitesItem): ?>
+                        <?php if ($addonsConfigured): ?>
+                            <div class="option-group">
+                                <?php foreach ($productAddons as $addon): ?>
+                                    <button class="option" data-price="<?= htmlspecialchars((string) $addon['price'], ENT_QUOTES) ?>">
+                                        <?= htmlspecialchars($addon['name']) ?><?php if ($addon['price'] > 0): ?> +₱<?= number_format($addon['price'], 2) ?><?php endif; ?>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php elseif ($isBitesItem): ?>
                             <?php if ($hasSauceOptions): ?>
                                 <div class="sauce-option-group" id="sauceOptionGroup">
                                     <?php foreach ($sauceOptions as $label => $price): ?>
@@ -357,6 +381,7 @@ $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, t
         const isNoAddonItem = <?= $isNoAddonItem ? 'true' : 'false' ?>;
         const isSimpleCategory = <?= $isSimpleCategory ? 'true' : 'false' ?>;
         const hasSauceOptions = <?= $hasSauceOptions ? 'true' : 'false' ?>;
+        const hasProductAddons = <?= $hasProductAddons ? 'true' : 'false' ?>;
         let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
         let addOnTotal = 0;
         const availableServings = <?= (int) $availableServings ?>;

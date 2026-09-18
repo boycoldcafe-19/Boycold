@@ -190,6 +190,156 @@ function boycold_ensure_product_id_auto_increment(mysqli $connect): void
 }
 
 /**
+ * Store an administrator's add-on choices per menu item.  The configured
+ * flag deliberately distinguishes older items (which keep their historic
+ * generic choices) from a newly created item for which the admin selected no
+ * add-ons at all.
+ */
+function boycold_ensure_product_addons_schema(mysqli $connect): void
+{
+    $configuredColumn = $connect->query("SHOW COLUMNS FROM products LIKE 'addons_configured'");
+    if (!$configuredColumn || $configuredColumn->num_rows === 0) {
+        if (!$connect->query(
+            'ALTER TABLE products ADD COLUMN addons_configured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_available'
+        )) {
+            throw new RuntimeException('Could not prepare product add-on settings: ' . $connect->error);
+        }
+    }
+
+    $sql = "CREATE TABLE IF NOT EXISTS product_addons (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        product_id INT NOT NULL,
+        addon_name VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        display_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_product_addons_name (product_id, addon_name),
+        KEY idx_product_addons_product_order (product_id, display_order)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if (!$connect->query($sql)) {
+        throw new RuntimeException('Could not prepare product add-ons: ' . $connect->error);
+    }
+}
+
+/**
+ * Decode and validate add-ons sent by the menu-management form.
+ *
+ * @return array<int, array{name: string, price: float}>
+ */
+function boycold_menu_normalize_addons(mixed $value): array
+{
+    if (is_string($value)) {
+        $value = trim($value) === '' ? [] : json_decode($value, true);
+        if ($value === null && json_last_error() !== JSON_ERROR_NONE) {
+            throw new RuntimeException('Product add-ons must be valid data.');
+        }
+    }
+    if (!is_array($value)) {
+        throw new RuntimeException('Product add-ons must be a list.');
+    }
+
+    $addons = [];
+    $seen = [];
+    foreach ($value as $addon) {
+        if (!is_array($addon)) {
+            throw new RuntimeException('Each product add-on must include a name and price.');
+        }
+        $name = preg_replace('/\s+/', ' ', trim((string) ($addon['name'] ?? $addon['value'] ?? '')));
+        if ($name === '') {
+            continue;
+        }
+        if (mb_strlen($name) > 100) {
+            throw new RuntimeException('Product add-on names must be 100 characters or fewer.');
+        }
+        $priceValue = $addon['price'] ?? null;
+        if (!is_numeric($priceValue) || (float) $priceValue < 0 || (float) $priceValue > 99999999.99) {
+            throw new RuntimeException("Enter a valid price for the {$name} add-on.");
+        }
+        $key = mb_strtolower($name, 'UTF-8');
+        if (isset($seen[$key])) {
+            throw new RuntimeException("The {$name} add-on was entered more than once.");
+        }
+        $seen[$key] = true;
+        $addons[] = ['name' => $name, 'price' => round((float) $priceValue, 2)];
+    }
+
+    return $addons;
+}
+
+/** @return array<int, array<int, array{name: string, price: float}>> */
+function boycold_menu_get_product_addons(mysqli $connect, array $productIds): array
+{
+    boycold_ensure_product_addons_schema($connect);
+    $ids = array_values(array_unique(array_filter(array_map('intval', $productIds), static fn (int $id): bool => $id > 0)));
+    if (!$ids) {
+        return [];
+    }
+
+    $result = $connect->query(
+        'SELECT product_id, addon_name, price FROM product_addons WHERE product_id IN (' . implode(',', $ids) . ') ORDER BY product_id, display_order, id'
+    );
+    if (!$result) {
+        throw new RuntimeException('Could not load product add-ons: ' . $connect->error);
+    }
+
+    $addons = [];
+    while ($row = $result->fetch_assoc()) {
+        $productId = (int) $row['product_id'];
+        $addons[$productId][] = [
+            'name' => (string) $row['addon_name'],
+            'price' => (float) $row['price'],
+        ];
+    }
+    return $addons;
+}
+
+/** @param array<int, array{name: string, price: float}> $addons */
+function boycold_menu_save_product_addons(mysqli $connect, int $productId, array $addons): void
+{
+    boycold_ensure_product_addons_schema($connect);
+    if ($productId < 1) {
+        throw new RuntimeException('A product ID is required to save add-ons.');
+    }
+
+    $delete = $connect->prepare('DELETE FROM product_addons WHERE product_id = ?');
+    if (!$delete) {
+        throw new RuntimeException('Could not prepare existing add-ons for replacement.');
+    }
+    $delete->bind_param('i', $productId);
+    if (!$delete->execute()) {
+        $error = $delete->error;
+        $delete->close();
+        throw new RuntimeException('Could not replace product add-ons: ' . $error);
+    }
+    $delete->close();
+
+    if (!$addons) {
+        return;
+    }
+    $insert = $connect->prepare(
+        'INSERT INTO product_addons (product_id, addon_name, price, display_order) VALUES (?, ?, ?, ?)'
+    );
+    if (!$insert) {
+        throw new RuntimeException('Could not prepare product add-on save.');
+    }
+    foreach ($addons as $position => $addon) {
+        $name = (string) $addon['name'];
+        $price = (float) $addon['price'];
+        $displayOrder = (int) $position;
+        $insert->bind_param('isdi', $productId, $name, $price, $displayOrder);
+        if (!$insert->execute()) {
+            $error = $insert->error;
+            $insert->close();
+            throw new RuntimeException('Could not save product add-ons: ' . $error);
+        }
+    }
+    $insert->close();
+}
+
+/**
  * Create a category when needed without overwriting an administrator's label
  * or its manually chosen display position.
  */

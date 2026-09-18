@@ -49,7 +49,8 @@ $shiftOpenedAt = $shiftResult['opened_at'];
 
 // Fetch all products from database
 boycold_ensure_inventory_schema($connect);
-$productsStmt = $connect->prepare("SELECT id, product_name, description, price, image, category, is_available FROM products WHERE is_available = 1 ORDER BY category, product_name");
+boycold_ensure_product_addons_schema($connect);
+$productsStmt = $connect->prepare("SELECT id, product_name, description, price, image, category, is_available, addons_configured FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsStmt->execute();
 $productsResult = $productsStmt->get_result();
 $products = [];
@@ -57,6 +58,7 @@ while ($row = $productsResult->fetch_assoc()) {
     $products[] = $row;
 }
 $productsStmt->close();
+$productAddons = boycold_menu_get_product_addons($connect, array_column($products, 'id'));
 $productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($products, 'product_name'));
 $menuCategories = boycold_menu_get_categories($connect);
 
@@ -269,6 +271,8 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             $ingredientStatus = htmlspecialchars((string) ($availabilityInfo['ingredient_status'] ?? 'Insufficient'), ENT_QUOTES);
                             $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
                             $canOrder = !empty($availabilityInfo['can_order']);
+                            $addonsConfigured = !empty($product['addons_configured']);
+                            $addons = $productAddons[(int) $product['id']] ?? [];
                         ?>
                         <div class="product-card"
                              data-category="<?= htmlspecialchars($product['category'], ENT_QUOTES) ?>"
@@ -277,7 +281,9 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                              data-can-order="<?= $canOrder ? '1' : '0' ?>"
                              data-stock-status="<?= $stockStatus ?>"
                              data-available-servings="<?= $servings ?>"
-                             data-stock-reason="<?= $stockReason ?>">
+                             data-stock-reason="<?= $stockReason ?>"
+                             data-addons-configured="<?= $addonsConfigured ? '1' : '0' ?>"
+                             data-addons="<?= htmlspecialchars(json_encode($addons), ENT_QUOTES, 'UTF-8') ?>">
                             <div class="card-image">
                                 <div class="card-image-placeholder">
                                     <?php
@@ -876,7 +882,16 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                     const category = card.getAttribute('data-category') || '';
                     const availableServings = Number(card.dataset.availableServings || 0);
 
-                    const product = { id, name, price, img, category, availableServings };
+                    const product = {
+                        id,
+                        name,
+                        price,
+                        img,
+                        category,
+                        availableServings,
+                        addonsConfigured: card.dataset.addonsConfigured === '1',
+                        addons: JSON.parse(card.dataset.addons || '[]')
+                    };
                     // Only clear cart if this is a fresh start (not continuing an existing order)
                     // Check if we have items in cart - if yes, we're continuing an order
                     fetch('../api/pos_cart_api.php?action=get_cart')
