@@ -4094,6 +4094,21 @@ boycold_ensure_inventory_schema($connect);
                             </div>
                         </div>
                     </div>
+
+                    <div class="panel">
+                        <div class="panel-header-row">
+                            <h3>Add-ons / Modifiers</h3>
+                            <button type="button" class="btn-addon" id="editAddAddonBtn">
+                                <i class="fa-solid fa-plus"></i> Add
+                            </button>
+                        </div>
+                        <p class="optional" id="editAddonSource">Shown exactly as offered in the User and POS menus.</p>
+                        <div class="addon-columns">
+                            <span>Add-on Name</span>
+                            <span>Price</span>
+                        </div>
+                        <div class="addon-list" id="editAddonList"></div>
+                    </div>
                 </div>
             </div>
 
@@ -4233,6 +4248,7 @@ boycold_ensure_inventory_schema($connect);
             let catPillsSnapshot = null;
             let draggedPill = null;
             let selectedBranchId = 0;
+            let productsById = new Map();
 
             function getAddCategoryGhost() {
                 return document.getElementById('addCategoryGhost');
@@ -4597,6 +4613,7 @@ boycold_ensure_inventory_schema($connect);
 
             function renderDatabaseProducts(products) {
                 if (!productGrid) return;
+                productsById = new Map(products.map(product => [String(product.id), product]));
                 productGrid.innerHTML = products.map(product => {
                     const name = escapeProductText(product.product_name);
                     const category = escapeProductText(normalizeProductCategory(product.category || 'uncategorized'));
@@ -4789,39 +4806,96 @@ boycold_ensure_inventory_schema($connect);
                 ]
             };
 
-            // Function to populate add-ons based on category
-            function populateAddons(category) {
-                // Add-ons are manually chosen for a product. Changing its
-                // category must not add defaults or discard manual rows.
-                return;
-                const addonList = document.getElementById('addonList');
+            const DEFAULT_DRINK_ADDONS = [
+                { name: 'Espresso Shot', price: 15 },
+                { name: 'Whipped Cream', price: 15 },
+                { name: 'Chocolate Drizzle', price: 15 }
+            ];
+
+            // These are the legacy choices currently rendered in the public
+            // menu and both branch POS sessions. Keeping them here lets an
+            // admin see and manage the exact same choices per product.
+            function menuAddonsForProduct(name, category) {
+                const normalizedName = String(name || '').trim().toLowerCase();
+                const normalizedCategory = normalizeProductCategory(category || '');
+
+                if (normalizedName === 'french fries') {
+                    return [
+                        { name: 'No Sauce', price: 0 },
+                        { name: 'Cheese Sauce', price: 30 },
+                        { name: 'Cheese Powder', price: 30 },
+                        { name: 'BBQ Powder', price: 30 },
+                        { name: 'Sour Cream Powder', price: 30 }
+                    ];
+                }
+
+                if (normalizedName.includes('poppers')) {
+                    return [
+                        { name: 'No Sauce', price: 0 },
+                        { name: 'Cheese Sauce', price: normalizedName.includes('fries') ? 40 : 30 }
+                    ];
+                }
+
+                const noAddonCategories = new Set(['rice-meal', 'light-snack', 'pasta', 'waffles', 'quesadilla']);
+                const noAddonNames = ['beef natchos', 'messy tuna quesadilla'];
+                if (noAddonCategories.has(normalizedCategory) || noAddonNames.includes(normalizedName)) {
+                    return [];
+                }
+
+                return DEFAULT_DRINK_ADDONS.map(addon => ({ ...addon }));
+            }
+
+            function appendAddonRow(addonList, addon = {}) {
                 if (!addonList) return;
 
+                const row = document.createElement('div');
+                row.className = 'addon-row';
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'addon-name';
+                nameInput.placeholder = 'Add-on name';
+                nameInput.value = String(addon.name || '');
+
+                const priceWrap = document.createElement('div');
+                priceWrap.className = 'addon-price-wrap';
+                const priceInputWrap = document.createElement('div');
+                priceInputWrap.className = 'price-input';
+                const currency = document.createElement('span');
+                currency.textContent = '₱';
+                const priceInput = document.createElement('input');
+                priceInput.type = 'number';
+                priceInput.className = 'addon-price';
+                priceInput.placeholder = '0.00';
+                priceInput.min = '0';
+                priceInput.step = '0.01';
+                priceInput.value = addon.price === undefined || addon.price === null ? '' : String(addon.price);
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'addon-remove';
+                removeButton.setAttribute('aria-label', 'Remove add-on');
+                removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                removeButton.addEventListener('click', () => row.remove());
+
+                priceInputWrap.append(currency, priceInput);
+                priceWrap.append(priceInputWrap, removeButton);
+                row.append(nameInput, priceWrap);
+                addonList.appendChild(row);
+            }
+
+            function renderAddonRows(addonList, addons) {
+                if (!addonList) return;
                 addonList.innerHTML = '';
-                // Do not infer add-ons from the category. An empty list is a
-                // deliberate setting and means no add-ons in the public menu
-                // and POS for the new product.
-                const addons = [];
+                addons.forEach(addon => appendAddonRow(addonList, addon));
+            }
 
-                addons.forEach(addon => {
-                    const addonRow = document.createElement('div');
-                    addonRow.className = 'addon-row';
-                    addonRow.innerHTML = `
-                        <input type="text" class="addon-name" placeholder="Add-on name" value="${addon.name}">
-                        <div class="addon-price-wrap">
-                            <div class="price-input"><span>₱</span><input type="number" class="addon-price" value="${addon.price}" step="0.01"></div>
-                            <button class="addon-remove" type="button" aria-label="Remove add-on"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                    `;
-                    addonList.appendChild(addonRow);
-                });
-
-                // Add remove button functionality
-                addonList.querySelectorAll('.addon-remove').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        this.closest('.addon-row').remove();
-                    });
-                });
+            // New products begin with the same defaults that their menu type
+            // already offers. Admins can freely remove or change any row.
+            function populateAddons(category) {
+                const addonList = document.getElementById('addonList');
+                if (!addonList || addonList.children.length) return;
+                const productName = document.getElementById('productName')?.value || '';
+                renderAddonRows(addonList, menuAddonsForProduct(productName, category));
             }
 
             // Populate add-ons when category changes
@@ -4833,6 +4907,13 @@ boycold_ensure_inventory_schema($connect);
                 // Initial population
                 populateAddons(productCategory.value);
             }
+
+            document.getElementById('productName')?.addEventListener('input', () => {
+                const addonList = document.getElementById('addonList');
+                if (addonList?.children.length === 0) {
+                    populateAddons(productCategory?.value || '');
+                }
+            });
 
             // Add new add-on button
             const addAddonBtn = document.getElementById('addAddonBtn');
@@ -5030,6 +5111,9 @@ boycold_ensure_inventory_schema($connect);
             const editProductImageInput = document.getElementById('editProductImageInput');
             const editImagePreview = document.getElementById('editImagePreview');
             const editImageRemoveBtn = document.getElementById('editImageRemoveBtn');
+            const editAddonList = document.getElementById('editAddonList');
+            const editAddAddonBtn = document.getElementById('editAddAddonBtn');
+            const editAddonSource = document.getElementById('editAddonSource');
             let editImageChanged = false;
             let editImageRemoved = false;
 
@@ -5088,6 +5172,34 @@ boycold_ensure_inventory_schema($connect);
                 if (editProductImageInput) editProductImageInput.value = '';
             }
 
+            function getEditProductAddons(product, name, category) {
+                const savedAddons = Array.isArray(product?.addons) ? product.addons : [];
+                if (savedAddons.length || product?.addons_configured) {
+                    return { addons: savedAddons, source: 'Saved for this product' };
+                }
+                return {
+                    addons: menuAddonsForProduct(name, category),
+                    source: 'Default choices currently shown in the User and POS menus'
+                };
+            }
+
+            function collectEditProductAddons() {
+                const addons = [];
+                editAddonList?.querySelectorAll('.addon-row').forEach(row => {
+                    const name = row.querySelector('.addon-name')?.value.trim() || '';
+                    const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
+                    if (!name && !priceRaw) return;
+                    const price = Number(priceRaw);
+                    if (!name || !Number.isFinite(price) || price < 0) {
+                        throw new Error('Each add-on needs a name and a valid price.');
+                    }
+                    addons.push({ name, price });
+                });
+                return addons;
+            }
+
+            editAddAddonBtn?.addEventListener('click', () => appendAddonRow(editAddonList));
+
             function openEditModal(card) {
                 if (!card) return;
 
@@ -5108,6 +5220,11 @@ boycold_ensure_inventory_schema($connect);
                 document.getElementById('editProductName').value = name;
                 document.getElementById('editSellingPrice').value = price;
                 document.getElementById('editProductCategory').value = category;
+
+                const product = productsById.get(String(card.dataset.id));
+                const addOnInfo = getEditProductAddons(product, name, category);
+                renderAddonRows(editAddonList, addOnInfo.addons);
+                if (editAddonSource) editAddonSource.textContent = addOnInfo.source;
 
                 const currentImage = card.querySelector('.card-image img');
                 if (editImagePreview) editImagePreview.src = currentImage?.src || '';
@@ -5192,6 +5309,14 @@ boycold_ensure_inventory_schema($connect);
                         return;
                     }
 
+                    let addons;
+                    try {
+                        addons = collectEditProductAddons();
+                    } catch (error) {
+                        alert(error.message);
+                        return;
+                    }
+
                     const productId = currentEditingCard.dataset.id;
                     const formData = new FormData();
                     formData.append('id', productId);
@@ -5199,6 +5324,7 @@ boycold_ensure_inventory_schema($connect);
                     formData.append('category', newCategory);
                     formData.append('price', String(priceValue));
                     formData.append('is_available', newStatus === 'unavailable' ? '0' : '1');
+                    formData.append('addons', JSON.stringify(addons));
                     if (editImageChanged && editProductImageInput?.files?.[0]) {
                         formData.append('image_file', editProductImageInput.files[0]);
                     }
