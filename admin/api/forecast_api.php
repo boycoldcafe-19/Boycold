@@ -18,6 +18,15 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
+set_exception_handler(function (Throwable $error): void {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Forecast data could not be loaded.',
+    ]);
+    error_log('Forecast API error: ' . $error->getMessage());
+});
+
 require_once __DIR__ . '/../../config/inventory_service.php';
 require_once __DIR__ . '/../../config/analytics_reporting_service.php';
 

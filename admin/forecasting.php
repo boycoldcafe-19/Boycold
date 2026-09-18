@@ -468,9 +468,11 @@ while ($row = $branchesResult->fetch_assoc()) {
                 historical_days: historicalDays,
                 forecast_days: 14
             });
-            if (demandRangeFromAnalytics.startDate && demandRangeFromAnalytics.endDate) {
-                params.set('demand_start_date', demandRangeFromAnalytics.startDate);
-                params.set('demand_end_date', demandRangeFromAnalytics.endDate);
+            const demandStartDate = demandRangeFromAnalytics.startDate;
+            const demandEndDate = demandRangeFromAnalytics.endDate;
+            if (demandStartDate && demandEndDate) {
+                params.set('demand_start_date', demandStartDate);
+                params.set('demand_end_date', demandEndDate);
             }
             const url = `api/forecast_api.php?${params.toString()}`;
             try {
@@ -478,14 +480,25 @@ while ($row = $branchesResult->fetch_assoc()) {
                     credentials: 'same-origin',
                     cache: 'no-store'
                 });
-                const data = await response.json();
-                if (data.success) {
-                    updateDashboard(data);
-                    updateLastUpdateTime();
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    throw new Error(`Forecast API returned invalid JSON (HTTP ${response.status}).`);
                 }
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `Forecast API request failed (HTTP ${response.status}).`);
+                }
+                updateDashboard(data);
+                updateLastUpdateTime();
                 return data;
             } catch (error) {
                 console.error('Forecast fetch error:', error);
+                const footerText = document.getElementById('forecastFooterText');
+                if (footerText) {
+                    footerText.textContent = error.message || 'Unable to load forecast data.';
+                }
                 return null;
             }
         }
