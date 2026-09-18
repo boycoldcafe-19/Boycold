@@ -1063,7 +1063,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 const row = document.createElement('div');
                 row.className = `trending-row ${isUp ? 'trending-up' : ''}`;
                 row.innerHTML = `
-                    <span class="trending-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../POS/img/icon.png'"></span>
+                    <span class="trending-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../pos/img/icon.png'"></span>
                     <div class="trending-content">
                         <span class="trending-name">${item.product_name}</span>
                         <p class="trending-desc">${item.recent_7} units this week vs ${item.prev_7} last week.</p>
