@@ -319,41 +319,39 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
     <link rel="stylesheet" href="../styles/login.css">
     <link rel="icon" type="image/png" href="../picture/icon.png">
 </head>
-<header>
-    <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
-</header>
-
 <body>
-    <div class="pic1">
-        <img src="../picture/Mask group.png" alt="Sign Up Image">
-    </div>
+    <header>
+        <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
+    </header>
 
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
+    <main class="login-layout">
+        <section class="login-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
 
-    <h1 class="font">Log in Now</h1>
-    <h2 class="p1">Please Log in to continue using our app</h2>
+            <h1 class="font">Log in Now</h1>
+            <h2 class="p1">Please Log in to continue using our app</h2>
 
-    <?php if ($verified): ?>
-        <p class="form-message success">
-            ✅ Account verified! You can now log in.
-        </p>
-    <?php endif; ?>
+            <?php if ($verified): ?>
+                <p class="form-message success">
+                    ✅ Account verified! You can now log in.
+                </p>
+            <?php endif; ?>
 
-    <?php if ($reset): ?>
-        <p class="form-message success">
-            ✅ Password reset successfully! Please log in.
-        </p>
-    <?php endif; ?>
+            <?php if ($reset): ?>
+                <p class="form-message success">
+                    ✅ Password reset successfully! Please log in.
+                </p>
+            <?php endif; ?>
 
-    <?php if ($error): ?>
-        <p class="form-message error">
-            <?= htmlspecialchars($error) ?>
-        </p>
-    <?php endif; ?>
+            <?php if ($error): ?>
+                <p class="form-message error">
+                    <?= htmlspecialchars($error) ?>
+                </p>
+            <?php endif; ?>
 
-    <form action="login.php" method="post">
+            <form action="login.php" method="post">
         <label for="email"></label>
         <input type="email" id="email" name="email" placeholder="*Email" value="<?= htmlspecialchars($savedEmail) ?>" required><br><br>
 
@@ -381,7 +379,13 @@ $savedEmail = $_COOKIE['remember_email'] ?? '';
                 <span>Continue with Google</span>
             </a>
         </div>
-    </form>
+            </form>
+        </section>
+
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="BoyCold Café promotion">
+        </div>
+    </main>
 
     <script>
         const passwordInput = document.getElementById('password');

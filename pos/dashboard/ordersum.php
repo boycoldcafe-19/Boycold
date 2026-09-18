@@ -193,10 +193,6 @@ if ($shiftResult) {
             <div class="top-header">
                 <div id="popupHost" style="display:none;"></div>
 
-                <div class="header-divider"></div>
-
-                <div class="header-divider"></div>
-
                 <button class="profile-btn">
                     <div class="profile-avatar">A</div>
                     <span class="profile-name"><?= htmlspecialchars($branchName) ?></span>

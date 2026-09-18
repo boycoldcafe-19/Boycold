@@ -23,7 +23,7 @@ header img {
 }
 
 body {
-    min-height: 115vh;
+    min-height: 100vh;
 }
 
 body::-webkit-scrollbar {
@@ -34,15 +34,30 @@ body::-webkit-scrollbar {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
-    right: 30px;
-    margin-top: 30px;
-    padding-left: 50px;
+    flex: 1 1 50%;
+    min-width: 0;
 }
 
 .pic1 img {
-    max-width: 100%;
+    display: block;
+    width: 100%;
     height: auto;
+    border-radius: 20px;
+}
+
+.login-layout {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: min(1360px, 100%);
+    min-height: calc(100vh - 87px);
+    margin: 0 auto;
+}
+
+.login-content {
+    flex: 1 1 50%;
+    min-width: 320px;
+    padding: 0 clamp(32px, 7vw, 110px);
 }
 
 /* Hidden by default; shown only on mobile */
@@ -58,7 +73,6 @@ body::-webkit-scrollbar {
 
 form {
     margin-top: 20px;
-    padding-left: 155px;
     font-family: 'Afacad', sans-serif;
 }
 
@@ -67,7 +81,6 @@ h1.font {
     font-size: 70px;
     color: #000000;
     padding-top: 50px;
-    padding-left: 135px;
 }
 
 button {
@@ -143,7 +156,6 @@ p {
 .p1 {
     font-size: 18px;
     color: #692727;
-    padding-left: 150px;
     margin-bottom: 30px;
     font-family: 'Afacad', sans-serif;
 }
@@ -237,7 +249,6 @@ p a:hover {
     font-size: 14px;
     margin-top: 5px;
     margin-bottom: 10px;
-    padding-left: 150px;
     line-height: 1.4;
 }
 
@@ -249,7 +260,17 @@ p a:hover {
     color: red;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+
+    .login-layout {
+        display: block;
+        width: 100%;
+        min-height: auto;
+    }
+
+    .login-content {
+        min-width: 0;
+    }
 
     /* Hide desktop side image */
     .pic1 {
@@ -361,8 +382,11 @@ p a:hover {
         padding: 0 20px;
     }
 
-    .google-btn {
+    .google {
         width: 100%;
     }
 
+    .google-btn {
+        width: 100%;
+    }
 }
