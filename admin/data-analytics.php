@@ -95,6 +95,15 @@ $branches = [];
 while ($row = $branchesResult->fetch_assoc()) {
     $branches[] = $row;
 }
+$selectedBranchName = 'All Branches';
+if ($branchId !== 'all') {
+    foreach ($branches as $branch) {
+        if ((string) $branch['id'] === $branchId) {
+            $selectedBranchName = (string) $branch['branch_name'];
+            break;
+        }
+    }
+}
 
 // Fetch analytics data from database
 function getLegacyAnalyticsData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId) {
@@ -533,7 +542,7 @@ if (($_GET['format'] ?? '') === 'json') {
                         <div class="branch-filter">
                             <div class="branch-dropdown">
                                 <button type="button" class="branch-trigger">
-                                    <span class="branch-trigger-label"><?php echo $branchId === 'all' ? 'All Branches' : ($branches[array_search($branchId, array_column($branches, 'id'))]['branch_name'] ?? 'All Branches'); ?></span>
+                                    <span class="branch-trigger-label"><?php echo htmlspecialchars($selectedBranchName, ENT_QUOTES); ?></span>
                                     <i class="fa-solid fa-chevron-down"></i>
                                 </button>
                                 <div class="branch-menu">
