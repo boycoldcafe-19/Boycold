@@ -203,8 +203,10 @@ $menuCategories = boycold_menu_get_categories($connect);
                             $category = htmlspecialchars($categoryValue);
                             $popularCategory = strtolower(trim((string) ($product['popular_category'] ?? '')));
                             $popularCategory = htmlspecialchars($popularCategory);
-                            $addonsConfigured = !empty($product['addons_configured']);
                             $addons = $productAddons[(int) $product['id']] ?? [];
+                            // Never expose legacy/default choices. A product has
+                            // add-ons only when the admin saved actual rows for it.
+                            $addonsConfigured = !empty($addons);
 
                             $dataCategory = $category;
                     ?>

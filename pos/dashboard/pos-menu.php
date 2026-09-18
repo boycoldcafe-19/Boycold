@@ -271,8 +271,10 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             $ingredientStatus = htmlspecialchars((string) ($availabilityInfo['ingredient_status'] ?? 'Insufficient'), ENT_QUOTES);
                             $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
                             $canOrder = !empty($availabilityInfo['can_order']);
-                            $addonsConfigured = !empty($product['addons_configured']);
                             $addons = $productAddons[(int) $product['id']] ?? [];
+                            // Both branches read the same administrator-managed
+                            // choices; an empty list means no custom add-ons.
+                            $addonsConfigured = !empty($addons);
                         ?>
                         <div class="product-card"
                              data-category="<?= htmlspecialchars($product['category'], ENT_QUOTES) ?>"

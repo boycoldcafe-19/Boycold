@@ -190,10 +190,8 @@ function boycold_ensure_product_id_auto_increment(mysqli $connect): void
 }
 
 /**
- * Store an administrator's add-on choices per menu item.  The configured
- * flag deliberately distinguishes older items (which keep their historic
- * generic choices) from a newly created item for which the admin selected no
- * add-ons at all.
+ * Store an administrator's add-on choices per menu item. An empty list means
+ * the item has no add-ons; public and POS menus must not infer defaults.
  */
 function boycold_ensure_product_addons_schema(mysqli $connect): void
 {

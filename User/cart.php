@@ -113,7 +113,7 @@ $_SESSION['user_email'] = $user['email'];
                 <li class="sidebar-nav-only"><a href="menu.php">MENU</a></li>
                 <li class="sidebar-nav-only"><a href="favorites.php">FAVORITES</a></li>
                 <li class="sidebar-nav-only"><a href="status.php">ORDERS</a></li>
-                <li class="sidebar-nav-only"><a href="stores.php">FIND A STORE</a></li>
+                <li class="sidebar-nav-only"><a href="store/stores.php">FIND A STORE</a></li>
             </ul>
         </nav>
         <div class="sidebar-user">

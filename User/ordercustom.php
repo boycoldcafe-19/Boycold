@@ -29,19 +29,17 @@ $productNameRaw = isset($_GET['name']) ? strip_tags($_GET['name']) : 'Unknown Pr
 $productName  = htmlspecialchars($productNameRaw);
 $productPrice = isset($_GET['price']) ? htmlspecialchars(strip_tags($_GET['price'])) : '0.00';
 $productImage = isset($_GET['image']) ? htmlspecialchars(strip_tags($_GET['image'])) : '../picture/SC-Einspanner Latte _ 149 1.png';
-$productAddon = isset($_GET['addon']) ? htmlspecialchars(strip_tags($_GET['addon'])) : '';
-$addonsConfigured = ($_GET['addons_configured'] ?? '0') === '1';
 $productAddons = [];
-if ($addonsConfigured) {
-    $decodedAddons = json_decode((string) ($_GET['addons'] ?? '[]'), true);
-    if (is_array($decodedAddons)) {
-        foreach ($decodedAddons as $addon) {
-            if (!is_array($addon)) continue;
-            $addonName = trim((string) ($addon['name'] ?? $addon['value'] ?? ''));
-            $addonPrice = $addon['price'] ?? null;
-            if ($addonName !== '' && is_numeric($addonPrice) && (float) $addonPrice >= 0) {
-                $productAddons[] = ['name' => $addonName, 'price' => (float) $addonPrice];
-            }
+// The product menu card passes only administrator-managed choices. Do not
+// fall back to generic add-ons when the list is empty.
+$decodedAddons = json_decode((string) ($_GET['addons'] ?? '[]'), true);
+if (is_array($decodedAddons)) {
+    foreach ($decodedAddons as $addon) {
+        if (!is_array($addon)) continue;
+        $addonName = trim((string) ($addon['name'] ?? $addon['value'] ?? ''));
+        $addonPrice = $addon['price'] ?? null;
+        if ($addonName !== '' && is_numeric($addonPrice) && (float) $addonPrice >= 0) {
+            $productAddons[] = ['name' => $addonName, 'price' => (float) $addonPrice];
         }
     }
 }
@@ -64,34 +62,9 @@ if ($productCategory === 'bites') {
 $simpleCategories = ['rice-meal', 'light-snack', 'pasta'];
 $isSimpleCategory = in_array($productCategory, $simpleCategories, true);
 
-// Bites items: use addon system, hide milk/espresso options
+// Bites items do not offer milk choices.
 $bitesItems  = ['French Fries', 'Chicken Poppers', 'Chicken poppers and fries', 'Fries and Chicken Poppers'];
 $isBitesItem = !$isSimpleCategory && in_array($productNameRaw, $bitesItems, true);
-
-// Sauce/flavor options per item [label => price]
-$sauceOptions = [];
-if ($productName === 'French Fries') {
-    $sauceOptions = [
-        'No Sauce'           => 69,
-        'Cheese Sauce'       => 99,
-        'Cheese Powder'      => 99,
-        'BBQ Powder'         => 99,
-        'Sour Cream Powder'  => 99,
-    ];
-} elseif ($productName === 'Chicken Poppers') {
-    $sauceOptions = [
-        'No Sauce'     => 79,
-        'Cheese Sauce' => 109,
-    ];
-} elseif ($productName === 'Chicken poppers and fries' || $productName === 'Fries and Chicken Poppers') {
-    $sauceOptions = [
-        'No Sauce'     => 99,
-        'Cheese Sauce' => 139,
-    ];
-}
-$hasSauceOptions = !empty($sauceOptions);
-// Default selected sauce: what was passed from menu, or the first option
-$selectedSauce = ($productAddon && isset($sauceOptions[$productAddon])) ? $productAddon : array_key_first($sauceOptions ?: []);
 
 // Waffles & Quesadilla: hide Milk Choice and Add-ons entirely
 $noAddonItems = [
@@ -108,7 +81,9 @@ $noAddonItems = [
     'Beef Natchos',
 ];
 $isNoAddonItem = $isSimpleCategory || in_array($productNameRaw, $noAddonItems, true);
-$hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCategory && !$isNoAddonItem);
+$hasProductAddons = !empty($productAddons);
+// With no add-ons configured, leave only the order-type and quantity controls.
+$showMilkChoices = $hasProductAddons && !$isBitesItem && !$isNoAddonItem;
 ?>
 
 <!DOCTYPE html>
@@ -226,8 +201,8 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                     </div>
                     <div class="mini-info">
                         <h4><?= $productName ?></h4>
-                        <p id="miniMilk"><?= ($isBitesItem || $isNoAddonItem) ? '' : 'Original Milk' ?></p>
-                        <p id="miniAddons"><?= $isBitesItem ? ($productAddon ?: 'No Sauce') . ' • Pick-Up' : (($isNoAddonItem || !$hasProductAddons) ? 'Pick-Up' : 'No Add-ons • Pick-Up') ?></p>
+                        <p id="miniMilk"><?= $showMilkChoices ? 'Original Milk' : '' ?></p>
+                        <p id="miniAddons"><?= $hasProductAddons ? 'No Add-ons • Pick-Up' : 'Pick-Up' ?></p>
                         <p id="miniQty">Qty: 1</p>
                     </div>
                 </div>
@@ -238,8 +213,8 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                 <div class="line"></div>
                 <div class="price">₱<?= $productPrice ?></div>
 
-                <!-- Milk Choice — hidden for bites/food items -->
-                <?php if (!$isBitesItem && !$isNoAddonItem): ?>
+                <!-- Only show modifications explicitly configured by the admin. -->
+                <?php if ($showMilkChoices): ?>
                     <div class="section" id="section-milk">
                         <div class="section-title">
                             <i class="fa-solid fa-bottle-water"></i>
@@ -256,45 +231,16 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                     <div class="section" id="section-addons">
                         <div class="section-title">
                             <i class="fa-solid fa-circle-plus"></i>
-                            <?= $isBitesItem ? 'Sauce / Flavor' : 'Add-ons' ?>
+                            Add-ons
                         </div>
 
-                        <?php if ($addonsConfigured): ?>
-                            <div class="option-group">
-                                <?php foreach ($productAddons as $addon): ?>
-                                    <button class="option" data-price="<?= htmlspecialchars((string) $addon['price'], ENT_QUOTES) ?>">
-                                        <?= htmlspecialchars($addon['name']) ?><?php if ($addon['price'] > 0): ?> +₱<?= number_format($addon['price'], 2) ?><?php endif; ?>
-                                    </button>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php elseif ($isBitesItem): ?>
-                            <?php if ($hasSauceOptions): ?>
-                                <div class="sauce-option-group" id="sauceOptionGroup">
-                                    <?php foreach ($sauceOptions as $label => $price): ?>
-                                        <label class="sauce-option <?= $label === $selectedSauce ? 'selected' : '' ?>">
-                                            <input type="radio" name="sauce-choice" value="<?= htmlspecialchars($label) ?>"
-                                                data-price="<?= $price ?>"
-                                                <?= $label === $selectedSauce ? 'checked' : '' ?>>
-                                            <span class="sauce-label"><?= htmlspecialchars($label) ?></span>
-                                            <span class="sauce-price">₱<?= $price ?></span>
-                                        </label>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="addon-selected-display">
-                                    <span class="addon-badge">
-                                        <i class="fa-solid fa-check"></i>
-                                        <?= $productAddon ?: 'No Sauce' ?>
-                                    </span>
-                                </div>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div class="option-group">
-                                <button class="option">Espresso Shot +₱15</button>
-                                <button class="option">Whipped Cream +₱15</button>
-                                <button class="option">Chocolate Drizzle +₱15</button>
-                            </div>
-                        <?php endif; ?>
+                        <div class="option-group">
+                            <?php foreach ($productAddons as $addon): ?>
+                                <button class="option" data-price="<?= htmlspecialchars((string) $addon['price'], ENT_QUOTES) ?>">
+                                    <?= htmlspecialchars($addon['name']) ?><?php if ($addon['price'] > 0): ?> +₱<?= number_format($addon['price'], 2) ?><?php endif; ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
 
                     </div>
                 <?php endif; ?>
@@ -376,33 +322,12 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
     <script>
         /* ── Product Data from PHP ── */
         let basePrice = parseFloat('<?= $productPrice ?>');
-        const isBitesItem = <?= $isBitesItem ? 'true' : 'false' ?>;
-        const isNoAddonItem = <?= $isNoAddonItem ? 'true' : 'false' ?>;
         const isSimpleCategory = <?= $isSimpleCategory ? 'true' : 'false' ?>;
-        const hasSauceOptions = <?= $hasSauceOptions ? 'true' : 'false' ?>;
         const hasProductAddons = <?= $hasProductAddons ? 'true' : 'false' ?>;
-        let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
+        const showMilkChoices = <?= $showMilkChoices ? 'true' : 'false' ?>;
         let addOnTotal = 0;
         const availableServings = <?= (int) $availableServings ?>;
         const selectedBranchId = <?= (int) $selectedBranchId ?>;
-
-        // If this item has sauce radio buttons, wire them up
-        if (hasSauceOptions) {
-            document.querySelectorAll('#sauceOptionGroup input[type="radio"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    // Update selected styling
-                    document.querySelectorAll('#sauceOptionGroup .sauce-option')
-                        .forEach(el => el.classList.remove('selected'));
-                    this.closest('.sauce-option').classList.add('selected');
-
-                    // The sauce price IS the full item price (not an add-on delta)
-                    basePrice = parseFloat(this.getAttribute('data-price'));
-                    passedAddon = this.value;
-                    recalcTotal();
-                    updateMiniCard();
-                });
-            });
-        }
 
         function recalcTotal() {
             const qty = parseInt(document.getElementById('qtyValue').textContent) || 1;
@@ -435,9 +360,9 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                 miniCard.classList.add('animate-in');
             }
 
-            // Milk row — only for drinks
+            // Milk row — only when add-ons were configured for a drink.
             const miniMilk = document.getElementById('miniMilk');
-            if (!isBitesItem && !isNoAddonItem) {
+            if (showMilkChoices) {
                 const milkGroup = document.querySelector('#section-milk .option-group');
                 const activeMilk = milkGroup ? milkGroup.querySelector('.option.active') : null;
                 const milkText = activeMilk ? activeMilk.textContent.replace(/\s*\+₱\d+/, '').trim() : 'Original';
@@ -446,13 +371,9 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
                 miniMilk.textContent = '';
             }
 
-            // Add-ons / sauce text
-            let addonText;
-            if (isBitesItem) {
-                addonText = passedAddon;
-            } else if (isNoAddonItem || !hasProductAddons) {
-                addonText = '';
-            } else {
+            // Add-on text comes only from the administrator-managed list.
+            let addonText = '';
+            if (hasProductAddons) {
                 const activeAddons = [...document.querySelectorAll('#section-addons .option.active')];
                 addonText = activeAddons.length ?
                     activeAddons.map(b => b.textContent.replace(/\s*\+₱\d+/, '').trim()).join(', ') :
@@ -490,16 +411,14 @@ $hasProductAddons = $addonsConfigured ? !empty($productAddons) : (!$isSimpleCate
 
             // Milk
             let milk = '';
-            if (!isBitesItem && !isNoAddonItem) {
+            if (showMilkChoices) {
                 const activeMilk = document.querySelector('#section-milk .option.active');
                 milk = activeMilk ? activeMilk.textContent.replace(/\s*\+₱\d+/, '').trim() + ' Milk' : 'Original Milk';
             }
 
             // Add-ons
             let addons = '';
-            if (isBitesItem) {
-                addons = passedAddon && passedAddon !== 'No Sauce' ? passedAddon : '';
-            } else if (!isNoAddonItem) {
+            if (hasProductAddons) {
                 const active = [...document.querySelectorAll('#section-addons .option.active')];
                 addons = active.map(b => b.textContent.replace(/\s*\+₱\d+/, '').trim()).join(', ');
             }

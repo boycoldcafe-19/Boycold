@@ -325,8 +325,10 @@ try {
                 $product['available_servings'] = $info['available_servings'] ?? 0;
                 $product['inventory_can_order'] = !empty($info['can_order']);
                 $product['ingredient_details'] = $info['ingredients'] ?? [];
-                $product['addons_configured'] = !empty($product['addons_configured']);
                 $product['addons'] = $addonsByProduct[(int) $product['id']] ?? [];
+                // The add-on rows are the source of truth. This also keeps
+                // products saved before the flag was introduced in sync.
+                $product['addons_configured'] = !empty($product['addons']);
             }
             unset($product);
             response([
@@ -466,7 +468,7 @@ try {
             $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
             $image = $uploadedImage ?? '';
             $available = !empty($data['is_available']) ? 1 : 0;
-            $addonsConfigured = 1;
+            $addonsConfigured = $addons ? 1 : 0;
             $stmt = $connect->prepare('INSERT INTO products (product_name, description, price, image, category, is_available, addons_configured) VALUES (?, ?, ?, ?, ?, ?, ?)');
             if (!$stmt) {
                 if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
@@ -529,7 +531,7 @@ try {
             $removeImage = !empty($data['remove_image']);
             $image = $uploadedImage ?? ($removeImage ? '' : (string) ($currentProduct['image'] ?? ''));
             if ($addonsProvided) {
-                $addonsConfigured = 1;
+                $addonsConfigured = $addons ? 1 : 0;
                 $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ?, addons_configured = ? WHERE id = ?');
                 $stmt->bind_param('ssdsiii', $name, $category, $price, $image, $available, $addonsConfigured, $id);
             } else {
