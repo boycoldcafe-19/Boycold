@@ -5,6 +5,7 @@ require_once '../config/db_config.php';
 $guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 require_once '../../config/inventory_service.php';
+require_once '../../config/menu_catalog_service.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -57,6 +58,7 @@ while ($row = $productsResult->fetch_assoc()) {
 }
 $productsStmt->close();
 $productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($products, 'product_name'));
+$menuCategories = boycold_menu_get_categories($connect);
 
 // Branch identity comes from the authenticated employee record.
 $branchId = (int) $guardEmployee['branch_id'];
@@ -232,16 +234,11 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             </div>
 
             <nav class="category-bar" aria-label="Menu categories">
-                <a href="#" data-filter="coffee" class="cat-pill active">Coffee</a>
-                <a href="#" data-filter="non-coffee" class="cat-pill">Non-Coffee</a>
-                <a href="#" data-filter="matcha-fusion" class="cat-pill">Matcha Fusion</a>
-                <a href="#" data-filter="smoothie" class="cat-pill">Smoothie</a>
-                <a href="#" data-filter="frappe-series" class="cat-pill">Frappe Series</a>
-                <a href="#" data-filter="rice-meal" class="cat-pill">Rice Meal</a>
-                <a href="#" data-filter="light-snack" class="cat-pill">Light Snack</a>
-                <a href="#" data-filter="pasta" class="cat-pill">Pasta</a>
-                <a href="#" data-filter="waffles" class="cat-pill">Waffles</a>
-                <a href="#" data-filter="quesadilla" class="cat-pill">Quesadilla</a>
+                <?php foreach ($menuCategories as $categoryIndex => $menuCategory): ?>
+                    <a href="#" data-filter="<?= htmlspecialchars($menuCategory['slug'], ENT_QUOTES) ?>" class="cat-pill<?= $categoryIndex === 0 ? ' active' : '' ?>">
+                        <?= htmlspecialchars($menuCategory['name']) ?>
+                    </a>
+                <?php endforeach; ?>
                 <button class="cat-add" id="addProductBtn" aria-label="Add category">
                     <i class="fa-solid fa-plus"></i>
                     <span>Add</span>
@@ -284,16 +281,24 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             <div class="card-image">
                                 <div class="card-image-placeholder">
                                     <?php
-                                    $imageUrlPath = parse_url((string) ($product['image'] ?? ''), PHP_URL_PATH);
-                                    $imageName = is_string($imageUrlPath) ? basename($imageUrlPath) : '';
-                                    $posImageFile = __DIR__ . '/../img/' . $imageName;
-                                    $pictureImageFile = __DIR__ . '/../../picture/' . $imageName;
-                                    if ($imageName === '' || (!is_file($posImageFile) && !is_file($pictureImageFile))) {
-                                        $imagePath = '../img/default.png';
-                                    } elseif (is_file($posImageFile)) {
-                                        $imagePath = '../img/' . rawurlencode($imageName);
+                                    $storedImage = ltrim((string) ($product['image'] ?? ''), '/');
+                                    if (str_starts_with($storedImage, 'uploads/menu/')) {
+                                        $uploadImageFile = __DIR__ . '/../../' . $storedImage;
+                                        $imagePath = is_file($uploadImageFile)
+                                            ? '../../' . implode('/', array_map('rawurlencode', explode('/', $storedImage)))
+                                            : '../img/default.png';
                                     } else {
-                                        $imagePath = '../../picture/' . rawurlencode($imageName);
+                                        $imageUrlPath = parse_url((string) ($product['image'] ?? ''), PHP_URL_PATH);
+                                        $imageName = is_string($imageUrlPath) ? basename($imageUrlPath) : '';
+                                        $posImageFile = __DIR__ . '/../img/' . $imageName;
+                                        $pictureImageFile = __DIR__ . '/../../picture/' . $imageName;
+                                        if ($imageName === '' || (!is_file($posImageFile) && !is_file($pictureImageFile))) {
+                                            $imagePath = '../img/default.png';
+                                        } elseif (is_file($posImageFile)) {
+                                            $imagePath = '../img/' . rawurlencode($imageName);
+                                        } else {
+                                            $imagePath = '../../picture/' . rawurlencode($imageName);
+                                        }
                                     }
                                     ?>
                                     <img src="<?= htmlspecialchars($imagePath) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">

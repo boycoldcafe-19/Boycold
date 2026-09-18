@@ -27,7 +27,7 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
-function getInventoryStatus($connect) {
+function getInventoryStatus(mysqli $connect): array {
     // Check if max_stock column exists
     $columnCheck = $connect->query("SHOW COLUMNS FROM ingredients LIKE 'max_stock'");
     $hasMaxStock = $columnCheck->num_rows > 0;

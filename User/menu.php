@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/db_config.php';
 require_once '../config/inventory_service.php';
+require_once '../config/menu_catalog_service.php';
 require_once '../config/loyalty.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -53,6 +54,7 @@ while ($productsResult && ($row = $productsResult->fetch_assoc())) {
     $productsList[] = $row;
 }
 $productAvailability = boycold_get_product_inventory_availability($connect, $branchId, array_column($productsList, 'product_name'));
+$menuCategories = boycold_menu_get_categories($connect);
 ?>
 
 
@@ -158,16 +160,13 @@ $productAvailability = boycold_get_product_inventory_availability($connect, $bra
         <div class="box">
             <ul>
                 <li><a href="#" data-filter="popular" class="active">Popular</a></li>
-                <li><a href="#" data-filter="coffee">Coffee</a></li>
-                <li><a href="#" data-filter="non-coffee">Non-Coffee</a></li>
-                <li><a href="#" data-filter="matcha-fusion">Matcha Fusion</a></li>
-                <li><a href="#" data-filter="smoothie">Smoothie</a></li>
-                <li><a href="#" data-filter="frappe-series">Frappe Series</a></li>
-                <li><a href="#" data-filter="rice-meal">Rice Meal</a></li>
-                <li><a href="#" data-filter="light-snack">Light Snack</a></li>
-                <li><a href="#" data-filter="pasta">Pasta</a></li>
-                <li><a href="#" data-filter="waffles">Waffles</a></li>
-                <li><a href="#" data-filter="quesadilla">Quesadilla</a></li>
+                <?php foreach ($menuCategories as $menuCategory): ?>
+                    <li>
+                        <a href="#" data-filter="<?= htmlspecialchars($menuCategory['slug'], ENT_QUOTES) ?>">
+                            <?= htmlspecialchars($menuCategory['name']) ?>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
             </ul>
 
         </div>

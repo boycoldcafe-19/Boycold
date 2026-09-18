@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/admin_auth.php';
 require_once __DIR__ . '/../config/inventory_service.php';
+require_once __DIR__ . '/../config/menu_catalog_service.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -99,6 +100,8 @@ if (!currentAdmin($connect)) {
 
 try {
     boycold_ensure_inventory_schema($connect);
+    boycold_ensure_menu_category_schema($connect);
+    boycold_ensure_product_id_auto_increment($connect);
 
     switch ($action) {
         case 'settings_get':
@@ -322,7 +325,101 @@ try {
                 $product['ingredient_details'] = $info['ingredients'] ?? [];
             }
             unset($product);
-            response(['success' => true, 'products' => $products]);
+            response([
+                'success' => true,
+                'products' => $products,
+                'categories' => boycold_menu_get_categories($connect),
+            ]);
+
+        case 'menu_categories_sync':
+            $requestedCategories = $data['categories'] ?? null;
+            if (!is_array($requestedCategories) || !$requestedCategories) {
+                response(['success' => false, 'error' => 'Keep at least one menu category.'], 422);
+            }
+
+            $existingCategories = boycold_menu_get_categories($connect, false);
+            $existingBySlug = [];
+            foreach ($existingCategories as $existingCategory) {
+                $existingBySlug[(string) $existingCategory['slug']] = $existingCategory;
+            }
+
+            $categories = [];
+            foreach ($requestedCategories as $position => $requestedCategory) {
+                if (!is_array($requestedCategory)) {
+                    response(['success' => false, 'error' => 'Invalid menu category.'], 422);
+                }
+                $slug = boycold_menu_category_slug((string) ($requestedCategory['slug'] ?? $requestedCategory['name'] ?? ''));
+                if ($slug === '') {
+                    response(['success' => false, 'error' => 'Each category needs a valid name.'], 422);
+                }
+                if (isset($categories[$slug])) {
+                    response(['success' => false, 'error' => 'Category names must be unique.'], 422);
+                }
+                $categories[$slug] = [
+                    'slug' => $slug,
+                    'name' => boycold_menu_category_label((string) ($requestedCategory['name'] ?? ''), $slug),
+                    'display_order' => (int) $position,
+                ];
+            }
+
+            $usedCategorySlugs = [];
+            $productCategories = $connect->query("SELECT DISTINCT category FROM products WHERE TRIM(COALESCE(category, '')) <> ''");
+            while ($productCategories && ($productCategory = $productCategories->fetch_assoc())) {
+                $usedSlug = boycold_menu_category_slug((string) $productCategory['category']);
+                if ($usedSlug !== '') {
+                    $usedCategorySlugs[$usedSlug] = true;
+                }
+            }
+            foreach ($existingBySlug as $slug => $existingCategory) {
+                if ((int) $existingCategory['is_active'] === 1 && !isset($categories[$slug]) && !empty($usedCategorySlugs[$slug])) {
+                    response([
+                        'success' => false,
+                        'error' => "The {$existingCategory['name']} category still has menu items. Move or delete those items before removing the category.",
+                    ], 422);
+                }
+            }
+
+            $connect->begin_transaction();
+            try {
+                $updateCategory = $connect->prepare(
+                    'UPDATE menu_categories SET name = ?, display_order = ?, is_active = 1 WHERE slug = ?'
+                );
+                $insertCategory = $connect->prepare(
+                    'INSERT INTO menu_categories (slug, name, display_order, is_active) VALUES (?, ?, ?, 1)'
+                );
+                foreach ($categories as $category) {
+                    if (isset($existingBySlug[$category['slug']])) {
+                        $updateCategory->bind_param('sis', $category['name'], $category['display_order'], $category['slug']);
+                        if (!$updateCategory->execute()) {
+                            throw new RuntimeException('Could not update a menu category.');
+                        }
+                    } else {
+                        $insertCategory->bind_param('ssi', $category['slug'], $category['name'], $category['display_order']);
+                        if (!$insertCategory->execute()) {
+                            throw new RuntimeException('Could not save a menu category.');
+                        }
+                    }
+                }
+                $updateCategory->close();
+                $insertCategory->close();
+
+                $deactivateCategory = $connect->prepare('UPDATE menu_categories SET is_active = 0 WHERE slug = ?');
+                foreach ($existingBySlug as $slug => $existingCategory) {
+                    if ((int) $existingCategory['is_active'] === 1 && !isset($categories[$slug])) {
+                        $deactivateCategory->bind_param('s', $slug);
+                        if (!$deactivateCategory->execute()) {
+                            throw new RuntimeException('Could not remove a menu category.');
+                        }
+                    }
+                }
+                $deactivateCategory->close();
+                $connect->commit();
+            } catch (Throwable $error) {
+                $connect->rollback();
+                throw $error;
+            }
+
+            response(['success' => true, 'categories' => boycold_menu_get_categories($connect)]);
 
         case 'orders':
                  $result = $connect->query("SELECT o.id, o.user_id, o.user_name,
@@ -357,43 +454,56 @@ try {
 
         case 'product_create':
             $name = requireValue($data, 'product_name');
-            $category = requireValue($data, 'category');
-            $categoryAliases = ['waffle' => 'waffles', 'bites' => 'light-snack'];
-            $category = $categoryAliases[strtolower($category)] ?? strtolower($category);
+            $category = boycold_menu_category_slug(requireValue($data, 'category'));
+            if ($category === '') response(['success' => false, 'error' => 'Choose a valid category.'], 422);
+            boycold_menu_ensure_category($connect, $category);
             $price = max(0, (float)($data['price'] ?? 0));
-            $image = trim((string)($data['image'] ?? ''));
+            $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
+            $image = $uploadedImage ?? '';
             $available = !empty($data['is_available']) ? 1 : 0;
             $stmt = $connect->prepare('INSERT INTO products (product_name, description, price, image, category, is_available) VALUES (?, ?, ?, ?, ?, ?)');
             if (!$stmt) {
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
                 response(['success' => false, 'error' => 'Could not prepare menu item insert: ' . $connect->error], 500);
             }
             $description = '';
             $stmt->bind_param('ssdssi', $name, $description, $price, $image, $category, $available);
-            if (!$stmt->execute()) {
+            try {
+                $saved = $stmt->execute();
+            } catch (Throwable $error) {
+                $stmt->close();
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
+                response(['success' => false, 'error' => 'Menu item could not be saved: ' . $error->getMessage()], 409);
+            }
+            if (!$saved) {
                 $error = $stmt->error ?: $connect->error;
                 $stmt->close();
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
                 response(['success' => false, 'error' => 'Menu item could not be saved: ' . $error], 409);
             }
             $newProductId = (int) $stmt->insert_id;
             $stmt->close();
             if ($newProductId < 1) {
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
                 response(['success' => false, 'error' => 'Menu item was not saved because no database ID was returned.'], 500);
             }
             response(['success' => true, 'id' => $newProductId, 'product_name' => $name]);
 
         case 'product_update':
             $id = (int)($data['id'] ?? 0);
+            if ($id < 1) response(['success' => false, 'error' => 'Invalid menu item.'], 422);
             $name = requireValue($data, 'product_name');
-            $category = requireValue($data, 'category');
-            $categoryAliases = ['waffle' => 'waffles', 'bites' => 'light-snack'];
-            $category = $categoryAliases[strtolower($category)] ?? strtolower($category);
+            $category = boycold_menu_category_slug(requireValue($data, 'category'));
+            if ($category === '') response(['success' => false, 'error' => 'Choose a valid category.'], 422);
+            boycold_menu_ensure_category($connect, $category);
             $price = max(0, (float)($data['price'] ?? 0));
             $available = !empty($data['is_available']) ? 1 : 0;
-            $currentStmt = $connect->prepare('SELECT is_available FROM products WHERE id = ? LIMIT 1');
+            $currentStmt = $connect->prepare('SELECT id, image, is_available FROM products WHERE id = ? LIMIT 1');
             $currentStmt->bind_param('i', $id);
             $currentStmt->execute();
             $currentProduct = $currentStmt->get_result()->fetch_assoc();
             $currentStmt->close();
+            if (!$currentProduct) response(['success' => false, 'error' => 'Menu item was not found.'], 404);
             if ($available === 1 && (int) ($currentProduct['is_available'] ?? 0) !== 1) {
                 $availability = boycold_get_product_inventory_availability($connect, 0, [$name]);
                 $info = $availability[boycold_inventory_normalize_name($name)] ?? null;
@@ -406,9 +516,28 @@ try {
                     ], 422);
                 }
             }
-            $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, is_available = ? WHERE id = ?');
-            $stmt->bind_param('ssdii', $name, $category, $price, $available, $id);
-            $stmt->execute();
+            $uploadedImage = boycold_menu_store_uploaded_image($_FILES['image_file'] ?? null);
+            $removeImage = !empty($data['remove_image']);
+            $image = $uploadedImage ?? ($removeImage ? '' : (string) ($currentProduct['image'] ?? ''));
+            $stmt = $connect->prepare('UPDATE products SET product_name = ?, category = ?, price = ?, image = ?, is_available = ? WHERE id = ?');
+            $stmt->bind_param('ssdsii', $name, $category, $price, $image, $available, $id);
+            try {
+                $updated = $stmt->execute();
+            } catch (Throwable $error) {
+                $stmt->close();
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
+                response(['success' => false, 'error' => 'Menu item could not be updated: ' . $error->getMessage()], 409);
+            }
+            if (!$updated) {
+                $error = $stmt->error ?: $connect->error;
+                $stmt->close();
+                if ($uploadedImage) boycold_menu_remove_uploaded_image($uploadedImage);
+                response(['success' => false, 'error' => 'Menu item could not be updated: ' . $error], 409);
+            }
+            $stmt->close();
+            if (($uploadedImage || $removeImage) && $image !== (string) ($currentProduct['image'] ?? '')) {
+                boycold_menu_remove_uploaded_image((string) ($currentProduct['image'] ?? ''));
+            }
             response(['success' => true]);
 
         case 'product_delete':
@@ -622,5 +751,8 @@ try {
 } catch (Throwable $e) {
     if ($connect->errno) $connect->rollback();
     error_log('Admin data API: ' . $e->getMessage());
-    response(['success' => false, 'error' => 'Request could not be completed'], 500);
+    $message = $e instanceof RuntimeException
+        ? $e->getMessage()
+        : 'Request could not be completed';
+    response(['success' => false, 'error' => $message], 500);
 }

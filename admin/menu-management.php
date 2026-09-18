@@ -51,7 +51,7 @@ boycold_ensure_inventory_schema($connect);
                                 <span class="nav-icon1"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path
-                                            d="M0.5 5C0.367392 5 0.240215 4.94732 0.146447 4.85355C0.0526785 4.75979 0 4.63261 0 4.5V0.5C0 0.367392 0.0526785 0.240215 0.146447 0.146447C0.240215 0.0526785 0.367392 0 0.5 0H4.5C4.63261 0 4.75979 0.0526785 4.85355 0.146447C4.94732 0.240215 5 0.367392 5 0.5V4.5C5 4.63261 4.94732 4.75979 4.85355 4.85355C4.75979 4.94732 4.63261 5 4.5 5H0.5ZM7.5 5C7.36739 5 7.24021 4.94732 7.14645 4.85355C7.05268 4.75979 7 4.63261 7 4.5V0.5C7 0.367392 7.05268 0.240215 7.14645 0.146447C7.24021 0.0526785 7.36739 0 7.5 0H11.5C11.6326 0 11.7598 0.0526785 11.8536 0.146447C11.9473 0.240215 12 0.367392 12 0.5V4.5C12 4.63261 11.9473 4.75979 11.8536 4.85355C11.7598 4.94732 11.6326 5 11.5 5H7.5ZM0.5 12C0.367392 12 0.240215 11.9473 0.146447 11.8536C0.0526785 11.7598 0 11.6326 0 11.5V7.5C0 7.36739 0.0526785 7.24021 0.146447 7.14645C0.240215 7.05268 0.367392 7 0.5 7H4.5C4.63261 7 4.75979 7.05268 4.85355 7.14645C4.94732 7.24021 5 7.36739 5 7.5V11.5C5 11.6326 4.94732 11.7598 4.85355 11.8536C4.75979 11.9473 4.63261 12 4.5 12H0.5ZM7.5 12C7.36739 12 7.24021 11.9473 7.14645 11.8536C7.05268 11.7598 7 11.6326 7 11.5V7.5C7 7.36739 7.05268 7.24021 7.14645 7.14645C7.24021 7.05268 7.36739 7 7.5 7H11.5C11.6326 7 11.7598 7.05268 11.8536 7.14645C11.9473 7.24021 12 7.36739 12 7.5V11.5C12 11.6326 11.7598 11.8536 11.8536C11.7598 11.9473 11.6326 12 11.5 12H7.5Z"
+                                            d="M0.5 5C0.367392 5 0.240215 4.94732 0.146447 4.85355C0.0526785 4.75979 0 4.63261 0 4.5V0.5C0 0.367392 0.0526785 0.240215 0.146447 0.146447C0.240215 0.0526785 0.367392 0 0.5 0H4.5C4.63261 0 4.75979 0.0526785 4.85355 0.146447C4.94732 0.240215 5 0.367392 5 0.5V4.5C5 4.63261 4.94732 4.75979 4.85355 4.85355C4.75979 4.94732 4.63261 5 4.5 5H0.5ZM7.5 5C7.36739 5 7.24021 4.94732 7.14645 4.85355C7.05268 4.75979 7 4.63261 7 4.5V0.5C7 0.367392 7.05268 0.240215 7.14645 0.146447C7.24021 0.0526785 7.36739 0 7.5 0H11.5C11.6326 0 11.7598 0.0526785 11.8536 0.146447C11.9473 0.240215 12 0.367392 12 0.5V4.5C12 4.63261 11.9473 4.75979 11.8536 4.85355C11.7598 4.94732 11.6326 5 11.5 5H7.5ZM0.5 12C0.367392 12 0.240215 11.9473 0.146447 11.8536C0.0526785 11.7598 0 11.6326 0 11.5V7.5C0 7.36739 0.0526785 7.24021 0.146447 7.14645C0.240215 7.05268 0.367392 7 0.5 7H4.5C4.63261 7 4.75979 7.05268 4.85355 7.14645C4.94732 7.24021 5 7.36739 5 7.5V11.5C5 11.6326 4.94732 11.7598 4.85355 11.8536C4.75979 11.9473 4.63261 12 4.5 12H0.5ZM7.5 12C7.36739 12 7.24021 11.9473 7.14645 11.8536C7.05268 11.7598 7 11.6326 7 11.5V7.5C7 7.36739 7.05268 7.24021 7.14645 7.14645C7.24021 7.05268 7.36739 7 7.5 7H11.5C11.6326 7 11.7598 7.05268 11.8536 7.14645C11.9473 7.24021 12 7.36739 12 7.5V11.5C12 11.6326 11.9473 11.7598 11.8536 11.8536C11.7598 11.9473 11.6326 12 11.5 12H7.5Z"
                                             fill="currentColor" />
                                     </svg></span>
                                 <span class="nav-label">Dashboard</span>
@@ -4265,34 +4265,48 @@ boycold_ensure_inventory_schema($connect);
                 }
             }
 
-            function renderDatabaseCategories(products) {
+            function rebuildCategorySelects(categories) {
+                ['productCategory', 'editProductCategory'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (!select) return;
+
+                    const selectedValue = select.value;
+                    const placeholder = select.querySelector('option[value=""]')?.cloneNode(true);
+                    select.innerHTML = '';
+                    if (placeholder) select.appendChild(placeholder);
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.slug;
+                        option.textContent = category.name;
+                        select.appendChild(option);
+                    });
+
+                    if (categories.some(category => category.slug === selectedValue)) {
+                        select.value = selectedValue;
+                    } else if (id === 'editProductCategory' && categories.length) {
+                        select.value = categories[0].slug;
+                    }
+                });
+            }
+
+            function renderDatabaseCategories(categories) {
                 const staticPills = catPillsWrap.querySelectorAll('.cat-pill:not(.cat-add-ghost)');
                 staticPills.forEach(pill => pill.remove());
-
-                const categoryOrder = ['coffee', 'non-coffee', 'matcha-fusion', 'smoothie', 'frappe-series', 'rice-meal', 'light-snack', 'pasta', 'waffles', 'quesadilla'];
-                const categoryLabels = {
-                    'coffee': 'Coffee', 'non-coffee': 'Non-Coffee',
-                    'matcha-fusion': 'Matcha Fusion', 'smoothie': 'Smoothie', 'frappe-series': 'Frappe Series',
-                    'rice-meal': 'Rice Meal', 'light-snack': 'Light Snack', 'pasta': 'Pasta',
-                    'waffles': 'Waffles', 'quesadilla': 'Quesadilla'
-                };
-                const categories = categoryOrder.filter(category =>
-                    products.some(product => normalizeProductCategory(product.category) === category)
-                );
+                const selectedCategory = currentCategory;
                 const ghost = getAddCategoryGhost();
                 categories.forEach(category => {
                     const pill = document.createElement('a');
                     pill.href = '#';
                     pill.className = 'cat-pill';
-                    pill.dataset.filter = normalizeProductCategory(category);
-                    pill.innerHTML = `${escapeProductText(categoryLabels[category] || category)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
+                    pill.dataset.filter = category.slug;
+                    pill.innerHTML = `${escapeProductText(category.name)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
                     catPillsWrap.insertBefore(pill, ghost || addCategoryBtn);
-                    addCategoryOptionToSelects(category, categoryLabels[category] || category);
                 });
 
-                const firstPill = getCatPills()[0];
-                currentCategory = firstPill ? firstPill.dataset.filter : 'all';
-                firstPill?.classList.add('active');
+                rebuildCategorySelects(categories);
+                const activePill = getCatPills().find(pill => pill.dataset.filter === selectedCategory) || getCatPills()[0];
+                currentCategory = activePill ? activePill.dataset.filter : 'all';
+                activePill?.classList.add('active');
             }
 
             if (menuSearch) {
@@ -4335,7 +4349,7 @@ boycold_ensure_inventory_schema($connect);
                 if (catEditActions) catEditActions.style.display = 'flex';
             }
 
-            function exitCategoryEditMode(commit) {
+            async function exitCategoryEditMode(commit) {
                 const activeInput = catPillsWrap.querySelector('input');
                 if (activeInput) activeInput.blur();
 
@@ -4348,6 +4362,33 @@ boycold_ensure_inventory_schema($connect);
                         ghost.classList.remove('new-cat-input');
                         ghost.innerHTML = '<i class="fa-solid fa-plus"></i> New Category';
                     }
+                }
+
+                if (commit) {
+                    const categories = getCatPills().map(pill => ({
+                        slug: pill.dataset.filter || '',
+                        name: getPillLabel(pill),
+                    }));
+                    catSaveBtn.disabled = true;
+                    try {
+                        const response = await fetch('admin_data_api.php?action=menu_categories_sync', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ categories }),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Categories could not be saved.');
+                        }
+                        renderDatabaseCategories(result.categories || []);
+                    } catch (error) {
+                        alert(error.message);
+                        await loadProducts();
+                    } finally {
+                        catSaveBtn.disabled = false;
+                    }
+                } else {
+                    await loadProducts();
                 }
 
                 const pills = getCatPills();
@@ -4396,7 +4437,7 @@ boycold_ensure_inventory_schema($connect);
                         newPill.className = 'cat-pill';
                         newPill.setAttribute('data-filter', filterVal);
                         newPill.draggable = true;
-                        newPill.innerHTML = `${val}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
+                        newPill.innerHTML = `${escapeProductText(val)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
                         catPillsWrap.insertBefore(newPill, ghost);
                         addCategoryOptionToSelects(filterVal, val);
                     }
@@ -4428,7 +4469,7 @@ boycold_ensure_inventory_schema($connect);
                     if (committed) return;
                     committed = true;
                     const val = input.value.trim() || label;
-                    pill.innerHTML = `${val}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
+                    pill.innerHTML = `${escapeProductText(val)}<span class="cat-delete-btn" aria-label="Delete category">&times;</span>`;
                 }
                 input.addEventListener('blur', commit);
                 input.addEventListener('keydown', (e) => {
@@ -4546,12 +4587,20 @@ boycold_ensure_inventory_schema($connect);
                 return category;
             }
 
+            function adminProductImageUrl(value) {
+                const image = String(value || '').trim();
+                if (!image || /^(?:data:image\/|https?:\/\/|\/\/|\/)/i.test(image) || image.startsWith('../')) {
+                    return image;
+                }
+                return `../${image.replace(/^\.\//, '')}`;
+            }
+
             function renderDatabaseProducts(products) {
                 if (!productGrid) return;
                 productGrid.innerHTML = products.map(product => {
                     const name = escapeProductText(product.product_name);
                     const category = escapeProductText(normalizeProductCategory(product.category || 'uncategorized'));
-                    const image = escapeProductText(product.image || '');
+                    const image = escapeProductText(adminProductImageUrl(product.image));
                     const manuallyActive = Number(product.is_available) === 1;
                     const inventoryStatus = String(product.inventory_status || 'unavailable');
                     const status = manuallyActive ? inventoryStatus : 'unavailable';
@@ -4603,7 +4652,7 @@ boycold_ensure_inventory_schema($connect);
                 const response = await fetch(`admin_data_api.php?action=products&branch_id=${selectedBranchId}`);
                 const result = await response.json();
                 if (!result.success) throw new Error(result.error || 'Products could not be loaded');
-                renderDatabaseCategories(result.products || []);
+                renderDatabaseCategories(result.categories || []);
                 renderDatabaseProducts(result.products);
             }
 
@@ -4808,6 +4857,16 @@ boycold_ensure_inventory_schema($connect);
                 productImageInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
+                        if (!file.type.startsWith('image/')) {
+                            alert('Please select a PNG, JPG, or WEBP image.');
+                            productImageInput.value = '';
+                            return;
+                        }
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('Image must be 2MB or smaller.');
+                            productImageInput.value = '';
+                            return;
+                        }
                         const reader = new FileReader();
                         reader.onload = (ev) => {
                             imagePreview.src = ev.target.result;
@@ -4843,11 +4902,17 @@ boycold_ensure_inventory_schema($connect);
                     const price = parseFloat(priceInput.value).toFixed(2);
                     const cups = stockQtyInput.value ? stockQtyInput.value + ' pcs' : '40 pcs';
                     const servings = servingsQtyInput.value ? servingsQtyInput.value : '25';
-                    const imgSrc = imagePreview?.src || '';
+                    const formData = new FormData();
+                    formData.append('product_name', name);
+                    formData.append('category', category);
+                    formData.append('price', price);
+                    formData.append('is_available', document.getElementById('productStatus').checked ? '1' : '0');
+                    const imageFile = productImageInput?.files?.[0];
+                    if (imageFile) formData.append('image_file', imageFile);
 
+                    saveProductBtn.disabled = true;
                     fetch('admin_data_api.php?action=product_create', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ product_name: name, category, price, image: imgSrc, is_available: document.getElementById('productStatus').checked ? 1 : 0 })
+                        method: 'POST', body: formData
                     }).then(async response => {
                         const result = await response.json();
                         if (!response.ok || !result.success || !Number.isInteger(Number(result.id)) || Number(result.id) < 1) {
@@ -4856,7 +4921,9 @@ boycold_ensure_inventory_schema($connect);
                         return result;
                     }).then(() => {
                         window.location.reload();
-                    }).catch(error => alert(error.message));
+                    }).catch(error => alert(error.message)).finally(() => {
+                        saveProductBtn.disabled = false;
+                    });
                     return;
 
                     const newCard = document.createElement('div');
@@ -5091,15 +5158,29 @@ boycold_ensure_inventory_schema($connect);
                         alert('Please enter a valid selling price.');
                         return;
                     }
-
-                    const newPrice = priceValue.toFixed(2);
+                    if (!newCategory) {
+                        alert('Please select a category.');
+                        return;
+                    }
 
                     const productId = currentEditingCard.dataset.id;
+                    const formData = new FormData();
+                    formData.append('id', productId);
+                    formData.append('product_name', newName);
+                    formData.append('category', newCategory);
+                    formData.append('price', String(priceValue));
+                    formData.append('is_available', newStatus === 'unavailable' ? '0' : '1');
+                    if (editImageChanged && editProductImageInput?.files?.[0]) {
+                        formData.append('image_file', editProductImageInput.files[0]);
+                    }
+                    if (editImageRemoved) formData.append('remove_image', '1');
+
+                    saveEditProductBtn.disabled = true;
                     fetch('admin_data_api.php?action=product_update', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: productId, product_name: newName, category: newCategory, price: priceValue, is_available: newStatus === 'unavailable' ? 0 : 1 })
-                    }).then(response => response.json()).then(result => {
-                        if (!result.success) {
+                        method: 'POST', body: formData
+                    }).then(async response => {
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
                             const insufficient = (result.ingredients || [])
                                 .filter(ingredient => ingredient.status === 'insufficient')
                                 .map(ingredient => `${ingredient.name}: ${ingredient.stock <= 0 ? 'out of stock' : 'insufficient stock'}`);
@@ -5107,7 +5188,9 @@ boycold_ensure_inventory_schema($connect);
                             throw new Error((result.error || 'Product could not be updated') + details);
                         }
                         window.location.reload();
-                    }).catch(error => alert(error.message));
+                    }).catch(error => alert(error.message)).finally(() => {
+                        saveEditProductBtn.disabled = false;
+                    });
                     return;
 
                     currentEditingCard.querySelector('.card-name').textContent = newName;
