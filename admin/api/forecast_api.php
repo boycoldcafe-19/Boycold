@@ -195,6 +195,8 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 
 // ==========================================
 // 3. DEMAND FORECAST (Top Menu Items)
+// Keep this source aligned with admin/data-analytics.php: the latest seven
+// database days, successful sales only, and the five highest-volume items.
 // ==========================================
 $demandQuery = "SELECT 
     oi.product_name,
@@ -208,7 +210,7 @@ WHERE {$successfulSaleCondition}
     $branchCondition
 GROUP BY oi.product_name
 ORDER BY total_orders DESC
-LIMIT 10";
+LIMIT 5";
 
 $stmt = $connect->prepare($demandQuery);
 if ($branchId !== 'all') {
