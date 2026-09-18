@@ -325,10 +325,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span id="shiftPillLabel">Shift Closed</span>
         </div>
 
-        <div class="header-divider"></div>
-
-        <div class="header-divider"></div>
-
         <button class="profile-btn">
           <div class="profile-avatar">
             <svg class="logo-light" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">

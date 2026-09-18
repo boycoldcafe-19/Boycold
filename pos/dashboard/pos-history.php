@@ -263,15 +263,10 @@ function orderhis_format_group_label(string $dateStr): string {
             <div class="top-header">
                 <div id="popupHost" style="display:none;"></div>
 
-                <div class="header-divider"></div>
-
                 <div class="shift-pill is-open" id="shiftPill">
                     <span class="shift-dot"></span>
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
-
-                <div class="header-divider"></div>
-
                 <button class="profile-btn">
                     <div class="profile-avatar">
                         <svg class="logo-light" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -282,7 +277,6 @@ function orderhis_format_group_label(string $dateStr): string {
                         </svg>
                     </div>
                     <span class="profile-name"><?= htmlspecialchars($branchName) ?></span>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
                 </button>
             </div>
 

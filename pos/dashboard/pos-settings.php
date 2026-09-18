@@ -299,14 +299,10 @@ if ($branchId > 0) {
         <div class="main-panel">
 
             <div class="top-header">
-                <div class="header-divider"></div>
-
                 <div class="shift-pill is-open" id="shiftPill">
                     <span class="shift-dot"></span>
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
-
-                <div class="header-divider"></div>
 
                 <button class="profile-btn">
                     <div class="profile-avatar">

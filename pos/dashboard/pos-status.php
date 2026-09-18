@@ -528,14 +528,10 @@ if ($paymentMethodKey === 'qrph') {
             <div class="top-header">
                 <div id="popupHost" style="display:none;"></div>
 
-                <div class="header-divider"></div>
-
                 <div class="shift-pill is-open" id="shiftPill">
                     <span class="shift-dot"></span>
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
-
-<div class="header-divider"></div>
 
                 <button class="profile-btn">
                     <div class="profile-avatar">
@@ -547,7 +543,6 @@ if ($paymentMethodKey === 'qrph') {
                         </svg>
                     </div>
                     <span class="profile-name"><?= htmlspecialchars($branchName) ?></span>
-                    <i class="fa-solid fa-chevron-down profile-caret"></i>
                 </button>
             </div>
 
