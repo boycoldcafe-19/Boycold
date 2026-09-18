@@ -86,7 +86,7 @@ body { min-height: 100vh; overflow: hidden; }
     flex: 1 1 50%;
     min-width: 320px;
     height: 100%;
-    padding: 0 clamp(32px, 7vw, 110px);
+    padding: 0 clamp(20px, 3vw, 48px) 0 clamp(32px, 7vw, 110px);
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
