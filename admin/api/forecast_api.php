@@ -12,6 +12,11 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+// Forecasting is a live report. Never let a browser/proxy mix a cached
+// response from another reload, login, or selected branch into this view.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 require_once __DIR__ . '/../../config/inventory_service.php';
 
@@ -340,7 +345,7 @@ WHERE {$successfulSaleCondition}
     AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
     $branchCondition
 GROUP BY HOUR(o.created_at)
-ORDER BY order_count DESC";
+ORDER BY order_count DESC, hour ASC";
 
 $stmt = $connect->prepare($peakHoursQuery);
 if ($branchId !== 'all') {
@@ -422,13 +427,14 @@ for ($h = 0; $h < 24; $h++) {
 
 // Sort peak hours by actual orders descending, keep top hours
 usort($peakHours, function($a, $b) {
-    return $b['orders'] - $a['orders'];
+    $orderComparison = $b['orders'] <=> $a['orders'];
+    return $orderComparison !== 0 ? $orderComparison : ($a['hour'] <=> $b['hour']);
 });
 $peakHours = array_slice($peakHours, 0, 8);
 
 // Sort back by hour for display
 usort($peakHours, function($a, $b) {
-    return $a['hour'] - $b['hour'];
+    return $a['hour'] <=> $b['hour'];
 });
 
 // ==========================================
@@ -445,7 +451,7 @@ WHERE {$successfulSaleCondition}
     $branchCondition
 GROUP BY oi.product_name
 HAVING recent_7 > 0 OR prev_7 > 0
-ORDER BY recent_7 DESC
+ORDER BY recent_7 DESC, oi.product_name ASC
 LIMIT 20";
 
 $stmt = $connect->prepare($trendingQuery);
@@ -479,7 +485,10 @@ while ($row = $result->fetch_assoc()) {
 
 // Sort by absolute change percentage to find trending
 usort($trendingItems, function($a, $b) {
-    return abs($b['change_percent']) - abs($a['change_percent']);
+    $changeComparison = abs($b['change_percent']) <=> abs($a['change_percent']);
+    return $changeComparison !== 0
+        ? $changeComparison
+        : strcasecmp($a['product_name'], $b['product_name']);
 });
 $trendingItems = array_slice($trendingItems, 0, 6);
 
