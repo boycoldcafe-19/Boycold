@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
+require_once '../config/analytics_reporting_service.php';
 
 function analyticsReportPercent(float|int|string|null $value): string
 {
@@ -30,20 +31,7 @@ $branchId = isset($_GET['branch_id'])
 $startDate = (string) ($_GET['start_date'] ?? '');
 $endDate = (string) ($_GET['end_date'] ?? '');
 if ($startDate === '' && $endDate === '') {
-    $latestSalesQuery = "SELECT MAX(DATE(created_at)) AS latest_date
-        FROM orders
-        WHERE (status IN ('completed', 'delivered') OR payment_status = 'paid')
-          AND status <> 'cancelled'
-          AND payment_status NOT IN ('failed', 'expired', 'cancelled')";
-    if ($branchId !== 'all') $latestSalesQuery .= ' AND branch_id = ?';
-    $latestSalesStmt = $connect->prepare($latestSalesQuery);
-    if ($branchId !== 'all') {
-        $latestBranchId = (int) $branchId;
-        $latestSalesStmt->bind_param('i', $latestBranchId);
-    }
-    $latestSalesStmt->execute();
-    $latestSalesDate = (string) ($latestSalesStmt->get_result()->fetch_assoc()['latest_date'] ?? '');
-    $latestSalesStmt->close();
+    $latestSalesDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? '';
     $endDate = $latestSalesDate !== '' ? $latestSalesDate : date('Y-m-d');
     $startDate = date('Y-m-d', strtotime($endDate . ' -6 days'));
 }
@@ -109,7 +97,7 @@ while ($row = $branchesResult->fetch_assoc()) {
 }
 
 // Fetch analytics data from database
-function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId) {
+function getLegacyAnalyticsData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId) {
     // Branch filter condition
     $branchCondition = '';
     if ($branchId !== 'all') {
@@ -293,6 +281,67 @@ function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, s
     ];
 }
 
+/**
+ * Page-level analytics, built from the same snapshot service used by
+ * Forecasting. This prevents a reporting filter/status rule from drifting
+ * between the two admin screens.
+ */
+function getAnalyticsData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId): array
+{
+    $currentReport = boycold_analytics_period_snapshot($connect, $startDate, $endDate, $branchId);
+    $previousReport = boycold_analytics_period_snapshot($connect, $prevStartDate, $prevEndDate, $branchId);
+    $currentData = $currentReport['summary'];
+    $prevData = $previousReport['summary'];
+
+    $avgOrderValue = $currentData['total_orders'] > 0
+        ? $currentData['total_sales'] / $currentData['total_orders']
+        : 0;
+    $prevAvgOrderValue = $prevData['total_orders'] > 0
+        ? $prevData['total_sales'] / $prevData['total_orders']
+        : 0;
+
+    // New customers is account-registration data, not a sale, so it remains
+    // separate from the shared sales snapshot.
+    $customersQuery = "SELECT COUNT(*) AS new_customers
+        FROM users
+        WHERE DATE(created_at) BETWEEN ? AND ?";
+    $statement = $connect->prepare($customersQuery);
+    $statement->bind_param('ss', $startDate, $endDate);
+    $statement->execute();
+    $currentCustomers = (int) ($statement->get_result()->fetch_assoc()['new_customers'] ?? 0);
+    $statement->close();
+
+    $statement = $connect->prepare($customersQuery);
+    $statement->bind_param('ss', $prevStartDate, $prevEndDate);
+    $statement->execute();
+    $prevCustomers = (int) ($statement->get_result()->fetch_assoc()['new_customers'] ?? 0);
+    $statement->close();
+
+    $salesTrend = $prevData['total_sales'] > 0
+        ? (($currentData['total_sales'] - $prevData['total_sales']) / $prevData['total_sales']) * 100
+        : 0;
+    $avgOrderTrend = $prevAvgOrderValue > 0
+        ? (($avgOrderValue - $prevAvgOrderValue) / $prevAvgOrderValue) * 100
+        : 0;
+    $customersTrend = $prevCustomers > 0
+        ? (($currentCustomers - $prevCustomers) / $prevCustomers) * 100
+        : 0;
+
+    return [
+        'total_sales' => $currentData['total_sales'],
+        'total_orders' => $currentData['total_orders'],
+        'avg_order_value' => $avgOrderValue,
+        'new_customers' => $currentCustomers,
+        'top_items' => $currentReport['top_items'],
+        'time_of_day' => $currentReport['time_of_day'],
+        'daily_sales' => $currentReport['daily_sales'],
+        'prev_daily_sales' => $previousReport['daily_sales'],
+        'sales_trend' => $salesTrend,
+        'avg_order_trend' => $avgOrderTrend,
+        'customers_trend' => $customersTrend,
+    ];
+}
+
 $analytics = getAnalyticsData($connect, $startDate, $endDate, $prevStartDate, $prevEndDate, $branchId);
 $timeAnalytics = getAnalyticsData($connect, $timeStartDate, $timeEndDate, $timePrevStartDate, $timePrevEndDate, $branchId);
 $peakAnalytics = getAnalyticsData($connect, $peakStartDate, $peakEndDate, $peakPrevStartDate, $peakPrevEndDate, $branchId);
@@ -304,6 +353,9 @@ if (($_GET['format'] ?? '') === 'json') {
         'success' => true,
         'total_sales' => (float) $analytics['total_sales'],
         'total_orders' => (int) $analytics['total_orders'],
+        'analytics' => $analytics,
+        'time_analytics' => $timeAnalytics,
+        'peak_analytics' => $peakAnalytics,
     ]);
     exit;
 }

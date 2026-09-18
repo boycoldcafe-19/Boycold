@@ -19,6 +19,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 require_once __DIR__ . '/../../config/inventory_service.php';
+require_once __DIR__ . '/../../config/analytics_reporting_service.php';
 
 boycold_ensure_inventory_schema($connect);
 
@@ -45,41 +46,12 @@ function forecastApiDate(mixed $value): ?string {
     return $date && $date->format('Y-m-d') === $value ? $value : null;
 }
 
-// Match admin/sales.php: forecasting uses successful sales only.
-$successfulSaleCondition = "(
-    (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
-    AND o.status <> 'cancelled'
-    AND o.payment_status NOT IN ('failed', 'expired', 'cancelled')
-)";
-
-// Branch filter
-$branchCondition = '';
-$params = [];
-$types = '';
-if ($branchId !== 'all') {
-    $branchCondition = 'AND o.branch_id = ?';
-    $params[] = $branchId;
-    $types .= 'i';
-}
-
-// Use the newest stored order as the forecast anchor when the database is
-// behind the server date. This keeps historical forecasts useful in local and
-// deployed databases that do not receive orders every calendar day.
-$latestOrderQuery = "SELECT MAX(DATE(o.created_at)) AS latest_order_date
-    FROM orders o
-    WHERE {$successfulSaleCondition}
-    $branchCondition";
-$latestStmt = $connect->prepare($latestOrderQuery);
-if ($branchId !== 'all') {
-    $latestStmt->bind_param($types, ...$params);
-}
-$latestStmt->execute();
-$latestOrderDate = (string) ($latestStmt->get_result()->fetch_assoc()['latest_order_date'] ?? '');
-$latestStmt->close();
+// Use the same successful-sale source and latest reporting date as Data
+// Analytics. Forecasting only calculates future values from this snapshot.
+$latestOrderDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? '';
 $forecastAnchorDate = $latestOrderDate !== '' && $latestOrderDate < date('Y-m-d')
     ? $latestOrderDate
     : date('Y-m-d');
-$forecastAnchorSql = "'" . $connect->real_escape_string($forecastAnchorDate) . "'";
 
 // Data Analytics defaults Top Selling Items to the latest seven sales days.
 // When its selected range is supplied, preserve it exactly (including custom
@@ -97,47 +69,26 @@ $demandHistoricalDays = (int) ((strtotime($demandEndDate) - strtotime($demandSta
 // ==========================================
 // 1. DAILY SALES HISTORY (last N days)
 // ==========================================
-$dailySalesQuery = "SELECT 
-    DATE(o.created_at) as sale_date,
-    COALESCE(SUM(o.total), 0) as total_sales,
-    COUNT(o.id) as total_orders
-FROM orders o
-WHERE {$successfulSaleCondition}
-    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
-    $branchCondition
-GROUP BY DATE(o.created_at)
-ORDER BY sale_date ASC";
-
-$stmt = $connect->prepare($dailySalesQuery);
-$histDaysParam = $historicalDays;
-if ($branchId !== 'all') {
-    $stmt->bind_param('i' . $types, $histDaysParam, ...$params);
-} else {
-    $stmt->bind_param('i', $histDaysParam);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-
-$historicalSales = [];
-$historicalDates = [];
-while ($row = $result->fetch_assoc()) {
-    $historicalSales[] = [
-        'date' => $row['sale_date'],
-        'sales' => floatval($row['total_sales']),
-        'orders' => intval($row['total_orders'])
-    ];
-    $historicalDates[] = $row['sale_date'];
-}
-$stmt->close();
+$historicalStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-' . ($historicalDays - 1) . ' days');
+$historicalStartDate = $historicalStart->format('Y-m-d');
+$historicalReport = boycold_analytics_period_snapshot(
+    $connect,
+    $historicalStartDate,
+    $forecastAnchorDate,
+    $branchId
+);
 
 // Keep zero-sales days in the series so the regression and chart use a real
-// contiguous database date range instead of only dates that had an order.
+// contiguous Data Analytics date range instead of only dates that had an order.
 $historicalByDate = [];
-foreach ($historicalSales as $sale) {
-    $historicalByDate[$sale['date']] = $sale;
+foreach ($historicalReport['daily_sales'] as $sale) {
+    $historicalByDate[$sale['sale_date']] = [
+        'date' => $sale['sale_date'],
+        'sales' => (float) $sale['daily_sales'],
+        'orders' => (int) $sale['daily_orders'],
+    ];
 }
 $historicalSales = [];
-$historicalStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-' . ($historicalDays - 1) . ' days');
 for ($offset = 0; $offset < $historicalDays; $offset++) {
     $date = $historicalStart->modify('+' . $offset . ' days')->format('Y-m-d');
     $historicalSales[] = $historicalByDate[$date] ?? [
@@ -226,48 +177,27 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 
 // ==========================================
 // 3. DEMAND FORECAST (Top Menu Items)
-// Keep this source identical to admin/data-analytics.php Top Selling Items:
-// selected calendar range, successful sales only, five highest-volume items,
-// and deterministic ordering when quantities are tied.
+// The demand candidates are the exact Top Selling Items snapshot shown in
+// Data Analytics for the selected range.
 // ==========================================
-$demandQuery = "SELECT 
-    oi.product_name,
-    SUM(oi.quantity) as total_orders,
-    SUM(oi.line_total) as total_revenue,
-    COUNT(DISTINCT DATE(o.created_at)) as days_sold
-FROM order_items oi
-INNER JOIN orders o ON oi.order_id = o.id
-WHERE {$successfulSaleCondition}
-    AND DATE(o.created_at) BETWEEN ? AND ?
-    $branchCondition
-GROUP BY oi.product_name
-ORDER BY total_orders DESC, oi.product_name ASC
-LIMIT 5";
-
-$stmt = $connect->prepare($demandQuery);
-$demandParams = [$demandStartDate, $demandEndDate];
-$demandTypes = 'ss';
-if ($branchId !== 'all') {
-    $demandParams = array_merge($demandParams, $params);
-    $demandTypes .= $types;
-}
-$stmt->bind_param($demandTypes, ...$demandParams);
-$stmt->execute();
-$result = $stmt->get_result();
-
+$demandReport = boycold_analytics_period_snapshot(
+    $connect,
+    $demandStartDate,
+    $demandEndDate,
+    $branchId
+);
 $demandItems = [];
 $maxOrders = 0;
-while ($row = $result->fetch_assoc()) {
-    $orders = intval($row['total_orders']);
+foreach ($demandReport['top_items'] as $item) {
+    $orders = (int) $item['total_quantity'];
     if ($orders > $maxOrders) $maxOrders = $orders;
     $demandItems[] = [
-        'product_name' => $row['product_name'],
+        'product_name' => $item['product_name'],
         'total_orders' => $orders,
-        'total_revenue' => floatval($row['total_revenue']),
-        'days_sold' => intval($row['days_sold'])
+        'total_revenue' => (float) $item['total_revenue'],
+        'days_sold' => (int) $item['days_sold'],
     ];
 }
-$stmt->close();
 
 // Forecast demand for each top item using the overall sales forecast factor.
 // Use the same calendar range as Data Analytics for each item's daily rate.
@@ -280,6 +210,22 @@ if ($totalHistoricalSales > 0) {
     $salesGrowthFactor = 1;
 }
 
+$recentTrendStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-6 days')->format('Y-m-d');
+$previousTrendEnd = (new DateTimeImmutable($forecastAnchorDate))->modify('-7 days')->format('Y-m-d');
+$previousTrendStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-13 days')->format('Y-m-d');
+$productTrends = boycold_analytics_product_period_comparison(
+    $connect,
+    $recentTrendStart,
+    $forecastAnchorDate,
+    $previousTrendStart,
+    $previousTrendEnd,
+    $branchId
+);
+$productTrendByName = [];
+foreach ($productTrends as $productTrend) {
+    $productTrendByName[$productTrend['product_name']] = $productTrend;
+}
+
 $demandForecast = [];
 foreach ($demandItems as $item) {
     $avgDailyOrders = $demandHistoricalDays > 0 ? $item['total_orders'] / $demandHistoricalDays : 0;
@@ -290,27 +236,9 @@ foreach ($demandItems as $item) {
     $trendIcon = 'minus';
     $trendPercent = 0;
     
-    // Check if this item was in the last 7 days vs the 7 days before that
-    $trendQuery = "SELECT 
-        SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent,
-        SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as previous
-    FROM order_items oi
-    INNER JOIN orders o ON oi.order_id = o.id
-    WHERE {$successfulSaleCondition}
-        AND oi.product_name = ?
-        AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
-        $branchCondition";
-    
-    $stmt = $connect->prepare(str_replace('$branchCondition', $branchCondition, $trendQuery));
-    $itemParams = array_merge([$item['product_name']], $params);
-    $itemTypes = 's' . $types;
-    $stmt->bind_param($itemTypes, ...$itemParams);
-    $stmt->execute();
-    $trendResult = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    
-    $recent = intval($trendResult['recent']);
-    $previous = intval($trendResult['previous']);
+    $trendResult = $productTrendByName[$item['product_name']] ?? null;
+    $recent = (int) ($trendResult['recent_quantity'] ?? 0);
+    $previous = (int) ($trendResult['previous_quantity'] ?? 0);
     
     if ($previous > 0) {
         $trendPercent = round((($recent - $previous) / $previous) * 100, 1);
@@ -336,32 +264,12 @@ foreach ($demandItems as $item) {
 // ==========================================
 // 4. PEAK HOURS FORECAST
 // ==========================================
-$peakHoursQuery = "SELECT 
-    HOUR(o.created_at) as hour,
-    COUNT(*) as order_count,
-    COUNT(DISTINCT DATE(o.created_at)) as days_active
-FROM orders o
-WHERE {$successfulSaleCondition}
-    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL ? DAY)
-    $branchCondition
-GROUP BY HOUR(o.created_at)
-ORDER BY order_count DESC, hour ASC";
-
-$stmt = $connect->prepare($peakHoursQuery);
-if ($branchId !== 'all') {
-    $stmt->bind_param('i' . $types, $histDaysParam, ...$params);
-} else {
-    $stmt->bind_param('i', $histDaysParam);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-
 $peakHours = [];
 $maxOrders = 0;
 $hourlyData = [];
-while ($row = $result->fetch_assoc()) {
-    $orders = intval($row['order_count']);
-    $hourlyData[intval($row['hour'])] = $orders;
+foreach ($historicalReport['time_of_day'] as $hour) {
+    $orders = (int) $hour['orders'];
+    $hourlyData[(int) $hour['hour']] = $orders;
     if ($orders > $maxOrders) $maxOrders = $orders;
 }
 
@@ -440,31 +348,10 @@ usort($peakHours, function($a, $b) {
 // ==========================================
 // 5. TRENDING DRINKS PREDICTION
 // ==========================================
-$trendingQuery = "SELECT 
-    oi.product_name,
-    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as recent_7,
-    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN oi.quantity ELSE 0 END) as prev_7
-FROM order_items oi
-INNER JOIN orders o ON oi.order_id = o.id
-WHERE {$successfulSaleCondition}
-    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)
-    $branchCondition
-GROUP BY oi.product_name
-HAVING recent_7 > 0 OR prev_7 > 0
-ORDER BY recent_7 DESC, oi.product_name ASC
-LIMIT 20";
-
-$stmt = $connect->prepare($trendingQuery);
-if ($branchId !== 'all') {
-    $stmt->bind_param($types, ...$params);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-
 $trendingItems = [];
-while ($row = $result->fetch_assoc()) {
-    $recent = intval($row['recent_7']);
-    $previous = intval($row['prev_7']);
+foreach ($productTrends as $productTrend) {
+    $recent = (int) $productTrend['recent_quantity'];
+    $previous = (int) $productTrend['previous_quantity'];
     
     if ($previous > 0) {
         $changePercent = round((($recent - $previous) / $previous) * 100, 1);
@@ -475,7 +362,7 @@ while ($row = $result->fetch_assoc()) {
     }
     
     $trendingItems[] = [
-        'product_name' => $row['product_name'],
+        'product_name' => $productTrend['product_name'],
         'recent_7' => $recent,
         'prev_7' => $previous,
         'change_percent' => $changePercent,
@@ -521,27 +408,26 @@ foreach (boycold_get_ingredient_restock_capacities($connect, $branchId === 'all'
 // 7. OVERALL STATS & INSIGHTS
 // ==========================================
 
-// Current week vs previous week comparison
-$weekComparisonQuery = "SELECT 
-    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN o.total ELSE 0 END) as this_week,
-    SUM(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN o.total ELSE 0 END) as last_week,
-    COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as this_week_orders,
-    COUNT(CASE WHEN o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY) AND o.created_at < DATE_SUB($forecastAnchorSql, INTERVAL 7 DAY) THEN 1 END) as last_week_orders
-FROM orders o
-WHERE {$successfulSaleCondition}
-    $branchCondition
-    AND o.created_at >= DATE_SUB($forecastAnchorSql, INTERVAL 14 DAY)";
+// Current week vs previous week comparison from the same Data Analytics
+// snapshots used by the rest of this forecast.
+$recentWeekStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-6 days')->format('Y-m-d');
+$previousWeekEnd = (new DateTimeImmutable($forecastAnchorDate))->modify('-7 days')->format('Y-m-d');
+$previousWeekStart = (new DateTimeImmutable($forecastAnchorDate))->modify('-13 days')->format('Y-m-d');
+$recentWeekReport = boycold_analytics_period_snapshot(
+    $connect,
+    $recentWeekStart,
+    $forecastAnchorDate,
+    $branchId
+);
+$previousWeekReport = boycold_analytics_period_snapshot(
+    $connect,
+    $previousWeekStart,
+    $previousWeekEnd,
+    $branchId
+);
 
-$stmt = $connect->prepare($weekComparisonQuery);
-if ($branchId !== 'all') {
-    $stmt->bind_param($types, ...$params);
-}
-$stmt->execute();
-$weekData = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-$thisWeekSales = floatval($weekData['this_week']);
-$lastWeekSales = floatval($weekData['last_week']);
+$thisWeekSales = (float) $recentWeekReport['summary']['total_sales'];
+$lastWeekSales = (float) $previousWeekReport['summary']['total_sales'];
 $salesChangePercent = $lastWeekSales > 0 ? round((($thisWeekSales - $lastWeekSales) / $lastWeekSales) * 100, 1) : 0;
 
 // Predicted sales for next 14 days
@@ -568,8 +454,8 @@ $response = [
         'sales_change_percent' => $salesChangePercent,
         'this_week_sales' => $thisWeekSales,
         'last_week_sales' => $lastWeekSales,
-        'this_week_orders' => intval($weekData['this_week_orders']),
-        'last_week_orders' => intval($weekData['last_week_orders']),
+        'this_week_orders' => (int) $recentWeekReport['summary']['total_orders'],
+        'last_week_orders' => (int) $previousWeekReport['summary']['total_orders'],
         'critical_restocks' => $criticalCount,
         'soon_restocks' => $soonCount,
         'highest_demand_item' => $highestDemandItem,
