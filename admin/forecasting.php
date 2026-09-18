@@ -389,10 +389,6 @@ $branchId = $sessionBranchId > 0
         let autoRefreshInterval = null;
         const forecastAdminId = <?php echo json_encode((string) $adminAccount['id']); ?>;
         const forecastBranchPreferenceKey = `boycold.forecasting.branch.${forecastAdminId}`;
-        const demandRangeFromAnalytics = {
-            startDate: <?php echo json_encode($_GET['analytics_start_date'] ?? $_GET['demand_start_date'] ?? null); ?>,
-            endDate: <?php echo json_encode($_GET['analytics_end_date'] ?? $_GET['demand_end_date'] ?? null); ?>
-        };
 
         // ==========================================
         // FETCH FORECAST DATA
@@ -403,12 +399,6 @@ $branchId = $sessionBranchId > 0
                 historical_days: historicalDays,
                 forecast_days: 14
             });
-            const analyticsStartDate = demandRangeFromAnalytics.startDate;
-            const analyticsEndDate = demandRangeFromAnalytics.endDate;
-            if (analyticsStartDate && analyticsEndDate) {
-                params.set('analytics_start_date', analyticsStartDate);
-                params.set('analytics_end_date', analyticsEndDate);
-            }
             const url = `api/forecast_api.php?${params.toString()}`;
             try {
                 const response = await fetch(url, {

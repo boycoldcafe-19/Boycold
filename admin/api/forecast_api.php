@@ -54,19 +54,6 @@ $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_day
 $forecastDays = max(1, min($forecastDays, 90));
 $historicalDays = max(3, min($historicalDays, 365));
 
-/**
- * Accept only calendar dates used by Data Analytics. Demand Forecast receives
- * this range from that page so both views rank the same menu items.
- */
-function forecastApiDate(mixed $value): ?string {
-    if (!is_string($value)) {
-        return null;
-    }
-
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-    return $date && $date->format('Y-m-d') === $value ? $value : null;
-}
-
 // Use the same successful-sale source and selected reporting range as Data
 // Analytics. Forecasting only calculates future values from this snapshot.
 $latestOrderDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? '';
@@ -74,26 +61,10 @@ $forecastAnchorDate = $latestOrderDate !== '' && $latestOrderDate < date('Y-m-d'
     ? $latestOrderDate
     : date('Y-m-d');
 
-// Data Analytics supplies the selected range when opening Forecasting.
-// Keep the legacy demand_* names as a compatibility fallback for old links.
-$analyticsStartDate = forecastApiDate(
-    $_GET['analytics_start_date'] ?? $_GET['demand_start_date'] ?? null
-);
-$analyticsEndDate = forecastApiDate(
-    $_GET['analytics_end_date'] ?? $_GET['demand_end_date'] ?? null
-);
-if ($analyticsStartDate !== null && $analyticsEndDate !== null) {
-    if ($analyticsStartDate > $analyticsEndDate) {
-        [$analyticsStartDate, $analyticsEndDate] = [$analyticsEndDate, $analyticsStartDate];
-    }
-    $forecastAnchorDate = $analyticsEndDate;
-    $demandStartDate = $analyticsStartDate;
-    $demandEndDate = $analyticsEndDate;
-} else {
-    // Direct Forecasting visits use the latest seven reporting days.
-    $demandEndDate = $forecastAnchorDate;
-    $demandStartDate = (new DateTimeImmutable($demandEndDate))->modify('-6 days')->format('Y-m-d');
-}
+// Forecasting owns its own reporting window. It uses the same Analytics
+// service and rules, but never inherits Data Analytics page state.
+$demandEndDate = $forecastAnchorDate;
+$demandStartDate = (new DateTimeImmutable($demandEndDate))->modify('-6 days')->format('Y-m-d');
 $demandHistoricalDays = (int) ((strtotime($demandEndDate) - strtotime($demandStartDate)) / 86400) + 1;
 
 // ==========================================
