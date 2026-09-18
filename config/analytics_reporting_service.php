@@ -14,7 +14,8 @@ function boycold_analytics_successful_sale_condition(string $orderAlias = 'o'): 
     }
 
     return "(
-        ({$orderAlias}.status IN ('completed', 'delivered') OR {$orderAlias}.payment_status = 'paid')
+        {$orderAlias}.user_id IS NOT NULL
+        AND ({$orderAlias}.status IN ('completed', 'delivered') OR {$orderAlias}.payment_status = 'paid')
         AND {$orderAlias}.status <> 'cancelled'
         AND {$orderAlias}.payment_status NOT IN ('failed', 'expired', 'cancelled')
     )";

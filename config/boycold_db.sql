@@ -249,6 +249,7 @@ CREATE TABLE `loyalty_transactions` (
 CREATE TABLE `orders` (
   `id` int NOT NULL,
   `user_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` int DEFAULT NULL,
   `status` enum('pending','confirmed','preparing','ready','delivered','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `order_type` enum('dine-in','takeout','delivery','pickup') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'dine-in',
   `payment_method` enum('cod','qrph') COLLATE utf8mb4_unicode_ci DEFAULT 'cod',
@@ -710,6 +711,7 @@ ALTER TABLE `loyalty_transactions`
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_orders_user` (`user_name`),
+  ADD KEY `idx_orders_user_id` (`user_id`),
   ADD KEY `branch_id` (`branch_id`),
   ADD KEY `device_id` (`device_id`),
   ADD KEY `cashier_id` (`cashier_id`),
@@ -959,6 +961,7 @@ ALTER TABLE `login_logs`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_name`) REFERENCES `users` (`user_name`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_orders_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`device_id`) REFERENCES `pos_devices` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `orders_ibfk_3` FOREIGN KEY (`cashier_id`) REFERENCES `employees` (`id`) ON DELETE SET NULL;
