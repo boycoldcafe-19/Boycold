@@ -7,7 +7,7 @@ function adminReportPercent(float|int|string|null $value): string
     return number_format(abs($number), 2, '.', '') . '%';
 }
 
-// Keep Dashboard metrics aligned with admin/sales.php: latest successful sale
+// Keep Dashboard metrics aligned with Admin Data Analytics: latest successful sale
 // date and the preceding six days when no date range is selected.
 $startDate = (string) ($_GET['start_date'] ?? '');
 $endDate = (string) ($_GET['end_date'] ?? '');
@@ -59,7 +59,7 @@ $prevEndDate = date('Y-m-d', strtotime($endDate . ' -1 week'));
 
 // Fetch analytics data
 function getDashboardData(mysqli $connect, string $startDate, string $endDate, string $prevStartDate, string $prevEndDate, string $branchId) {
-    // Total Sales follows admin/sales.php and includes successful sales only.
+    // Total Sales follows Admin Data Analytics and includes successful sales only.
     $salesQuery = "SELECT
         COALESCE(SUM(total), 0) as total_sales
         FROM orders 
