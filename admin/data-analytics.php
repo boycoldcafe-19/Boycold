@@ -698,29 +698,19 @@ if (($_GET['format'] ?? '') === 'json') {
 
                         <div class="top-items-list">
                             <?php 
-                            // Image filename mapping for products with different names than their files
-                            $imageMapping = [
-                                'French Vanilla' => 'Franch Vanilla.png',
-                                'Black Forrest' => 'blackforest.png',
-                                'Black Forest' => 'blackforest.png',
-                                'Messy Tuna Spinach' => 'Messy Tuna Spinach.png',
-                                'Chicken Quesadilla' => 'Chicken Quesadilla.png',
-                                'Beef Quesadilla' => 'Beef Quesadilla.png',
-                                'Messy Tuna Quesadilla' => 'Messy Tuna Spinach.png',
-                            ];
-                            
                             if (!empty($analytics['top_items'])) {
                                 $maxQuantity = max(array_column($analytics['top_items'], 'total_quantity'));
                                 foreach ($analytics['top_items'] as $index => $item) {
                                     $progress = $maxQuantity > 0 ? ($item['total_quantity'] / $maxQuantity) * 100 : 0;
                                     $productName = htmlspecialchars($item['product_name']);
-                                    $imageName = isset($imageMapping[$item['product_name']]) 
-                                        ? $imageMapping[$item['product_name']] 
-                                        : $productName . '.png';
+                                    $productImage = trim((string) ($item['product_image'] ?? ''));
+                                    if ($productImage !== '' && !preg_match('/^(?:https?:)?\//i', $productImage)) {
+                                        $productImage = '../' . ltrim($productImage, './');
+                                    }
                             ?>
                             <div class="top-item">
                                 <span class="item-rank"><?php echo $index + 1; ?></span>
-                                <span class="item-thumb"><img src="../pos/img/<?php echo $imageName; ?>" alt="" onerror="this.src='../pos/img/icon.png'"></span>
+                                <span class="item-thumb"><img src="<?php echo htmlspecialchars($productImage, ENT_QUOTES); ?>" alt="" onerror="this.style.visibility='hidden'"></span>
                                 <div class="item-content">
                                     <div class="item-top-row">
                                         <span class="item-name"><?php echo $productName; ?></span>

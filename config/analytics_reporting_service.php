@@ -80,7 +80,7 @@ function boycold_analytics_latest_sale_date(mysqli $connect, string $branchId): 
  *
  * @return array{
  *   summary: array{total_sales: float, total_orders: int},
- *   top_items: array<int, array{product_name: string, total_quantity: int, total_revenue: float, days_sold: int}>,
+ *   top_items: array<int, array{product_name: string, product_image: string, total_quantity: int, total_revenue: float, days_sold: int}>,
  *   time_of_day: array<int, array{hour: int, orders: int}>,
  *   daily_sales: array<int, array{sale_date: string, daily_sales: float, daily_orders: int}>
  * }
@@ -114,6 +114,7 @@ function boycold_analytics_period_snapshot(
 
     $topItemsQuery = "SELECT
             oi.product_name,
+            MAX(NULLIF(oi.product_image, '')) AS product_image,
             SUM(oi.quantity) AS total_quantity,
             SUM(oi.line_total) AS total_revenue,
             COUNT(DISTINCT DATE(o.created_at)) AS days_sold
@@ -136,6 +137,7 @@ function boycold_analytics_period_snapshot(
     while ($row = $result->fetch_assoc()) {
         $topItems[] = [
             'product_name' => (string) $row['product_name'],
+            'product_image' => (string) ($row['product_image'] ?? ''),
             'total_quantity' => (int) $row['total_quantity'],
             'total_revenue' => (float) $row['total_revenue'],
             'days_sold' => (int) $row['days_sold'],
@@ -210,7 +212,7 @@ function boycold_analytics_period_snapshot(
  * Product quantity comparison used by Forecasting trends. It uses the same
  * successful-sales and branch rules as the Data Analytics snapshot above.
  *
- * @return array<int, array{product_name: string, recent_quantity: int, previous_quantity: int}>
+ * @return array<int, array{product_name: string, product_image: string, recent_quantity: int, previous_quantity: int}>
  */
 function boycold_analytics_product_period_comparison(
     mysqli $connect,
@@ -227,6 +229,7 @@ function boycold_analytics_product_period_comparison(
 
     $query = "SELECT
             oi.product_name,
+            MAX(NULLIF(oi.product_image, '')) AS product_image,
             SUM(CASE WHEN DATE(o.created_at) BETWEEN ? AND ? THEN oi.quantity ELSE 0 END) AS recent_quantity,
             SUM(CASE WHEN DATE(o.created_at) BETWEEN ? AND ? THEN oi.quantity ELSE 0 END) AS previous_quantity
         FROM order_items oi
@@ -257,6 +260,7 @@ function boycold_analytics_product_period_comparison(
     while ($row = $result->fetch_assoc()) {
         $items[] = [
             'product_name' => (string) $row['product_name'],
+            'product_image' => (string) ($row['product_image'] ?? ''),
             'recent_quantity' => (int) $row['recent_quantity'],
             'previous_quantity' => (int) $row['previous_quantity'],
         ];

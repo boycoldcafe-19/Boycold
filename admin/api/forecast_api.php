@@ -34,9 +34,21 @@ boycold_ensure_inventory_schema($connect);
 
 // Match admin/dashboard.php branch scope when the caller does not provide one.
 $sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
-$branchId = isset($_GET['branch_id'])
-    ? (string) $_GET['branch_id']
-    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
+$requestedBranchId = isset($_GET['branch_id']) ? (string) $_GET['branch_id'] : 'all';
+$branchId = $sessionBranchId > 0 ? (string) $sessionBranchId : $requestedBranchId;
+if ($branchId !== 'all') {
+    $branchNumber = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $branchStatement = $connect->prepare(
+        "SELECT id FROM branches WHERE id = ? AND status = 'active' LIMIT 1"
+    );
+    $branchStatement->bind_param('i', $branchNumber);
+    $branchStatement->execute();
+    $validBranch = $branchStatement->get_result()->fetch_assoc();
+    $branchStatement->close();
+    if (!$validBranch) {
+        $branchId = 'all';
+    }
+}
 $forecastDays = isset($_GET['forecast_days']) ? intval($_GET['forecast_days']) : 14;
 $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_days']) : 28;
 $forecastDays = max(1, min($forecastDays, 90));
@@ -211,6 +223,7 @@ foreach ($demandReport['top_items'] as $item) {
     if ($orders > $maxOrders) $maxOrders = $orders;
     $demandItems[] = [
         'product_name' => $item['product_name'],
+        'product_image' => $item['product_image'],
         'total_orders' => $orders,
         'total_revenue' => (float) $item['total_revenue'],
         'days_sold' => (int) $item['days_sold'],
@@ -368,7 +381,13 @@ usort($peakHours, function($a, $b) {
 // 5. TRENDING DRINKS PREDICTION
 // ==========================================
 $trendingItems = [];
-foreach ($productTrends as $productTrend) {
+foreach ($demandItems as $demandItem) {
+    $productTrend = $productTrendByName[$demandItem['product_name']] ?? [
+        'product_name' => $demandItem['product_name'],
+        'product_image' => $demandItem['product_image'],
+        'recent_quantity' => 0,
+        'previous_quantity' => 0,
+    ];
     $recent = (int) $productTrend['recent_quantity'];
     $previous = (int) $productTrend['previous_quantity'];
     
@@ -382,21 +401,13 @@ foreach ($productTrends as $productTrend) {
     
     $trendingItems[] = [
         'product_name' => $productTrend['product_name'],
-        'recent_7' => $recent,
-        'prev_7' => $previous,
+        'product_image' => $demandItem['product_image'],
+        'recent_quantity' => $recent,
+        'previous_quantity' => $previous,
         'change_percent' => $changePercent,
         'is_up' => $changePercent >= 0
     ];
 }
-
-// Sort by absolute change percentage to find trending
-usort($trendingItems, function($a, $b) {
-    $changeComparison = abs($b['change_percent']) <=> abs($a['change_percent']);
-    return $changeComparison !== 0
-        ? $changeComparison
-        : strcasecmp($a['product_name'], $b['product_name']);
-});
-$trendingItems = array_slice($trendingItems, 0, 6);
 
 // ==========================================
 // 6. INGREDIENT RESTOCK WARNINGS
@@ -497,7 +508,7 @@ $response = [
             'type' => $salesChangePercent >= 0 ? 'positive' : 'negative',
             'icon' => $salesChangePercent >= 0 ? 'arrow-trend-up' : 'arrow-trend-down',
             'heading' => 'Sales ' . ($salesChangePercent >= 0 ? 'increase' : 'decrease') . ' by ' . ($salesChangePercent > 0 ? '+' : '') . number_format($salesChangePercent, 2, '.', '') . '%',
-            'desc' => $salesChangePercent >= 0 ? 'Great job! Your sales are higher than last week.' : 'Sales are lower than last week. Consider promotions.'
+            'desc' => $salesChangePercent >= 0 ? 'Great job! Your sales are higher than the previous period.' : 'Sales are lower than the previous period. Consider promotions.'
         ],
         [
             'type' => 'info',

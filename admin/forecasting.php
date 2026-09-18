@@ -5,9 +5,7 @@ require_once '../config/db_config.php';
 // Match admin/dashboard.php: branch-scoped admins see their branch by default;
 // all-branch admins can explicitly use the all-branches view.
 $sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
-$branchId = isset($_GET['branch_id'])
-    ? (string) $_GET['branch_id']
-    : ($sessionBranchId > 0 ? (string) $sessionBranchId : 'all');
+$requestedBranchId = isset($_GET['branch_id']) ? (string) $_GET['branch_id'] : 'all';
 
 $branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";
 $branchesResult = $connect->query($branchesQuery);
@@ -15,6 +13,10 @@ $branches = [];
 while ($row = $branchesResult->fetch_assoc()) {
     $branches[] = $row;
 }
+$activeBranchIds = array_map(static fn(array $branch): string => (string) $branch['id'], $branches);
+$branchId = $sessionBranchId > 0
+    ? (string) $sessionBranchId
+    : (in_array($requestedBranchId, $activeBranchIds, true) ? $requestedBranchId : 'all');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -191,12 +193,18 @@ while ($row = $branchesResult->fetch_assoc()) {
                                     <i class="fa-solid fa-chevron-down"></i>
                                 </button>
                                 <div class="branch-menu">
-                                    <button type="button" class="branch-option" data-value="all">All Branches</button>
-                                    <?php foreach ($branches as $branch): ?>
-                                        <button type="button" class="branch-option" data-value="<?php echo $branch['id']; ?>">
-                                            <?php echo htmlspecialchars($branch['branch_name']); ?>
+                                    <?php if ($sessionBranchId === 0): ?>
+                                        <button type="button" class="branch-option" data-value="all">All Branches</button>
+                                        <?php foreach ($branches as $branch): ?>
+                                            <button type="button" class="branch-option" data-value="<?php echo $branch['id']; ?>">
+                                                <?php echo htmlspecialchars($branch['branch_name']); ?>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <button type="button" class="branch-option" data-value="<?php echo $branchId; ?>">
+                                            <?php echo htmlspecialchars($branches[array_search($branchId, $activeBranchIds, true)]['branch_name'] ?? 'Assigned Branch'); ?>
                                         </button>
-                                    <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -367,84 +375,11 @@ while ($row = $branchesResult->fetch_assoc()) {
     </div>
     
     <script>
-        // Image filename mapping for products
-        const imageMapping = {
-            'French Vanilla': 'Franch Vanilla.png',
-            'Messy Tuna Spinach': 'Messy Tuna Spinach.png',
-            'Chicken Quesadilla': 'Chicken Quesadilla.png',
-            'Beef Quesadilla': 'Beef Quesadilla.png',
-            'Messy Tuna Quesadilla': 'Messy Tuna Spinach.png',
-            'hershey delight': 'hershey delight.png',
-            'Hershey Delight Frappe': 'hershey delight.png',
-            'White Smores': 'white smores.png',
-            'Choco Banana Pudding': 'Choco Banana Pudding.png',
-            'Matcha banana Pudding': 'Matcha banana Pudding.png',
-            'Mango graham': 'Mango graham.png',
-            'Mango matcha': 'Mango matcha.png',
-            'mango oreo': 'mango oreo.png',
-            'Berry mango': 'Berry mango.png',
-            'Berry Caramel Bliss': 'Berry Caramel Bliss.png',
-            'Berry Oreo': 'Berry Oreo.png',
-            'Choco Berry': 'Choco Berry.png',
-            'Choco Vanilla Cookie': 'Choco Vanilla Cookie.png',
-            'Choco Matcha': 'Choco Matcha.png',
-            'Lavender Matcha': 'Lavender Matcha.png',
-            'Lavander Matcha': 'Lavender Matcha.png',
-            'Strawberry Matcha': 'Strawberry Matcha.png',
-            'Seasalt Matcha': 'Seasalt Matcha.png',
-            'Matcha Frappe': 'Matcha Frappe.png',
-            'Matcha Freddo': 'Matcha Freddo.png',
-            'Matcha banana Pudding': 'Matcha banana Pudding.png',
-            'Lolly Matcha waffle': 'Matcha waffle.png',
-            'Lolly Chocolate waffle': 'Chocolate waffle.png',
-            'Lolly Biscoff waffle': 'Biscoff waffle.png',
-            'Lolly Oreo waffle': 'Oreo waffle.png',
-            'Lolly Strawberry waffle': 'Strawberry waffle.png',
-            'Lolly tiramisu waffle': 'tiramisu waffle.png',
-            'Lolly ube waffle': 'ube waffle.png',
-            'Nuttela Hazelnut Frappe': 'Nuttela Hazelnut Frappe.png',
-            'Cheesecake Frappe': 'Cheesecake Frappe.png',
-            'Biscoff frappe': 'Biscoff frappe.png',
-            'Caramel Frappe': 'Caramel Frappe.png',
-            'Oreo Frappe': 'Oreo Frappe.png',
-            'Java Chips': 'Java Chips.png',
-            'Chicken poppers and fries': 'Chicken poppers and fries.png',
-            'Beef Natchos': 'Beef Natchos.png',
-            'Fries and Chicken Poppers': 'Chicken poppers and fries.png',
-            'Chicken Poppers': 'Chicken Poppers.png',
-            'French Fries': 'Fries.png',
-            'Blueberry shake': 'BLUEBERRY SHAKE 1.png',
-            'Strawberry shake': 'Strawberry shake.png',
-            'Strawberry Milk': 'Strawberry Milk.png',
-            'Blueberry Milk': 'Blueberry Milk.png',
-            'White cocoa': 'White cocoa.png',
-            'Milky Oreo': 'Milky Oreo.png',
-            'Einspanner Latte': 'Einspanner Latte.png',
-            'Butter scotch latte': 'Butter scotch latte.png',
-            'Nutella Hazelnut latte': 'Nutella Hazelnut latte.png',
-            'Salted Caramel': 'Salted Caramel.png',
-            'Salted Macadamia': 'Salted Macadamia.png',
-            'Salted Mango Dream': 'Salted Mango Dream.png',
-            'Biscoff Creamy Latte': 'Biscoff Creamy Latte.png',
-            'Cheesecake Latte': 'Cheesecake Latte.png',
-            'Cheesecake Matcha': 'Cheesecake Matcha.png',
-            'Sea Salt Latte': 'Sea salt Latte.png',
-            'Sea salt Latte': 'Sea salt Latte.png',
-            'Tiramisu Latte': 'Tiramisu Latte.png',
-            'Hazelnut Latte': 'Hazelnut Latte.png',
-            'Caramel Macchiato': 'Caramel Macchiato.png',
-            'Spanish Latte': 'Spanish Latte.png',
-            'Dark Mocha': 'Dark Mocha.png',
-            'White Mocha': 'White Mocha.png',
-            'Cafe Latte': 'Cafe Latte.png',
-            'Pure matcha': 'Pure matcha.png',
-            'Dirty Matcha': 'Dirty Matcha.png',
-            'Matcha Latte': 'Matcha Latte.png'
-        };
-
-        function getProductImage(productName) {
-            const name = imageMapping[productName] || productName + '.png';
-            return '../pos/img/' + name;
+        function getProductImage(productImage) {
+            if (!productImage) return '';
+            if (/^https?:\/\//i.test(productImage)) return productImage;
+            if (productImage.startsWith('/')) return productImage;
+            return '../' + productImage.replace(/^\.\//, '');
         }
 
         // State
@@ -1000,7 +935,7 @@ while ($row = $branchesResult->fetch_assoc()) {
                 const row = document.createElement('div');
                 row.className = 'demand-row';
                 row.innerHTML = `
-                        <span class="demand-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../pos/img/icon.png'"></span>
+                        <span class="demand-thumb"><img src="${getProductImage(item.product_image)}" alt="" onerror="this.style.visibility='hidden'"></span>
                     <span class="demand-item-name">${item.product_name}</span>
                     <span class="demand-orders">${item.forecasted_orders} units</span>
                     <span class="demand-trend ${trendClass}">
@@ -1063,10 +998,10 @@ while ($row = $branchesResult->fetch_assoc()) {
                 const row = document.createElement('div');
                 row.className = `trending-row ${isUp ? 'trending-up' : ''}`;
                 row.innerHTML = `
-                    <span class="trending-thumb"><img src="${getProductImage(item.product_name)}" alt="" onerror="this.src='../pos/img/icon.png'"></span>
+                    <span class="trending-thumb"><img src="${getProductImage(item.product_image)}" alt="" onerror="this.style.visibility='hidden'"></span>
                     <div class="trending-content">
                         <span class="trending-name">${item.product_name}</span>
-                        <p class="trending-desc">${item.recent_7} units this week vs ${item.prev_7} last week.</p>
+                        <p class="trending-desc">${item.recent_quantity} units in the selected period vs ${item.previous_quantity} in the previous period.</p>
                     </div>
                     <span class="trending-percent ${isUp ? 'trending-percent-up' : 'trending-percent-down'}">
                         <i class="fa-solid fa-arrow-${isUp ? 'up' : 'down'}"></i> ${formatReportPercent(item.change_percent)}
