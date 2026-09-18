@@ -452,12 +452,25 @@ while ($row = $branchesResult->fetch_assoc()) {
         let currentBranchId = '<?php echo $branchId; ?>';
         let historicalDays = 28;
         let autoRefreshInterval = null;
+        const demandRangeFromAnalytics = {
+            startDate: <?php echo json_encode($_GET['demand_start_date'] ?? null); ?>,
+            endDate: <?php echo json_encode($_GET['demand_end_date'] ?? null); ?>
+        };
 
         // ==========================================
         // FETCH FORECAST DATA
         // ==========================================
         async function fetchForecastData() {
-            const url = `api/forecast_api.php?branch_id=${currentBranchId}&historical_days=${historicalDays}&forecast_days=14`;
+            const params = new URLSearchParams({
+                branch_id: currentBranchId,
+                historical_days: historicalDays,
+                forecast_days: 14
+            });
+            if (demandRangeFromAnalytics.startDate && demandRangeFromAnalytics.endDate) {
+                params.set('demand_start_date', demandRangeFromAnalytics.startDate);
+                params.set('demand_end_date', demandRangeFromAnalytics.endDate);
+            }
+            const url = `api/forecast_api.php?${params.toString()}`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();

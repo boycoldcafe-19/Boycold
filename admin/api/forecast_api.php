@@ -27,6 +27,19 @@ $historicalDays = isset($_GET['historical_days']) ? intval($_GET['historical_day
 $forecastDays = max(1, min($forecastDays, 90));
 $historicalDays = max(3, min($historicalDays, 365));
 
+/**
+ * Accept only calendar dates used by Data Analytics. Demand Forecast receives
+ * this range from that page so both views rank the same menu items.
+ */
+function forecastApiDate(mixed $value): ?string {
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    return $date && $date->format('Y-m-d') === $value ? $value : null;
+}
+
 // Match admin/sales.php: forecasting uses successful sales only.
 $successfulSaleCondition = "(
     (o.status IN ('completed', 'delivered') OR o.payment_status = 'paid')
@@ -62,6 +75,19 @@ $forecastAnchorDate = $latestOrderDate !== '' && $latestOrderDate < date('Y-m-d'
     ? $latestOrderDate
     : date('Y-m-d');
 $forecastAnchorSql = "'" . $connect->real_escape_string($forecastAnchorDate) . "'";
+
+// Data Analytics defaults Top Selling Items to the latest seven sales days.
+// When its selected range is supplied, preserve it exactly (including custom
+// ranges) so the Demand Forecast predicts from the same top five products.
+$demandStartDate = forecastApiDate($_GET['demand_start_date'] ?? null);
+$demandEndDate = forecastApiDate($_GET['demand_end_date'] ?? null);
+if ($demandStartDate === null || $demandEndDate === null) {
+    $demandEndDate = $forecastAnchorDate;
+    $demandStartDate = (new DateTimeImmutable($demandEndDate))->modify('-6 days')->format('Y-m-d');
+} elseif ($demandStartDate > $demandEndDate) {
+    [$demandStartDate, $demandEndDate] = [$demandEndDate, $demandStartDate];
+}
+$demandHistoricalDays = (int) ((strtotime($demandEndDate) - strtotime($demandStartDate)) / 86400) + 1;
 
 // ==========================================
 // 1. DAILY SALES HISTORY (last N days)
@@ -195,9 +221,9 @@ $forecastedSales = computeForecast($historicalSales, $forecastDays);
 
 // ==========================================
 // 3. DEMAND FORECAST (Top Menu Items)
-// Keep this source aligned with admin/data-analytics.php: the selected
-// historical calendar range, successful sales only, and the five
-// highest-volume items.
+// Keep this source identical to admin/data-analytics.php Top Selling Items:
+// selected calendar range, successful sales only, five highest-volume items,
+// and deterministic ordering when quantities are tied.
 // ==========================================
 $demandQuery = "SELECT 
     oi.product_name,
@@ -207,16 +233,20 @@ $demandQuery = "SELECT
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.id
 WHERE {$successfulSaleCondition}
-    AND DATE(o.created_at) BETWEEN DATE_SUB($forecastAnchorSql, INTERVAL " . ($historicalDays - 1) . " DAY) AND $forecastAnchorSql
+    AND DATE(o.created_at) BETWEEN ? AND ?
     $branchCondition
 GROUP BY oi.product_name
-ORDER BY total_orders DESC
+ORDER BY total_orders DESC, oi.product_name ASC
 LIMIT 5";
 
 $stmt = $connect->prepare($demandQuery);
+$demandParams = [$demandStartDate, $demandEndDate];
+$demandTypes = 'ss';
 if ($branchId !== 'all') {
-    $stmt->bind_param($types, ...$params);
+    $demandParams = array_merge($demandParams, $params);
+    $demandTypes .= $types;
 }
+$stmt->bind_param($demandTypes, ...$demandParams);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -235,7 +265,7 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 
 // Forecast demand for each top item using the overall sales forecast factor.
-// Use calendar days for the daily rate so sparse item sales are not inflated.
+// Use the same calendar range as Data Analytics for each item's daily rate.
 $totalHistoricalSales = array_sum(array_column($historicalSales, 'sales'));
 $totalForecastedSales = array_sum($forecastedSales);
 
@@ -247,7 +277,7 @@ if ($totalHistoricalSales > 0) {
 
 $demandForecast = [];
 foreach ($demandItems as $item) {
-    $avgDailyOrders = $historicalDays > 0 ? $item['total_orders'] / $historicalDays : 0;
+    $avgDailyOrders = $demandHistoricalDays > 0 ? $item['total_orders'] / $demandHistoricalDays : 0;
     $forecastedOrders = round($avgDailyOrders * $forecastDays * $salesGrowthFactor);
     
     // Determine trend
@@ -519,6 +549,11 @@ $response = [
     'success' => true,
     'timestamp' => date('Y-m-d H:i:s'),
     'forecast_date' => date('Y-m-d'),
+    'demand_range' => [
+        'start_date' => $demandStartDate,
+        'end_date' => $demandEndDate,
+        'days' => $demandHistoricalDays,
+    ],
     'stats' => [
         'predicted_sales_next_14' => $predictedSales14,
         'sales_change_percent' => $salesChangePercent,
