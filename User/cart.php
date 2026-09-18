@@ -220,7 +220,7 @@ $_SESSION['user_email'] = $user['email'];
                 </div>
                 <button class="checkout-btn" disabled>Proceed to Checkout</button>
                 <p class="summary-terms">
-                    By placing your order, you agree to our <a href="#">BoyCold Cafe Terms</a>
+                    By placing your order, you agree to our <a href="footer-link/terms.php">BoyCold Cafe Terms</a>
                 </p>
             </div>
 

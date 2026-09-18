@@ -1,11 +1,17 @@
 <?php
 require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
+require_once '../config/analytics_reporting_service.php';
 
 // Match admin/dashboard.php: branch-scoped admins see their branch by default;
 // all-branch admins can explicitly use the all-branches view.
 $sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
-$requestedBranchId = isset($_GET['branch_id']) ? (string) $_GET['branch_id'] : 'all';
+// Follow the branch Data Analytics is showing unless a link/selection says otherwise.
+$analyticsScope = boycold_analytics_remembered_scope();
+$followAnalyticsBranch = !isset($_GET['branch_id']) && $analyticsScope !== null;
+$requestedBranchId = isset($_GET['branch_id'])
+    ? (string) $_GET['branch_id']
+    : ($analyticsScope['branch_id'] ?? 'all');
 
 $branchesQuery = "SELECT id, branch_name FROM branches WHERE status = 'active' ORDER BY branch_name";
 $branchesResult = $connect->query($branchesQuery);
@@ -385,6 +391,7 @@ $branchId = $sessionBranchId > 0
         // State
         let forecastChart = null;
         let currentBranchId = <?php echo json_encode((string) $branchId); ?>;
+        const followAnalyticsBranch = <?php echo json_encode($followAnalyticsBranch); ?>;
         let historicalDays = 28;
         let autoRefreshInterval = null;
         const forecastAdminId = <?php echo json_encode((string) $adminAccount['id']); ?>;
@@ -1094,7 +1101,7 @@ $branchId = $sessionBranchId > 0
             // A selected branch used to exist only in JavaScript, so it was
             // lost after logout. Restore it for the same admin unless a link
             // explicitly supplies another branch.
-            if (!preferredBranch) {
+            if (!preferredBranch && !followAnalyticsBranch) {
                 try {
                     preferredBranch = localStorage.getItem(forecastBranchPreferenceKey);
                 } catch (error) {
@@ -1224,4 +1231,3 @@ $branchId = $sessionBranchId > 0
     <script src="admin-js/logout-modal.js"></script>
 </body>
 </html>
-

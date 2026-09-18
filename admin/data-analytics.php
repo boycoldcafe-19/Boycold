@@ -31,9 +31,9 @@ $branchId = isset($_GET['branch_id'])
 $startDate = (string) ($_GET['start_date'] ?? '');
 $endDate = (string) ($_GET['end_date'] ?? '');
 if ($startDate === '' && $endDate === '') {
-    $latestSalesDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? '';
-    $endDate = $latestSalesDate !== '' ? $latestSalesDate : date('Y-m-d');
-    $startDate = date('Y-m-d', strtotime($endDate . ' -6 days'));
+    $defaultRange = boycold_analytics_default_range($connect, $branchId);
+    $startDate = $defaultRange['start_date'];
+    $endDate = $defaultRange['end_date'];
 }
 
 if ($startDate === '') $startDate = $endDate;
@@ -43,6 +43,9 @@ $defaultEndDate = $endDate;
 if ($startDate > $endDate) {
     [$startDate, $endDate] = [$endDate, $startDate];
 }
+
+// Forecasting reads this exact branch + range (Top Selling Items, trends).
+boycold_analytics_remember_scope($branchId, $startDate, $endDate);
 
 // Compare to the immediately preceding range of the same length.  This keeps
 // both the KPI trend and Sales Overview comparison correct for custom ranges.
@@ -1627,4 +1630,3 @@ if (($_GET['format'] ?? '') === 'json') {
 </body>
 
 </html>
-

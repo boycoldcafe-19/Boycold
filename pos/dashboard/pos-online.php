@@ -342,21 +342,6 @@ if ($branchId > 0) {
                     <span id="shiftPillLabel">Shift Open</span>
                 </div>
 
-                <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <?php if ($pendingCount > 0): ?>
-                    <span class="icon-badge"><?= $pendingCount ?></span>
-                    <?php endif; ?>
-                </button>
-
-                <div class="notif-dropdown" id="notifDropdown">
-                    <div class="notif-header">
-                        <span class="notif-title">Inventory Warnings</span>
-                    </div>
-                    <div class="notif-list inventory-warning-list"></div>
-                    <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
-                </div>
-
                 <div class="header-divider"></div>
 
                 <button class="profile-btn">

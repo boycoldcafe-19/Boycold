@@ -195,20 +195,6 @@ if ($shiftResult) {
 
                 <div class="header-divider"></div>
 
-                <div class="notif-wrap">
-                    <button class="icon-btn" id="notifBtn" data-inventory-alert="true" aria-label="Inventory warnings">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span class="icon-badge" id="notifBadge">0</span>
-                    </button>
-                    <div class="notif-dropdown" id="notifDropdown">
-                        <div class="notif-header">
-                            <span class="notif-title">Inventory Warnings</span>
-                        </div>
-                        <div class="notif-list inventory-warning-list"></div>
-                        <a href="pos-menu.php" class="notif-footer">Open inventory details <i class="fa-solid fa-chevron-right"></i></a>
-                    </div>
-                </div>
-
                 <div class="header-divider"></div>
 
                 <button class="profile-btn">

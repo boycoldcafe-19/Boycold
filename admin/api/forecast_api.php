@@ -34,7 +34,12 @@ boycold_ensure_inventory_schema($connect);
 
 // Match admin/dashboard.php branch scope when the caller does not provide one.
 $sessionBranchId = (int) ($_SESSION['branch_id'] ?? 0);
-$requestedBranchId = isset($_GET['branch_id']) ? (string) $_GET['branch_id'] : 'all';
+// Data Analytics is the source of truth: without an explicit branch, follow the
+// branch and date range it is currently showing.
+$analyticsScope = boycold_analytics_remembered_scope();
+$requestedBranchId = isset($_GET['branch_id'])
+    ? (string) $_GET['branch_id']
+    : ($analyticsScope['branch_id'] ?? 'all');
 $branchId = $sessionBranchId > 0 ? (string) $sessionBranchId : $requestedBranchId;
 if ($branchId !== 'all') {
     $branchNumber = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -56,15 +61,14 @@ $historicalDays = max(3, min($historicalDays, 365));
 
 // Use the same successful-sale source and selected reporting range as Data
 // Analytics. Forecasting only calculates future values from this snapshot.
-$latestOrderDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? '';
-$forecastAnchorDate = $latestOrderDate !== '' && $latestOrderDate < date('Y-m-d')
-    ? $latestOrderDate
-    : date('Y-m-d');
+// Same default range as Data Analytics (latest sale date, no PHP-clock check).
+$defaultRange = boycold_analytics_default_range($connect, $branchId);
+$forecastAnchorDate = $defaultRange['end_date'];
 
-// Forecasting owns its own reporting window. It uses the same Analytics
-// service and rules, but never inherits Data Analytics page state.
-$demandEndDate = $forecastAnchorDate;
-$demandStartDate = (new DateTimeImmutable($demandEndDate))->modify('-6 days')->format('Y-m-d');
+// Demand Forecast and Trending Drinks read the range Data Analytics is showing;
+// with no saved Analytics view they use the shared default range.
+$demandStartDate = $analyticsScope['start_date'] ?? $defaultRange['start_date'];
+$demandEndDate = $analyticsScope['end_date'] ?? $defaultRange['end_date'];
 $demandHistoricalDays = (int) ((strtotime($demandEndDate) - strtotime($demandStartDate)) / 86400) + 1;
 
 // ==========================================

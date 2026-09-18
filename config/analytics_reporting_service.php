@@ -269,3 +269,73 @@ function boycold_analytics_product_period_comparison(
 
     return $items;
 }
+
+/**
+ * Default Data Analytics range: the 7 reporting days ending on the latest
+ * successful sale (or today when there are none). Data Analytics and
+ * Forecasting both call this, so their default window cannot drift apart.
+ *
+ * @return array{start_date: string, end_date: string}
+ */
+function boycold_analytics_default_range(mysqli $connect, string $branchId): array
+{
+    $endDate = boycold_analytics_latest_sale_date($connect, $branchId) ?? date('Y-m-d');
+
+    return [
+        'start_date' => date('Y-m-d', strtotime($endDate . ' -6 days')),
+        'end_date' => $endDate,
+    ];
+}
+
+/**
+ * Data Analytics saves the branch and date range it is showing, so Forecasting
+ * reads the very same scope (top sellers, trends) instead of choosing its own.
+ */
+function boycold_analytics_remember_scope(string $branchId, string $startDate, string $endDate): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    $_SESSION['analytics_scope'] = [
+        'branch_id' => $branchId,
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+    ];
+}
+
+/**
+ * @return array{branch_id: string, start_date: string, end_date: string}|null
+ */
+function boycold_analytics_remembered_scope(): ?array
+{
+    $scope = $_SESSION['analytics_scope'] ?? null;
+    if (!is_array($scope)) {
+        return null;
+    }
+
+    $validDate = static function (mixed $value): ?string {
+        if (!is_string($value)) {
+            return null;
+        }
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $date && $date->format('Y-m-d') === $value ? $value : null;
+    };
+
+    $startDate = $validDate($scope['start_date'] ?? null);
+    $endDate = $validDate($scope['end_date'] ?? null);
+    if ($startDate === null || $endDate === null) {
+        return null;
+    }
+    if ($startDate > $endDate) {
+        [$startDate, $endDate] = [$endDate, $startDate];
+    }
+
+    $branchId = (string) ($scope['branch_id'] ?? 'all');
+    if ($branchId !== 'all'
+        && filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+        $branchId = 'all';
+    }
+
+    return ['branch_id' => $branchId, 'start_date' => $startDate, 'end_date' => $endDate];
+}
