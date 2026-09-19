@@ -280,17 +280,33 @@ $_SESSION['user_email'] = $user['email'];
                 const data = await res.json();
                 if (data.success) {
                     currentCart = data.items;
-                    // Auto-select all items by default
-                    selectedItems.clear();
-                    currentCart.forEach(item => selectedItems.add(item.cartId));
+
+                    const validSelected = new Set(
+                        [...selectedItems].filter((cartId) =>
+                            currentCart.some((item) => item.cartId === cartId)
+                        )
+                    );
+
+                    if (validSelected.size === 0) {
+                        currentCart.forEach((item) => validSelected.add(item.cartId));
+                    }
+
+                    selectedItems = validSelected;
                     renderCart(currentCart);
-                    // Check all checkboxes after rendering
+
                     setTimeout(() => {
-                        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
-                            checkbox.checked = true;
+                        document.querySelectorAll('.item-checkbox').forEach((checkbox) => {
+                            const cartId = Number(checkbox.dataset.cartId);
+                            checkbox.checked = selectedItems.has(cartId);
                         });
+
                         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-                        if (selectAllCheckbox) selectAllCheckbox.checked = true;
+                        if (selectAllCheckbox) {
+                            selectAllCheckbox.checked =
+                                currentCart.length > 0 &&
+                                currentCart.every((item) => selectedItems.has(item.cartId));
+                        }
+
                         recalcSummary();
                     }, 0);
                 } else {
