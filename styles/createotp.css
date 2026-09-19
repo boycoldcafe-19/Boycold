@@ -14,10 +14,14 @@ body{
     overflow-x:hidden;
 }
 
+body::-webkit-scrollbar {
+    display: none;
+}
+
 /* HEADER */
 header{
     border-bottom:1px solid #ddd;
-    padding:15px 25px;
+    padding:0;
     background:#fff;
     position:sticky;
     top:0;
@@ -25,23 +29,41 @@ header{
 }
 
 header img{
-    width:55px;
-    height:auto;
-}
-
-/* DESKTOP SIDE IMAGE */
-.pic1{
-    position:fixed;
-    right:0;
-    top:90px;
-}
-
-.pic1 img{
     width:auto;
-    height:88vh;
+    height:50%;
+    margin:20px 0 15px 30px;
 }
 
-/* MOBILE HERO */
+.pic1 {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex:1 1 50%;
+    min-width:0;
+}
+
+.pic1 img {
+    display:block;
+    width:95%;
+    height:auto;
+    border-radius:20px;
+}
+
+.login-layout {
+    display:flex;
+    align-items:center;
+    width:min(1380px, 100%);
+    min-height:calc(100vh - 87px);
+    margin:0 auto;
+    gap:24px;
+}
+
+.login-content {
+    flex:1 1 50%;
+    min-width:320px;
+    padding:0 clamp(20px, 3vw, 64px);
+}
+
 .hero-banner{
     display:none;
 }
@@ -49,9 +71,12 @@ header img{
 /* MAIN OTP SECTION */
 .otp{
     width:100%;
-    max-width:600px;
-    padding:40px 20px;
-    margin-top:40px;
+    max-width:480px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
 }
 
 /* OTP IMAGE */
@@ -100,20 +125,28 @@ button:hover{
 
 /* MOBILE */
 @media (max-width:768px){
-
     body{
         min-height:100vh;
     }
 
-    /* HIDE DESKTOP IMAGE */
+    .login-layout {
+        display:block;
+        width:100%;
+        min-height:0;
+    }
+
+    .login-content {
+        min-width:0;
+        padding:0;
+    }
+
     .pic1{
         display:none;
     }
 
-    /* SHOW MOBILE HERO */
     .hero-banner{
         display:block;
-        margin:15px;
+        margin:15px 16px 0;
     }
 
     .hero-banner img{
@@ -121,12 +154,13 @@ button:hover{
         height:220px;
         object-fit:cover;
         border-radius:20px;
+        display:block;
     }
 
-    /* OTP SECTION */
     .otp{
-        margin:auto;
+        margin:20px auto 0;
         padding:25px 20px 40px;
+        max-width:100%;
     }
 
     .pic2 img{
@@ -139,8 +173,8 @@ button:hover{
     }
 
     button{
-    width:280px;
-    height:58px;
-    font-size:30px;
-}
+        width:280px;
+        height:58px;
+        font-size:30px;
+    }
 }

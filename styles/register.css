@@ -374,8 +374,9 @@ h4 {
     border-radius: 8px;
     padding: 10px 16px;
     font-size: 14px;
-    margin: 10px 0 0 120px;
-    max-width: 275px;
+    margin: 0 0 12px;
+    max-width: 440px;
+    text-align: left;
 }
 
 /* ── Password rules ── */
@@ -446,7 +447,7 @@ h4 {
 /* Error msg on mobile */
 @media (max-width: 768px) {
     .error-msg {
-        margin: 10px 20px 0;
+        margin: 0 20px 12px;
         max-width: 100%;
     }
 
@@ -500,7 +501,8 @@ h4 {
 
     #registerSection .p1,
     #registerSection .p2,
-    #registerSection .google-message {
+    #registerSection .google-message,
+    #registerSection .error-msg {
         padding-left: 20px;
         padding-right: 20px;
     }
@@ -521,6 +523,7 @@ h4 {
     .register-content .error-msg {
         margin-left: 20px;
         margin-right: 20px;
+        max-width: calc(100% - 40px);
     }
 }
 

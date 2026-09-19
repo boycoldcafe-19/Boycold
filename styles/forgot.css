@@ -64,6 +64,9 @@ body::-webkit-scrollbar{
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .forgot-content::-webkit-scrollbar {
@@ -78,6 +81,11 @@ body::-webkit-scrollbar{
 form {
     margin-top: 20px;
     font-family: 'Afacad', sans-serif;
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 h1.font {
@@ -87,6 +95,9 @@ h1.font {
     padding-top: 50px;
     padding-left: 0;
     white-space: nowrap;
+    margin: 0 0 10px 0;
+    text-align: left;
+    line-height: 1;
 }
 
 button {
@@ -114,8 +125,12 @@ p {
     font-size: 18px;
     color: #692727;
     padding-left: 0;
-    margin-bottom: 17px;
+    margin: 0 0 17px;
     font-family: 'Afacad', sans-serif;
+    max-width: 430px;
+    line-height: 1.45;
+    text-align: left;
+    display: block;
 }
 
 .p2 {
@@ -123,6 +138,9 @@ p {
     color: #000;
     padding-left: 0;
     font-size: 17px;
+    margin: 0 0 18px;
+    text-align: left;
+    display: block;
 }
 
 #email {
@@ -149,6 +167,8 @@ p a:hover {
     text-decoration: none;
     color: #000000;
     padding-left: 0;
+    width: 100%;
+    max-width: 275px;
 }
 
 .terms a {
@@ -161,8 +181,9 @@ p a:hover {
 }
 
 .terms p{
-    padding-left: 10px;
+    padding-left: 0;
     font-size: 15px;
+    text-align: left;
 }
 
 @media (max-width: 768px) {

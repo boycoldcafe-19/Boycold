@@ -21,25 +21,29 @@ if (empty($_SESSION['otp_email'])) {
         <img src="../picture/LOGO.png" alt="BoyCold CAFE Logo" width="50px">
     </header>
 
-    <div class="pic1">
-        <img src="../picture/Mask group.png" alt="Sign Up Image">
-    </div>
+    <main class="login-layout">
+        <section class="login-content">
+            <div class="hero-banner">
+                <img src="../picture/Mask group.png" alt="BoyCold Café hero">
+            </div>
 
-    <div class="hero-banner">
-        <img src="../picture/Mask group.png" alt="BoyCold Café hero">
-    </div>
+            <div class="otp">
+                <div class="pic2">
+                    <img src="../picture/otp.png" alt="OTP Image">
+                </div>
+                <p class="p1">Thanks - we've sent you an email.</p>
+                <div class="btn-wrap">
+                    <a href="otp.php?mode=register">
+                        <button type="button">Verify OTP</button>
+                    </a>
+                </div>
+            </div>
+        </section>
 
-    <div class="otp">
-        <div class="pic2">
-            <img src="../picture/otp.png" alt="OTP Image">
+        <div class="pic1">
+            <img src="../picture/Mask group.png" alt="Sign Up Image">
         </div>
-        <p class="p1">Thanks - we've sent you an email.</p>
-        <div class="btn-wrap">
-            <a href="otp.php?mode=register">
-                <button type="button">Verify OTP</button>
-            </a>
-        </div>
-    </div>
+    </main>
 </body>
 
 </html>

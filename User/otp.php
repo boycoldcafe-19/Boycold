@@ -283,14 +283,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <br><br>
             </div>
             <input type="hidden" name="otp" id="otpHidden">
-            <div class="terms" style="padding-left: 135px;">
+            <div class="terms">
                 <button type="submit">Log In</button>
             </div>
         </form>
 
         <form method="post" action="otp.php?mode=<?= $mode ?>" class="resend-form" id="resendForm">
             <input type="hidden" name="action" value="resend">
-            <p class="resend-text" style="padding-left: 140px;">Didn't receive code?
+            <p class="resend-text">Didn't receive code?
                 <span id="resendLink" class="resend-link" onclick="handleResend()">Resend OTP</span>
                 <span id="countdown" style="display:none; font-size:20px; color:#6F4E37; font-family:'Afacad',sans-serif;"></span>
             </p>

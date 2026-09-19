@@ -48,10 +48,10 @@ body::-webkit-scrollbar{
 
 h1.font {
     font-family: 'Gaegu', cursive;
-    font-size: 70px;
+    font-size: 55px;
     color: #000000;
     padding-top: 50px;
-    padding-left: 45px;
+    padding-left: 0;
 }
 
 p {
@@ -61,12 +61,13 @@ p {
 .p1 {
     font-size: 18px;
     color: #692727;
-    padding-left: 80px;
+    padding-left: 0;
     font-size: larger;
-    margin-bottom: 100px;
+    margin-bottom: 28px;
 }   
 
 .otp-container{
+    width: min(420px, 100%);
     margin-top: 20px;
     margin-bottom: 45px;
 }
@@ -74,8 +75,9 @@ p {
 .otp-inputs{
     display: flex;
     gap: 12px;
-    padding-left: 80px;
-    margin-bottom: 75px;
+    padding-left: 0;
+    margin-bottom: 24px;
+    justify-content: flex-start;
 }
 
 .otp-inputs input{
@@ -258,29 +260,36 @@ body {
 .otp-content #otpForm {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    width: min(420px, 100%);
 }
 
 .otp-content #otpForm .otp-inputs {
-    justify-content: center;
+    justify-content: flex-start;
     margin-bottom: 24px;
 }
 
 .otp-content #otpForm .terms {
+    width: 100%;
     padding-left: 0 !important;
+    display: flex;
+    justify-content: flex-start;
 }
 
 .otp-content #otpForm button {
     display: block;
+    margin: 0;
 }
 
 .otp-content .resend-form {
     margin-top: 14px;
-    text-align: center;
+    text-align: left;
+    width: min(420px, 100%);
 }
 
 .otp-content .resend-text {
     white-space: nowrap;
+    display: inline-block;
 }
 
 @media (max-width: 900px) {
