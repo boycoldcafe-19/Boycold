@@ -14,7 +14,7 @@ function boycold_admin_account(mysqli $connect): ?array
     }
 
     $stmt = $connect->prepare(
-        "SELECT id, employee_name, email, avatar, branch_id, role, is_active
+        "SELECT id, employee_name, email, password, avatar, branch_id, role, is_active
          FROM employees
          WHERE id = ? AND role = 'admin' AND is_active = 1
          LIMIT 1"

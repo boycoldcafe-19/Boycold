@@ -354,10 +354,10 @@ if ($reviewTable = $connect->query("SHOW TABLES LIKE 'order_reviews'")) {
             <div class="freedrink-img" style="width:120px;height:120px;margin:0 auto 20px;border-radius:16px;overflow:hidden;background:#f5f0eb;display:flex;align-items:center;justify-content:center;">
                 <img src="../picture/icon2.png" alt="Free drink" style="width:100%;height:100%;object-fit:contain;">
             </div>
-            <h2 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1e1e1e;font-family:'Afacad',sans-serif;">Free Drink Ready!</h2>
+            <h2 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1e1e1e;font-family:'Afacad',sans-serif;">Free Drink Reward</h2>
             <p style="margin:0 0 4px;font-size:15px;color:#777;font-family:'Afacad',sans-serif;">You've completed your loyalty card.</p>
-            <p style="margin:0 0 20px;font-size:15px;color:#777;font-family:'Afacad',sans-serif;">You can claim your free drink in any Boycold Cafe branch.</p>
-            <button class="freedrink-btn" id="freeDrinkViewBtn" style="padding:12px 24px;background:#692727;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:'Afacad',sans-serif;cursor:pointer;transition:background 0.15s;">Claim Free Drinks</button>
+            <p style="margin:0 0 20px;font-size:15px;color:#777;font-family:'Afacad',sans-serif;">Redeem it by having your loyalty QR code scanned at any Boycold Cafe branch POS.</p>
+            <button class="freedrink-btn" id="freeDrinkViewBtn" style="padding:12px 24px;background:#692727;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:'Afacad',sans-serif;cursor:pointer;transition:background 0.15s;">Got it</button>
         </div>
     </div>
 
@@ -394,7 +394,6 @@ if ($reviewTable = $connect->query("SHOW TABLES LIKE 'order_reviews'")) {
         if (freeDrinkViewBtn) {
             freeDrinkViewBtn.addEventListener('click', () => {
                 closeFreeDrinkModal();
-                window.location.href = 'account.php';
             });
         }
 

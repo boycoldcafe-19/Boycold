@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
         } else {
             session_regenerate_id(true);
             $_SESSION = [];
+            $_SESSION['admin_logged_in'] = true;
             $_SESSION['user_type'] = 'admin';
             $_SESSION['employee_id'] = (int) $admin['id'];
             $_SESSION['employee_name'] = $admin['employee_name'];

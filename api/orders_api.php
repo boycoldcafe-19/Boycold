@@ -213,6 +213,19 @@ switch ($action) {
         $cartItemIdsProvided = array_key_exists('cart_item_ids', $body);
         $cartItemIds = [];
 
+        // Free-drink rewards are redeemed only by a cashier after the
+        // customer's loyalty QR code is scanned at a branch POS terminal.
+        // Keep this server-side guard so a crafted online checkout request
+        // cannot bypass the customer-facing UI.
+        if ($isFreeDrinkClaim) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Free drink rewards can only be redeemed at a BoyCold Cafe POS terminal. Please have your loyalty QR code scanned at any branch.'
+            ]);
+            break;
+        }
+
         if ($cartItemIdsProvided) {
             if (!is_array($body['cart_item_ids'])) {
                 echo json_encode(['success' => false, 'error' => 'Invalid cart item selection.']);

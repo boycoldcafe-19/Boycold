@@ -6,7 +6,8 @@ const nav = document.getElementById('mainNav');
 const FREE_DRINK_EXCLUDED_CATEGORIES = new Set([
     'rice-meal', 'light-snack', 'pasta', 'waffles', 'quesadilla', 'bites', 'waffle'
 ]);
-const isFreeDrinkFlow = sessionStorage.getItem('boycold_free_drink_flow') === '1';
+// Online free-drink redemption is disabled; rewards are redeemed at the POS.
+const isFreeDrinkFlow = false;
 
 document.querySelectorAll('.cart-link.is-disabled').forEach((link) => {
     link.addEventListener('click', (event) => event.preventDefault());
@@ -398,32 +399,6 @@ document.addEventListener('click', async function(e) {
         const image  = card.querySelector('.card-image img')?.getAttribute('src') || '';
         const servings = card.dataset.availableServings || '0';
         const branchId = getSelectedBranchId();
-
-        if (isFreeDrinkFlow) {
-            const category = normalizeMenuCategory(card.dataset.category);
-            if (FREE_DRINK_EXCLUDED_CATEGORIES.has(category)) {
-                alert('Please select an eligible drink for your free reward.');
-                return;
-            }
-
-            sessionStorage.setItem('boycold_direct_order', JSON.stringify({
-                id: Date.now(),
-                productId: Number(card.dataset.productId || 0),
-                name,
-                image,
-                unitPrice: 0,
-                qty: 1,
-                total: 0,
-                milk: '',
-                addons: '',
-                orderType: 'pickup',
-                notes: '',
-                freeDrinkClaim: true
-            }));
-            sessionStorage.removeItem('boycold_free_drink_flow');
-            window.location.href = 'checkout.php?mode=free-drink';
-            return;
-        }
 
         const productId = card.dataset.productId || '';
         const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId, product_id: productId });

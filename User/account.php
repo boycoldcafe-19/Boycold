@@ -643,7 +643,7 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         <span class="card-no">Card no: <?= $cardNo ?></span>
                         <div class="loyalty-card-actions">
                             <?php if ($isLoyaltyCardActive && $isLoyaltyCardComplete): ?>
-                                <button class="reward-btn" type="button" onclick="openFreeDrinkModal()" title="Claim your free drink reward">
+                                <button class="reward-btn" type="button" onclick="openFreeDrinkModal()" title="View POS reward instructions">
                                     <i class="fa-solid fa-gift" aria-hidden="true"></i>
                                     Rewards
                                 </button>
@@ -859,10 +859,10 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
             <div class="freedrink-img">
                 <img src="../picture/icon2.png" alt="Free drink">
             </div>
-            <h2>Free Drink Ready!</h2>
+            <h2>Free Drink Reward</h2>
             <p>You've completed your loyalty card.</p>
-            <p>You can claim your free drink in any Boycold Cafe branch.</p>
-            <button class="freedrink-btn" id="freeDrinkViewBtn">Claim your Free Drink</button>
+            <p>To redeem, have your loyalty QR code scanned at any Boycold Cafe branch POS.</p>
+            <button class="freedrink-btn" id="freeDrinkViewBtn">Got it</button>
         </div>
     </div>
 
@@ -1005,8 +1005,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         if (freeDrinkViewBtn) {
             freeDrinkViewBtn.addEventListener('click', () => {
                 closeFreeDrinkModal();
-                sessionStorage.setItem('boycold_free_drink_flow', '1');
-                window.location.href = 'menu.php?free_drink=1';
             });
         }
 

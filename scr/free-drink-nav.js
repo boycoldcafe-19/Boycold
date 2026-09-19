@@ -1,4 +1,7 @@
 (() => {
+    // Remove any state left by the retired online redemption flow.
+    sessionStorage.removeItem('boycold_free_drink_flow');
+
     let overlay = document.getElementById('freeDrinkOverlay');
     const createdOverlay = !overlay;
     if (!overlay) {
@@ -10,8 +13,8 @@
                 <button type="button" class="freedrink-close" aria-label="Close free drink message">&times;</button>
                 <div class="freedrink-img"><img src="../picture/icon2.png" alt="Free drink"></div>
                 <h2 id="freeDrinkNavTitle">Free Drink Reward</h2>
-                <p>View your loyalty card and claim your free drink.</p>
-                <button type="button" class="freedrink-btn">Claim Free Drinks</button>
+                <p>Redeem it by having your loyalty QR code scanned at any Boycold Cafe branch POS.</p>
+                <button type="button" class="freedrink-btn">Got it</button>
             </div>`;
         document.body.appendChild(overlay);
     }
@@ -39,7 +42,7 @@
     });
     if (createdOverlay) {
         viewButton?.addEventListener('click', () => {
-            window.location.href = 'account.php';
+            closeModal();
         });
     }
     document.addEventListener('keydown', (event) => {
@@ -50,8 +53,7 @@
         .then((response) => response.json())
         .then((result) => {
             if (result.success && result.show_reward_popup === true) {
-                if (sessionStorage.getItem('boycold_free_drink_flow') !== '1'
-                    && sessionStorage.getItem('boycold_direct_order') === null) {
+                if (sessionStorage.getItem('boycold_direct_order') === null) {
                     openModal();
                 }
             }

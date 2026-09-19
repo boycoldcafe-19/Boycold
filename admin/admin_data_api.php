@@ -130,6 +130,7 @@ try {
             $current = requireValue($data, 'current_password');
             $new = requireValue($data, 'new_password');
             if (strlen($new) < 8) response(['success' => false, 'error' => 'New password must be at least 8 characters'], 422);
+            if (hash_equals($current, $new)) response(['success' => false, 'error' => 'New password must be different from your current password'], 422);
             $admin = currentAdmin($connect);
             if (!$admin) response(['success' => false, 'error' => 'Admin login required'], 401);
             if (!password_verify($current, $admin['password'])) {
@@ -139,7 +140,10 @@ try {
             $stmt = $connect->prepare('UPDATE employees SET password = ? WHERE id = ?');
             $stmt->bind_param('si', $hash, $admin['id']);
             $stmt->execute();
-            response(['success' => true]);
+            $updated = $stmt->affected_rows;
+            $stmt->close();
+            if ($updated !== 1) response(['success' => false, 'error' => 'Password could not be updated. Please try again.'], 500);
+            response(['success' => true, 'message' => 'Password updated successfully.']);
 
         case 'customers':
             $sql = "SELECT u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,

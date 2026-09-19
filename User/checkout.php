@@ -626,7 +626,8 @@ $branches = $branches ?? [];
         const DELIVERY_FEE = 30;
         const TAX = 5;
         const DIRECT_KEY = 'boycold_direct_order';
-        const FREE_DRINK_MODE = new URLSearchParams(window.location.search).get('mode') === 'free-drink';
+        // Free-drink rewards are redeemed at the branch POS, not online.
+        const FREE_DRINK_MODE = false;
         let cartItems = [];
         // IDs of persistent-cart rows represented by cartItems.  This lets the
         // API remove only the rows that the customer selected for checkout.
@@ -662,9 +663,15 @@ $branches = $branches ?? [];
             const directRaw = sessionStorage.getItem(DIRECT_KEY);
             if (directRaw) {
                 try {
-                    cartItems = [JSON.parse(directRaw)];
+                    const directItem = JSON.parse(directRaw);
+                    if (directItem.freeDrinkClaim === true) {
+                        sessionStorage.removeItem(DIRECT_KEY);
+                        window.location.replace('menu.php');
+                        return;
+                    }
+                    cartItems = [directItem];
                     isDirectOrder = true;
-                    isFreeDrinkClaim = cartItems[0].freeDrinkClaim === true || FREE_DRINK_MODE;
+                    isFreeDrinkClaim = false;
                     if (isFreeDrinkClaim) {
                         const pickupButton = [...document.querySelectorAll('.co-toggle-btn')]
                             .find((button) => button.textContent.trim().toLowerCase().includes('pick'));

@@ -478,10 +478,23 @@ require_once __DIR__ . '/admin_guard.php';
                 return;
             }
 
+            if (newVal.length < 8) {
+                alert('New password must be at least 8 characters.');
+                return;
+            }
+
             if (newVal !== confirmVal) {
                 alert('New passwords do not match!');
                 return;
             }
+
+            if (currVal === newVal) {
+                alert('New password must be different from your current password.');
+                return;
+            }
+
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.textContent = 'Saving...';
 
             fetch('admin_data_api.php?action=settings_password', {
                     method: 'POST',
@@ -493,15 +506,24 @@ require_once __DIR__ . '/admin_guard.php';
                         new_password: newVal
                     })
                 })
-                .then(response => response.json())
+                .then(async response => {
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'Password update failed');
+                    }
+                    return result;
+                })
                 .then(result => {
-                    if (!result.success) throw new Error(result.error || 'Password update failed');
-                    alert('Password changed successfully!');
+                    alert(result.message || 'Password changed successfully!');
                     currentPassword.value = '';
                     newPassword.value = '';
                     confirmPassword.value = '';
                 })
-                .catch(error => alert(error.message));
+                .catch(error => alert(error.message || 'Password update failed'))
+                .finally(() => {
+                    changePasswordBtn.disabled = false;
+                    changePasswordBtn.textContent = 'Change Password';
+                });
         });
     </script>
     <script src="admin-js/admin-responsive.js"></script>
