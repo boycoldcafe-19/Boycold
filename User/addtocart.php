@@ -535,7 +535,9 @@ $_SESSION['user_email'] = $user['email'];
                 address: document.getElementById('addressInput')?.value || '',
                 delivery_fee: 30,
                 tax: 5,
-                notes: ''
+                notes: '',
+                from_cart: true,
+                cart_item_ids: selectedItemsList.map(i => i.cartId)
             };
             try {
                 const res = await fetch(ORDER_API, {

@@ -629,6 +629,9 @@ $branches = $branches ?? [];
         const DIRECT_KEY = 'boycold_direct_order';
         const FREE_DRINK_MODE = new URLSearchParams(window.location.search).get('mode') === 'free-drink';
         let cartItems = [];
+        // IDs of persistent-cart rows represented by cartItems.  This lets the
+        // API remove only the rows that the customer selected for checkout.
+        let checkoutCartItemIds = [];
         let isDirectOrder = false; // true = "buy now" from ordercustom.php (single item only)
         let isFreeDrinkClaim = FREE_DRINK_MODE;
         let branchIsAvailable = false;
@@ -688,7 +691,12 @@ $branches = $branches ?? [];
                         try {
                             const selectedIds = JSON.parse(selectedRaw);
                             if (Array.isArray(selectedIds) && selectedIds.length > 0) {
-                                allItems = allItems.filter(item => selectedIds.includes(item.cartId));
+                                const selectedIdSet = new Set(
+                                    selectedIds
+                                        .map(Number)
+                                        .filter((cartId) => Number.isInteger(cartId) && cartId > 0)
+                                );
+                                allItems = allItems.filter(item => selectedIdSet.has(item.cartId));
                             }
                             sessionStorage.removeItem('boycold_selected_items'); // consume once
                         } catch (err) {
@@ -697,6 +705,8 @@ $branches = $branches ?? [];
                     }
                     
                     cartItems = allItems;
+                    checkoutCartItemIds = cartItems.map((item) => Number(item.cartId))
+                        .filter((cartId) => Number.isInteger(cartId) && cartId > 0);
                     renderSummary();
                 } else {
                     document.getElementById('coItemList').innerHTML =
@@ -833,7 +843,9 @@ $branches = $branches ?? [];
                 free_drink_claim: isFreeDrinkClaim,
                 product_id:      isFreeDrinkClaim ? Number(cartItems[0]?.productId || 0) : 0,
                 notes:           '',
-                from_cart:       !isDirectOrder
+                from_cart:       !isDirectOrder,
+                // Direct/free-drink orders do not come from the persistent cart.
+                cart_item_ids:   !isDirectOrder ? checkoutCartItemIds : []
             };
 
             try {

@@ -193,6 +193,7 @@ switch ($action) {
     //   "address": "...",
     //   "delivery_fee": 30,
     //   "tax": 5,
+    //   "cart_item_ids": [12, 15], // optional: remove only these cart rows
     //   "notes": ""
     // }
     case 'place':
@@ -208,6 +209,23 @@ switch ($action) {
         $orderNotes     = trim($body['notes']   ?? '');
         $branchId       = isset($body['branch_id']) && $body['branch_id'] !== '' ? (int) $body['branch_id'] : null;
         $isFreeDrinkClaim = !empty($body['free_drink_claim']);
+        $fromCart       = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
+        $cartItemIdsProvided = array_key_exists('cart_item_ids', $body);
+        $cartItemIds = [];
+
+        if ($cartItemIdsProvided) {
+            if (!is_array($body['cart_item_ids'])) {
+                echo json_encode(['success' => false, 'error' => 'Invalid cart item selection.']);
+                break;
+            }
+            foreach ($body['cart_item_ids'] as $cartItemId) {
+                $cartItemId = (int) $cartItemId;
+                if ($cartItemId > 0) {
+                    $cartItemIds[$cartItemId] = $cartItemId;
+                }
+            }
+            $cartItemIds = array_values($cartItemIds);
+        }
 
         // ── Payment method / status ────────────────────────────
         $paymentMethod = strtolower(trim($body['payment_method'] ?? 'cod'));
@@ -454,11 +472,27 @@ switch ($action) {
                 $redeemStmt->close();
             }
 
-            $fromCart = array_key_exists('from_cart', $body) ? (bool) $body['from_cart'] : true;
             if ($fromCart) {
-                $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
-                $clr->bind_param("s", $userName);
-                $clr->execute();
+                if ($cartItemIdsProvided) {
+                    if (!$cartItemIds) {
+                        throw new RuntimeException('Select at least one cart item to checkout.');
+                    }
+
+                    $placeholders = implode(', ', array_fill(0, count($cartItemIds), '?'));
+                    $types = 's' . str_repeat('i', count($cartItemIds));
+                    $params = array_merge([$userName], $cartItemIds);
+                    $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ? AND id IN ($placeholders)");
+                    $clr->bind_param($types, ...$params);
+                    $clr->execute();
+                    $clr->close();
+                } else {
+                    // Preserve the historical all-cart behavior for older
+                    // callers that do not send a selected cart-item list.
+                    $clr = $connect->prepare("DELETE FROM cart WHERE user_name = ?");
+                    $clr->bind_param("s", $userName);
+                    $clr->execute();
+                    $clr->close();
+                }
             }
 
             $connect->commit();
