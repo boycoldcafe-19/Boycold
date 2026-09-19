@@ -248,15 +248,30 @@ require_once __DIR__ . '/admin_guard.php';
                     <div class="password-grid">
                         <div class="field-group">
                             <label for="currentPassword">Current Password</label>
-                            <input type="password" id="currentPassword" placeholder="Enter current password">
+                            <div class="password-input-wrap">
+                                <input type="password" id="currentPassword" placeholder="Enter current password" autocomplete="current-password">
+                                <button type="button" class="password-toggle" data-target="currentPassword" aria-label="Show current password" aria-pressed="false">
+                                    <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="field-group">
                             <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" placeholder="Enter new password">
+                            <div class="password-input-wrap">
+                                <input type="password" id="newPassword" placeholder="Enter new password" autocomplete="new-password">
+                                <button type="button" class="password-toggle" data-target="newPassword" aria-label="Show new password" aria-pressed="false">
+                                    <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="field-group">
                             <label for="confirmPassword">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" placeholder="Confirm new password">
+                            <div class="password-input-wrap">
+                                <input type="password" id="confirmPassword" placeholder="Confirm new password" autocomplete="new-password">
+                                <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Show confirm new password" aria-pressed="false">
+                                    <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -467,6 +482,21 @@ require_once __DIR__ . '/admin_guard.php';
         const currentPassword = document.getElementById('currentPassword');
         const newPassword = document.getElementById('newPassword');
         const confirmPassword = document.getElementById('confirmPassword');
+
+        document.querySelectorAll('.password-toggle').forEach(toggle => {
+            const passwordInput = document.getElementById(toggle.dataset.target);
+            const icon = toggle.querySelector('i');
+            const passwordLabel = passwordInput.closest('.field-group').querySelector('label').textContent.trim();
+
+            toggle.addEventListener('click', () => {
+                const willShowPassword = passwordInput.type === 'password';
+                passwordInput.type = willShowPassword ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', willShowPassword);
+                icon.classList.toggle('fa-eye-slash', !willShowPassword);
+                toggle.setAttribute('aria-pressed', String(willShowPassword));
+                toggle.setAttribute('aria-label', `${willShowPassword ? 'Hide' : 'Show'} ${passwordLabel}`);
+            });
+        });
 
         changePasswordBtn.addEventListener('click', function() {
             const currVal = currentPassword.value.trim();
