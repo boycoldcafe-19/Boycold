@@ -398,21 +398,23 @@ require_once __DIR__ . '/admin_guard.php';
         const imageInput = document.getElementById('imageInput');
         const profileImagePreview = document.getElementById('profileImagePreview');
 
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size exceeds 5MB limit.');
-                    return;
+        if (imageInput && profileImagePreview) {
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File size exceeds 5MB limit.');
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        profileImagePreview.src = event.target.result;
+                        profileImagePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
                 }
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    profileImagePreview.src = event.target.result;
-                    profileImagePreview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+            });
+        }
 
         // Toggle Edit/Save Admin Profile
         const editProfileBtn = document.getElementById('editProfileBtn');
@@ -430,7 +432,7 @@ require_once __DIR__ . '/admin_guard.php';
                 emailText.innerText = result.settings.email;
                 nameInput.value = result.settings.full_name;
                 emailInput.value = result.settings.email;
-                if (result.settings.avatar) profileImagePreview.src = result.settings.avatar;
+                if (result.settings.avatar && profileImagePreview) profileImagePreview.src = result.settings.avatar;
             });
 
         editProfileBtn.addEventListener('click', function() {
