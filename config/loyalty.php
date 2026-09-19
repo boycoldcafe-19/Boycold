@@ -2,7 +2,6 @@
 
 const BOYCOLD_LOYALTY_MAX_STAMPS = 10;
 const BOYCOLD_LOYALTY_RULE = 'completed_order'; // One stamp per completed order, regardless of item quantity.
-const BOYCOLD_LOYALTY_STAMPS_PER_QUALIFYING_ITEM = 1;
 const BOYCOLD_LOYALTY_RESET_ON_REWARD = false;
 const BOYCOLD_LOYALTY_EXCLUDED_DRINK_CATEGORIES = [
     'rice-meal',
@@ -272,25 +271,10 @@ function getLoyaltyCustomerByToken(mysqli $connect, string $payload): ?array
 
 function calculateLoyaltyStampsForOrder(mysqli $connect, int $orderId): int
 {
-    if ($orderId <= 0) {
-        return 0;
-    }
-
-    if (BOYCOLD_LOYALTY_RULE === 'completed_order') {
-        return 1;
-    }
-
-    $stmt = $connect->prepare(
-        "SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) AS qualifying_items
-         FROM order_items
-         WHERE order_id = ?"
-    );
-    $stmt->bind_param('i', $orderId);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    return max(0, (int) ($row['qualifying_items'] ?? 0)) * BOYCOLD_LOYALTY_STAMPS_PER_QUALIFYING_ITEM;
+    // awardLoyaltyForCompletedOrder() verifies that this is a completed order
+    // before calling this function. Its product rows and quantities never
+    // affect the reward: one completed order always earns one stamp.
+    return $orderId > 0 ? 1 : 0;
 }
 
 function setOrderLoyaltyAwarded(mysqli $connect, int $orderId, int $userId = 0): void

@@ -980,11 +980,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         // Store current stamps to detect changes
         let currentStamps = <?= (int) $loyaltyStamps ?>;
 
-        // Whether the "Free Drink Ready" popup has already been shown for the
-        // current completed card. Starts from what the server decided (based
-        // on session state), and flips as stamps change live during this page view.
-        let loyaltyPopupShown = <?= $showLoyaltyPopupOnLoad ? 'false' : ($isLoyaltyCardComplete ? 'true' : 'false') ?>;
-
         /* ── FREE DRINK MODAL ── */
         const freeDrinkOverlay = document.getElementById('freeDrinkOverlay');
         const freeDrinkClose   = document.getElementById('freeDrinkClose');
@@ -994,7 +989,6 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
         function openFreeDrinkModal() {
             if (!freeDrinkOverlay) return;
             freeDrinkOverlay.classList.add('open');
-            loyaltyPopupShown = true;
         }
 
         function closeFreeDrinkModal() {
@@ -1080,12 +1074,8 @@ $addressDisplayValue = $address !== '' ? htmlspecialchars($address, ENT_QUOTES, 
                         // Reactively pop the free-drink modal the moment the
                         // card newly reaches completion during this page view
                         // (e.g. a stamp was just credited via a live order).
-                        if (newStamps >= LOYALTY_MAX_STAMPS && !loyaltyPopupShown) {
+                        if (data.show_reward_popup === true) {
                             openFreeDrinkModal();
-                        } else if (newStamps < LOYALTY_MAX_STAMPS) {
-                            // Card was reset (reward claimed) — allow the
-                            // popup to fire again next time it completes.
-                            loyaltyPopupShown = false;
                         }
                     }
                 }

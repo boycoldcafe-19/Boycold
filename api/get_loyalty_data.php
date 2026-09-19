@@ -44,11 +44,27 @@ try {
 
     $displayStamps = min(BOYCOLD_LOYALTY_MAX_STAMPS, max(0, (int) $result['loyalty_stamps']));
 
+    // Show the reward notification only once for each completed loyalty card.
+    // This session flag is shared by every customer page, unlike a browser-only
+    // flag which can be lost when the customer opens another page or tab.
+    $showRewardPopup = false;
+    if ($displayStamps >= BOYCOLD_LOYALTY_MAX_STAMPS) {
+        if (empty($_SESSION['loyalty_popup_shown_for_completion'])) {
+            $_SESSION['loyalty_popup_shown_for_completion'] = true;
+            $showRewardPopup = true;
+        }
+    } else {
+        // A claimed reward resets the card; allow one notification after the
+        // customer completes the next card.
+        $_SESSION['loyalty_popup_shown_for_completion'] = false;
+    }
+
     echo json_encode([
         'success' => true,
         'loyalty_beans' => (int) $result['loyalty_beans'],
         'loyalty_stamps' => $displayStamps,
-        'loyalty_card_status' => strtolower((string) ($result['loyalty_card_status'] ?? 'active'))
+        'loyalty_card_status' => strtolower((string) ($result['loyalty_card_status'] ?? 'active')),
+        'show_reward_popup' => $showRewardPopup
     ]);
 
 } catch (Exception $e) {
