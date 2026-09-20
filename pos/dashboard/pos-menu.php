@@ -1012,8 +1012,36 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             document.querySelectorAll(".field input, .field select").forEach(el => el.classList.remove("invalid"));
         }
 
-        function slugify(text) {
-            return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        // Reads add-on/milk-choice rows out of a modifier list (only #addonList
+        // exists in this modal today; milk choices are sent as an empty array).
+        function collectModifierRows(list, label) {
+            const modifiers = [];
+            list?.querySelectorAll('.addon-row').forEach(row => {
+                const name = row.querySelector('.addon-name')?.value.trim() || '';
+                const priceRaw = row.querySelector('.addon-price')?.value.trim() || '';
+                if (!name && !priceRaw) return;
+                const price = Number(priceRaw);
+                if (!name || !Number.isFinite(price) || price < 0) {
+                    throw new Error(`Each ${label} needs a name and a valid price.`);
+                }
+                modifiers.push({ name, price });
+            });
+            return modifiers;
+        }
+
+        // Parses the API reply; a non-JSON answer (e.g. a web-server "413 Request
+        // Entity Too Large") becomes a readable message instead of a raw parse error.
+        async function readProductApiResponse(response) {
+            try {
+                return await response.json();
+            } catch (error) {
+                return {
+                    success: false,
+                    error: response.status === 413
+                        ? 'The image is too large for the server upload limit. Use a smaller image.'
+                        : 'The server returned an unexpected response (' + response.status + ').'
+                };
+            }
         }
 
         saveProductBtn.addEventListener("click", () => {
@@ -1042,58 +1070,45 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             const name = nameInput.value.trim();
             const category = categorySelect.value;
             const price = parseFloat(priceInput.value).toFixed(2);
-            const imgSrc = imagePreview.src || "../img/ChatGPT Jul 1, 2026, 12_58_44 PM 1.png";
-            const id = slugify(name) + "-" + Date.now();
 
-            const card = document.createElement("div");
-            card.className = "product-card";
-            card.setAttribute("data-category", category);
-            card.setAttribute("data-id", id);
-            card.innerHTML = `
-                <div class="card-image">
-                    <div class="card-image-placeholder">
-                        <img src="${imgSrc}">
-                    </div>
-                </div>
-                <div class="card-info">
-                    <div class="card-mid">
-                        <p class="card-name">${name}</p>
-                    </div>
-                    <div class="card-footer">
-                        <p class="card-price">₱${price}</p>
-                        <div class="drink-stock">
-                            <p class="drink-status available">
-                                <span class="status-dot"></span>
-                                Available
-                            </p>
-
-                            <p class="drink-ingredient">
-                                Ingredients: <span>Sufficient</span>
-                            </p>
-
-                            <p class="drink-cups">
-                                Cups: <span>40 pcs</span>
-                            </p>
-                        </div>
-                        <button class="card-btn btn-order" aria-label="Add to order">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            productGrid.appendChild(card);
-            setupListViewStock(card);
-
-            updateProductCardsStock();
-            attachOrderButtonHandlers();
-
-            const activeFilter = document.querySelector('.category-bar .cat-pill.active')?.getAttribute('data-filter');
-            if (activeFilter && category !== activeFilter) {
-                card.style.display = "none";
+            let addons;
+            try {
+                addons = collectModifierRows(addonList, 'add-on');
+            } catch (error) {
+                alert(error.message);
+                return;
             }
 
-            closeAddProductModal();
+            const formData = new FormData();
+            formData.append('product_name', name);
+            formData.append('category', category);
+            formData.append('price', price);
+            formData.append('is_available', productStatus.checked ? '1' : '0');
+            formData.append('addons', JSON.stringify(addons));
+            formData.append('milk_choices', JSON.stringify([]));
+            const imageFile = productImageInput?.files?.[0];
+            if (imageFile) formData.append('image_file', imageFile);
+
+            saveProductBtn.disabled = true;
+            fetch('../api/pos_menu_api.php?action=product_create', {
+                method: 'POST',
+                body: formData
+            }).then(async response => {
+                const result = await readProductApiResponse(response);
+                if (!response.ok || !result.success || !Number.isInteger(Number(result.id)) || Number(result.id) < 1) {
+                    throw new Error(result.error || 'Menu item could not be saved to the database.');
+                }
+                return result;
+            }).then(() => {
+                // Reload so the new item renders through the same server-side
+                // PHP loop (and image path resolver) as every other product,
+                // instead of duplicating that markup here client-side.
+                window.location.reload();
+            }).catch(error => {
+                alert(error.message);
+            }).finally(() => {
+                saveProductBtn.disabled = false;
+            });
         });
         document.querySelectorAll('.sidebar-nav a').forEach(link => {
             link.addEventListener('click', function(e) {
