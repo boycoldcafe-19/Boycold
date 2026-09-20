@@ -6,6 +6,10 @@
     const ORDER_POPUP = '../order-popup.php';
     const POLL_INTERVAL = 5000;
 
+    function isPopupSoundMuted() {
+        return localStorage.getItem('boycold_pos_muted') === 'true';
+    }
+
     console.log('[Order Notify] Initialized, polling every', POLL_INTERVAL, 'ms');
 
     let latestOrderId = 0;
@@ -57,6 +61,10 @@
     }
 
     function startPopupSound() {
+        if (isPopupSoundMuted()) {
+            stopPopupSound();
+            return;
+        }
         if (popupSoundInterval) return;
         playPopupSoundTick();
         popupSoundInterval = setInterval(playPopupSoundTick, 1100);
@@ -67,6 +75,19 @@
         clearInterval(popupSoundInterval);
         popupSoundInterval = null;
     }
+
+    window.addEventListener('boycold:mute-toggle', (event) => {
+        const isMuted = Boolean(event.detail?.muted);
+        if (isMuted) {
+            stopPopupSound();
+            return;
+        }
+
+        const popupHost = document.getElementById('popupHost');
+        if (popupHost && popupHost.style.display !== 'none' && popupHost.innerHTML.trim()) {
+            startPopupSound();
+        }
+    });
 
     window.orderPopupSoundControl = {
         start: startPopupSound,

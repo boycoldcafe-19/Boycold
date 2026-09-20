@@ -82,6 +82,7 @@ if ($shiftResult) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="dash-css/pos-menu.css">
+    <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="stylesheet" href="dash-css/ordersum.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
@@ -150,13 +151,6 @@ if ($shiftResult) {
                             <i class="fa-solid fa-chevron-right nav-chevron"></i>
                         </a>
                     </li>
-                    <li>
-                        <a href="pos-settings.php">
-                            <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
-                            <span class="nav-label">POS Settings</span>
-                            <i class="fa-solid fa-chevron-right nav-chevron"></i>
-                        </a>
-                    </li>
                 </ul>
 
                 <div class="sidebar-divider"></div>
@@ -192,6 +186,24 @@ if ($shiftResult) {
 
             <div class="top-header">
                 <div id="popupHost" style="display:none;"></div>
+
+                <div class="header-divider"></div>
+
+                <div class="theme-switch-wrap" title="Toggle Dark / Light Mode">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" role="switch" aria-label="Toggle Dark Mode" aria-checked="false">
+                        <span class="theme-icon sun-icon"><i class="fa-solid fa-sun"></i></span>
+                        <span class="theme-icon moon-icon"><i class="fa-solid fa-moon"></i></span>
+                        <span class="theme-thumb"></span>
+                    </button>
+                </div>
+
+                <div class="header-divider"></div>
+
+                <button class="sound-btn" id="soundToggleBtn" type="button" aria-label="Toggle Sound" title="Sound On (Click to Mute)">
+                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                </button>
+
+                <div class="header-divider"></div>
 
                 <button class="profile-btn">
                     <div class="profile-avatar">A</div>
@@ -1308,6 +1320,80 @@ if ($shiftResult) {
         }
         
 
+    </script>
+    <script>
+        (function () {
+            const soundToggleBtn = document.getElementById("soundToggleBtn");
+            const soundIcon = document.getElementById("soundIcon");
+            const themeToggleBtn = document.getElementById("themeToggleBtn");
+
+            function playSoundChime() {
+                try {
+                    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtor) return;
+                    const ctx = new AudioCtor();
+                    [{ freq: 659.25, start: 0 }, { freq: 880, start: 0.1 }].forEach(({ freq, start }) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = "sine";
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.18, ctx.currentTime + start);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + 0.14);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + start);
+                        osc.stop(ctx.currentTime + start + 0.15);
+                    });
+                } catch (e) {}
+            }
+
+            function updateSoundUI(isMuted) {
+                if (!soundToggleBtn || !soundIcon) return;
+                if (isMuted) {
+                    soundIcon.className = "fa-solid fa-volume-xmark";
+                    soundToggleBtn.classList.add("muted");
+                    soundToggleBtn.title = "Sound Muted (Click to Unmute)";
+                } else {
+                    soundIcon.className = "fa-solid fa-volume-high";
+                    soundToggleBtn.classList.remove("muted");
+                    soundToggleBtn.title = "Sound On (Click to Mute)";
+                }
+            }
+
+            function updateThemeUI(isDark) {
+                if (!themeToggleBtn) return;
+                if (isDark) {
+                    document.body.classList.add("dark-theme");
+                    themeToggleBtn.setAttribute("aria-checked", "true");
+                } else {
+                    document.body.classList.remove("dark-theme");
+                    themeToggleBtn.setAttribute("aria-checked", "false");
+                }
+            }
+
+            let isMuted = localStorage.getItem("boycold_pos_muted") === "true";
+            updateSoundUI(isMuted);
+
+            if (soundToggleBtn) {
+                soundToggleBtn.addEventListener("click", () => {
+                    isMuted = !isMuted;
+                    localStorage.setItem("boycold_pos_muted", String(isMuted));
+                    window.dispatchEvent(new CustomEvent('boycold:mute-toggle', { detail: { muted: isMuted } }));
+                    updateSoundUI(isMuted);
+                    if (!isMuted) playSoundChime();
+                });
+            }
+
+            updateThemeUI(document.body.classList.contains("dark-theme"));
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener("click", () => {
+                    const isDark = !document.body.classList.contains("dark-theme");
+                    localStorage.setItem("boycold_theme", isDark ? "dark" : "light");
+                    updateThemeUI(isDark);
+                });
+            }
+        })();
     </script>
     <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>

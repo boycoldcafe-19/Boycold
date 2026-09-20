@@ -36,6 +36,7 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold - POS</title>
     <link rel="stylesheet" href="dash-css/pos-loyalty.css">
+    <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -175,18 +176,6 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
                             <i class="fa-solid fa-chevron-right nav-chevron"></i>
                         </a>
                     </li>
-                    <li>
-                        <a href="pos-settings.php">
-                            <span class="nav-icon"><svg width="22" height="23" viewBox="0 0 22 23" fill="currentColor"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M9.30036 22.2897C8.79884 22.2897 8.36716 22.1225 8.00533 21.7881C7.64349 21.4538 7.42505 21.0451 7.35001 20.5622L7.09925 18.7233C6.85778 18.6304 6.63043 18.519 6.41719 18.389C6.20395 18.2589 5.9948 18.1196 5.78974 17.971L4.06229 18.6954C3.59792 18.8998 3.13355 18.9183 2.66919 18.7512C2.20482 18.584 1.84261 18.2868 1.58257 17.8596L0.273048 15.5749C0.0130021 15.1477 -0.0612965 14.6926 0.0501518 14.2097C0.1616 13.7267 0.412359 13.3274 0.802427 13.0116L2.27912 11.8971C2.26054 11.7671 2.25125 11.6415 2.25125 11.5204V10.7681C2.25125 10.6478 2.26054 10.5226 2.27912 10.3926L0.802427 9.27807C0.412359 8.9623 0.1616 8.56294 0.0501518 8.08C-0.0612965 7.59706 0.0130021 7.14198 0.273048 6.71476L1.58257 4.43007C1.84261 4.00285 2.20482 3.70566 2.66919 3.53848C3.13355 3.37131 3.59792 3.38988 4.06229 3.59421L5.78974 4.31862C5.99406 4.17002 6.20767 4.03071 6.43056 3.90069C6.65346 3.77067 6.87636 3.65922 7.09925 3.56634L7.35001 1.72745C7.42431 1.24451 7.64275 0.835862 8.00533 0.501517C8.36791 0.167172 8.79958 0 9.30036 0H11.9194C12.4209 0 12.853 0.167172 13.2155 0.501517C13.5781 0.835862 13.7962 1.24451 13.8697 1.72745L14.1205 3.56634C14.362 3.65922 14.5897 3.77067 14.8037 3.90069C15.0177 4.03071 15.2264 4.17002 15.43 4.31862L17.1575 3.59421C17.6218 3.38988 18.0862 3.37131 18.5506 3.53848C19.0149 3.70566 19.3771 4.00285 19.6372 4.43007L20.9467 6.71476C21.2067 7.14198 21.281 7.59706 21.1696 8.08C21.0582 8.56294 20.8074 8.9623 20.4173 9.27807L18.9406 10.3926C18.9592 10.5226 18.9685 10.6481 18.9685 10.7692V11.5204C18.9685 11.6415 18.9499 11.7671 18.9128 11.8971L20.3895 13.0116C20.7795 13.3274 21.0303 13.7267 21.1417 14.2097C21.2532 14.6926 21.1789 15.1477 20.9188 15.5749L19.5815 17.8596C19.3214 18.2868 18.9592 18.584 18.4948 18.7512C18.0305 18.9183 17.5661 18.8998 17.1017 18.6954L15.43 17.971C15.2257 18.1196 15.0121 18.2589 14.7892 18.389C14.5663 18.519 14.3434 18.6304 14.1205 18.7233L13.8697 20.5622C13.7954 21.0451 13.5774 21.4538 13.2155 21.7881C12.8537 22.1225 12.4217 22.2897 11.9194 22.2897H9.30036ZM9.49539 20.0607H11.6965L12.0866 17.1073C12.6624 16.9587 13.1966 16.7406 13.6892 16.4531C14.1818 16.1656 14.632 15.8171 15.0399 15.4077L17.7983 16.5501L18.8849 14.6554L16.4888 12.8444C16.5816 12.5844 16.6467 12.3106 16.6838 12.023C16.721 11.7355 16.7395 11.4428 16.7395 11.1448C16.7395 10.8469 16.721 10.5545 16.6838 10.2677C16.6467 9.98094 16.5816 9.70677 16.4888 9.44524L18.8849 7.63421L17.7983 5.73959L15.0399 6.90979C14.6313 6.48257 14.181 6.1252 13.6892 5.83766C13.1973 5.55012 12.6631 5.33169 12.0866 5.18234L11.7244 2.22897H9.52325L9.13318 5.18234C8.55737 5.33094 8.02353 5.54938 7.53167 5.83766C7.03982 6.12594 6.58919 6.47403 6.17981 6.88193L3.42146 5.73959L2.33484 7.63421L4.73098 9.41738C4.63811 9.696 4.57309 9.97462 4.53594 10.2532C4.4988 10.5319 4.48022 10.8291 4.48022 11.1448C4.48022 11.442 4.4988 11.7299 4.53594 12.0086C4.57309 12.2872 4.63811 12.5658 4.73098 12.8444L2.33484 14.6554L3.42146 16.5501L6.17981 15.3799C6.58845 15.8071 7.03907 16.1648 7.53167 16.4531C8.02427 16.7414 8.55811 16.9595 9.13318 17.1073L9.49539 20.0607ZM10.6656 15.0455C11.7429 15.0455 12.6624 14.6647 13.4239 13.9032C14.1855 13.1416 14.5663 12.2222 14.5663 11.1448C14.5663 10.0675 14.1855 9.14804 13.4239 8.38648C12.6624 7.62492 11.7429 7.24414 10.6656 7.24414C9.56969 7.24414 8.64578 7.62492 7.89388 8.38648C7.14198 9.14804 6.76565 10.0675 6.76491 11.1448C6.76417 12.2222 7.14049 13.1416 7.89388 13.9032C8.64727 14.6647 9.57118 15.0455 10.6656 15.0455Z"
-                                        fill="currentColor" />
-                                </svg></span>
-                            <span class="nav-label">POS Settings</span>
-                            <i class="fa-solid fa-chevron-right nav-chevron"></i>
-                        </a>
-                    </li>
                 </ul>
 
                 <div class="sidebar-divider"></div>
@@ -237,6 +226,24 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
                     <span class="shift-dot"></span>
                     Open Shift
                 </div>
+
+                <div class="header-divider"></div>
+
+                <div class="theme-switch-wrap" title="Toggle Dark / Light Mode">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" type="button" role="switch" aria-label="Toggle Dark Mode" aria-checked="false">
+                        <span class="theme-icon sun-icon"><i class="fa-solid fa-sun"></i></span>
+                        <span class="theme-icon moon-icon"><i class="fa-solid fa-moon"></i></span>
+                        <span class="theme-thumb"></span>
+                    </button>
+                </div>
+
+                <div class="header-divider"></div>
+
+                <button class="sound-btn" id="soundToggleBtn" type="button" aria-label="Toggle Sound" title="Sound On (Click to Mute)">
+                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                </button>
+
+                <div class="header-divider"></div>
 
                 <button class="profile-btn">
                     <div class="profile-avatar">
@@ -795,6 +802,74 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
                 scanPaused = false;
             }
         });
+    </script>
+    <script>
+        (function () {
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const soundToggleBtn = document.getElementById('soundToggleBtn');
+            const soundIcon = document.getElementById('soundIcon');
+
+            function playSoundChime() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    [{ freq: 659.25, start: 0 }, { freq: 880, start: 0.1 }].forEach(({ freq, start }) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.18, ctx.currentTime + start);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + 0.14);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + start);
+                        osc.stop(ctx.currentTime + start + 0.15);
+                    });
+                } catch (e) {}
+            }
+
+            function updateSoundUI(isMuted) {
+                if (!soundToggleBtn || !soundIcon) return;
+
+                if (isMuted) {
+                    soundIcon.className = 'fa-solid fa-volume-xmark';
+                    soundToggleBtn.classList.add('muted');
+                    soundToggleBtn.title = 'Sound Muted (Click to Unmute)';
+                } else {
+                    soundIcon.className = 'fa-solid fa-volume-high';
+                    soundToggleBtn.classList.remove('muted');
+                    soundToggleBtn.title = 'Sound On (Click to Mute)';
+                }
+            }
+
+            function updateThemeUI(isDark) {
+                if (!themeToggleBtn) return;
+                document.body.classList.toggle('dark-theme', isDark);
+                themeToggleBtn.setAttribute('aria-checked', String(isDark));
+            }
+
+            let isMuted = localStorage.getItem('boycold_pos_muted') === 'true';
+            updateSoundUI(isMuted);
+
+            if (soundToggleBtn) {
+                soundToggleBtn.addEventListener('click', () => {
+                    isMuted = !isMuted;
+                    localStorage.setItem('boycold_pos_muted', isMuted);
+                    window.dispatchEvent(new CustomEvent('boycold:mute-toggle', { detail: { muted: isMuted } }));
+                    updateSoundUI(isMuted);
+                    if (!isMuted) playSoundChime();
+                });
+            }
+
+            updateThemeUI((localStorage.getItem('boycold_theme') || 'dark') === 'dark');
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', () => {
+                    const isDark = !document.body.classList.contains('dark-theme');
+                    localStorage.setItem('boycold_theme', isDark ? 'dark' : 'light');
+                    updateThemeUI(isDark);
+                });
+            }
+        })();
     </script>
     <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
