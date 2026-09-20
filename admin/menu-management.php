@@ -5009,8 +5009,11 @@ boycold_ensure_inventory_schema($connect);
                 productImageInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        if (!file.type.startsWith('image/')) {
-                            alert('Please select a PNG, JPG, or WEBP image.');
+                        const isValidImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/pjpeg']
+                            .includes((file.type || '').toLowerCase()) || /\.(png|jpe?g|webp)$/i.test(file.name || '');
+
+                        if (!isValidImage) {
+                            alert('Please select a PNG, JPG/JPEG, or WEBP image.');
                             productImageInput.value = '';
                             return;
                         }

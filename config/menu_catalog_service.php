@@ -507,13 +507,27 @@ function boycold_menu_store_uploaded_image(?array $upload): ?string
     }
 
     $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file((string) $upload['tmp_name']);
+    $mime = strtolower((string) $finfo->file((string) $upload['tmp_name']));
+    $filenameExt = strtolower(pathinfo((string) ($upload['name'] ?? ''), PATHINFO_EXTENSION));
     $extensions = [
         'image/jpeg' => 'jpg',
+        'image/jpg' => 'jpg',
+        'image/pjpeg' => 'jpg',
         'image/png' => 'png',
+        'image/x-png' => 'png',
         'image/webp' => 'webp',
     ];
-    if (!isset($extensions[$mime])) {
+    $resolvedExt = $extensions[$mime] ?? null;
+    if ($resolvedExt === null) {
+        $resolvedExt = match ($filenameExt) {
+            'jpg', 'jpeg' => 'jpg',
+            'png' => 'png',
+            'webp' => 'webp',
+            default => null,
+        };
+    }
+
+    if ($resolvedExt === null) {
         throw new RuntimeException('Use a PNG, JPG, or WEBP image.');
     }
 
@@ -522,7 +536,7 @@ function boycold_menu_store_uploaded_image(?array $upload): ?string
         throw new RuntimeException('The product image folder could not be created.');
     }
 
-    $filename = 'menu_' . bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+    $filename = 'menu_' . bin2hex(random_bytes(16)) . '.' . $resolvedExt;
     $target = $directory . DIRECTORY_SEPARATOR . $filename;
     if (!move_uploaded_file((string) $upload['tmp_name'], $target)) {
         throw new RuntimeException('The product image could not be saved.');

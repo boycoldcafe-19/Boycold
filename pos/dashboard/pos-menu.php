@@ -932,6 +932,16 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             productImageInput.addEventListener("change", (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
+
+                const isValidImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/pjpeg']
+                    .includes(file.type.toLowerCase()) || /\.(png|jpe?g|webp)$/i.test(file.name || '');
+
+                if (!isValidImage) {
+                    alert('Please upload a PNG, JPG/JPEG, or WEBP image.');
+                    productImageInput.value = '';
+                    return;
+                }
+
                 const reader = new FileReader();
                 reader.onload = (evt) => {
                     imagePreview.src = evt.target.result;
