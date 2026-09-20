@@ -1,5 +1,12 @@
 <?php
 
+// Max size of an uploaded menu image. Real menu PNGs are often 2-7MB. PHP's own
+// upload_max_filesize / post_max_size must be at least this large (XAMPP/Laragon/Hostinger
+// defaults already are); if not, the admin sees the exact PHP limit in the error message.
+if (!defined('BOYCOLD_MENU_IMAGE_MAX_BYTES')) {
+    define('BOYCOLD_MENU_IMAGE_MAX_BYTES', 8 * 1024 * 1024);
+}
+
 /**
  * Normalize a category into the value stored by products and used by filters.
  * Category records are shared by the public menu and every branch.
@@ -562,13 +569,16 @@ function boycold_menu_store_uploaded_image(?array $upload): ?string
 
     $uploadError = (int) ($upload['error'] ?? UPLOAD_ERR_OK);
     if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
-        throw new RuntimeException('Product images must be 2MB or smaller.');
+        throw new RuntimeException(
+            'This image is larger than the server upload limit (upload_max_filesize = '
+            . ini_get('upload_max_filesize') . '). Use a smaller image or raise the limit in php.ini.'
+        );
     }
     if ($uploadError !== UPLOAD_ERR_OK) {
         throw new RuntimeException('The product image could not be uploaded.');
     }
-    if ((int) ($upload['size'] ?? 0) < 1 || (int) $upload['size'] > 2 * 1024 * 1024) {
-        throw new RuntimeException('Product images must be 2MB or smaller.');
+    if ((int) ($upload['size'] ?? 0) < 1 || (int) $upload['size'] > BOYCOLD_MENU_IMAGE_MAX_BYTES) {
+        throw new RuntimeException('Product images must be ' . (BOYCOLD_MENU_IMAGE_MAX_BYTES / 1024 / 1024) . 'MB or smaller.');
     }
 
     $resolvedExt = boycold_menu_detect_image_extension((string) $upload['tmp_name']);

@@ -3942,7 +3942,7 @@ boycold_ensure_inventory_schema($connect);
                             <div class="upload-box" id="uploadBox">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
                                 <p class="upload-title">Drop your image here</p>
-                                <p class="upload-sub">Supports PNG, JPG, WEBP (max 2MB)</p>
+                                <p class="upload-sub">Supports PNG, JPG, WEBP (max 8MB)</p>
                                 <label class="choose-file-btn" for="productImageInput">
                                     <i class="fa-solid fa-upload"></i> Browse File
                                 </label>
@@ -4087,7 +4087,7 @@ boycold_ensure_inventory_schema($connect);
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
-                            <p class="edit-image-note">PNG, JPG, or WEBP, maximum 2MB.</p>
+                            <p class="edit-image-note">PNG, JPG, or WEBP, maximum 8MB.</p>
                         </div>
                     </div>
 
@@ -5005,6 +5005,21 @@ boycold_ensure_inventory_schema($connect);
                 return collectModifierRows(milkChoiceList, 'milk choice');
             }
 
+            // Parse the API reply; a non-JSON answer (e.g. a web-server "413 Request Entity Too Large")
+            // becomes a readable message instead of "Unexpected token '<'".
+            async function readProductApiResponse(response) {
+                try {
+                    return await response.json();
+                } catch (error) {
+                    return {
+                        success: false,
+                        error: response.status === 413
+                            ? 'The image is too large for the server upload limit. Use a smaller image.'
+                            : 'The server returned an unexpected response (' + response.status + ').'
+                    };
+                }
+            }
+
             // Some Windows setups report an empty file.type for .webp, so also accept by extension.
             function isAllowedProductImage(file) {
                 return ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/pjpeg']
@@ -5022,8 +5037,8 @@ boycold_ensure_inventory_schema($connect);
                             productImageInput.value = '';
                             return;
                         }
-                        if (file.size > 2 * 1024 * 1024) {
-                            alert('Image must be 2MB or smaller.');
+                        if (file.size > 8 * 1024 * 1024) {
+                            alert('Image must be 8MB or smaller.');
                             productImageInput.value = '';
                             return;
                         }
@@ -5085,7 +5100,7 @@ boycold_ensure_inventory_schema($connect);
                     fetch('admin_data_api.php?action=product_create', {
                         method: 'POST', body: formData
                     }).then(async response => {
-                        const result = await response.json();
+                        const result = await readProductApiResponse(response);
                         if (!response.ok || !result.success || !Number.isInteger(Number(result.id)) || Number(result.id) < 1) {
                             throw new Error(result.error || 'Menu item could not be saved to the database.');
                         }
@@ -5207,8 +5222,8 @@ boycold_ensure_inventory_schema($connect);
                         return;
                     }
 
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert('Image must be 2MB or smaller.');
+                    if (file.size > 8 * 1024 * 1024) {
+                        alert('Image must be 8MB or smaller.');
                         editProductImageInput.value = '';
                         return;
                     }
@@ -5412,7 +5427,7 @@ boycold_ensure_inventory_schema($connect);
                     fetch('admin_data_api.php?action=product_update', {
                         method: 'POST', body: formData
                     }).then(async response => {
-                        const result = await response.json();
+                        const result = await readProductApiResponse(response);
                         if (!response.ok || !result.success) {
                             const insufficient = (result.ingredients || [])
                                 .filter(ingredient => ingredient.status === 'insufficient')

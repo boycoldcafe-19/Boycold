@@ -98,6 +98,15 @@ if (!currentAdmin($connect)) {
     response(['success' => false, 'error' => 'Admin login required'], 401);
 }
 
+// When an upload is bigger than post_max_size, PHP throws away the whole POST body. That used
+// to surface as a confusing "product_name is required" - report the real reason instead.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && empty($_POST) && empty($_FILES)
+    && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0
+    && stripos((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data') === 0) {
+    response(['success' => false, 'error' => 'The upload is larger than the server allows (post_max_size = ' . ini_get('post_max_size') . '). Use a smaller image.'], 413);
+}
+
 try {
     boycold_ensure_inventory_schema($connect);
     boycold_ensure_menu_category_schema($connect);
