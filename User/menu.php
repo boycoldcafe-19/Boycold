@@ -203,6 +203,17 @@ $menuCategories = boycold_menu_get_categories($connect);
                             $popularCategory = strtolower(trim((string) ($product['popular_category'] ?? '')));
                             $popularCategory = htmlspecialchars($popularCategory);
 
+                            $storedImage = trim((string) ($product['image'] ?? ''));
+                            $resolvedImage = '../img/default.png';
+                            if ($storedImage !== '') {
+                                if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../') || str_starts_with($storedImage, './')) {
+                                    $resolvedImage = $storedImage;
+                                } else {
+                                    $normalizedImage = ltrim($storedImage, '/');
+                                    $resolvedImage = '../' . $normalizedImage;
+                                }
+                            }
+                            $resolvedImage = htmlspecialchars($resolvedImage, ENT_QUOTES);
                             $dataCategory = $category;
                     ?>
 
@@ -228,21 +239,7 @@ $menuCategories = boycold_menu_get_categories($connect);
                                             <?php endif; ?>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
-                                        <?php
-                                            $normalizedImage = trim((string) $image);
-                                            if ($normalizedImage === '') {
-                                                $imageSrc = '../img/default.png';
-                                            } elseif (preg_match('/^(?:https?:)?\/\//i', $normalizedImage) || preg_match('/^data:image\//i', $normalizedImage) || strpos($normalizedImage, '../') === 0) {
-                                                $imageSrc = $normalizedImage;
-                                            } elseif (strpos($normalizedImage, '/') === 0) {
-                                                $imageSrc = '../' . ltrim($normalizedImage, '/');
-                                            } elseif (strpos($normalizedImage, 'uploads/') === 0 || strpos($normalizedImage, 'picture/') === 0 || strpos($normalizedImage, 'img/') === 0) {
-                                                $imageSrc = '../' . $normalizedImage;
-                                            } else {
-                                                $imageSrc = '../' . ltrim($normalizedImage, '/');
-                                            }
-                                        ?>
-                                        <img src="<?= htmlspecialchars($imageSrc, ENT_QUOTES) ?>" alt="<?= $name ?>">
+                                        <img src="<?= $resolvedImage ?>" alt="<?= $name ?>">
                                     </div>
                                 </div>
                                 <div class="card-info">

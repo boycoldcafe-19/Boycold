@@ -673,7 +673,8 @@ button {
     text-transform: none;
 }
 
-.export-inventory-btn {
+.export-inventory-btn,
+.export-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -684,11 +685,13 @@ button {
     font-size: 15px;
     padding: 12px 20px;
     border-radius: 10px;
-    transition: background .15s;
+    transition: all .15s ease;
     cursor: pointer;
+    min-height: 42px;
 }
 
-.export-inventory-btn:hover {
+.export-inventory-btn:hover,
+.export-btn:hover {
     background: #fbf1f1;
     border-color: #5a1e1e;
     color: #5a1e1e;

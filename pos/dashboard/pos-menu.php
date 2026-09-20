@@ -271,14 +271,11 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                                     $imagePath = '../img/default.png';
 
                                     if ($storedImage !== '') {
-                                        if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../')) {
+                                        if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../') || str_starts_with($storedImage, './')) {
                                             $imagePath = $storedImage;
-                                        } elseif (str_starts_with($storedImage, '/')) {
-                                            $imagePath = '../' . ltrim($storedImage, '/');
-                                        } elseif (str_starts_with($storedImage, 'uploads/') || str_starts_with($storedImage, 'picture/') || str_starts_with($storedImage, 'img/')) {
-                                            $imagePath = '../../' . $storedImage;
                                         } else {
-                                            $imagePath = '../../' . ltrim($storedImage, '/');
+                                            $normalizedImage = ltrim($storedImage, '/');
+                                            $imagePath = '../../' . $normalizedImage;
                                         }
                                     }
                                     ?>

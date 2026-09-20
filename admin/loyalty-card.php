@@ -516,6 +516,11 @@
                 const canShowActionMenu = item.redeemed || item.stamps < 10;
                 const needsReactivation = item.status === 'Inactive' || item.status === 'Completed' || item.stamps >= 10;
                 const actionIsClaimed = Boolean(item.redeemed);
+                const rewardText = item.redeemed
+                    ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
+                    : (item.stamps >= 10
+                        ? `<span>Ready to be Claimed</span>`
+                        : (item.stamps === 0 ? '' : `<span>Not Redeemed</span>`));
 
                 tr.innerHTML = `
                     <td>
@@ -542,11 +547,7 @@
                             </div>
                             <div class="reward-info">
                                 <strong>${item.reward}</strong>
-                                ${item.redeemed
-                        ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
-                        : (item.stamps >= 10
-                            ? `<span>Ready to be Claimed</span>`
-                            : `<span>Not Redeemed</span>`)}
+                                ${rewardText}
                             </div>
                         </div>
                     </td>

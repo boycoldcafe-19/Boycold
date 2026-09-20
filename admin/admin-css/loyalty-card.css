@@ -1012,8 +1012,21 @@ button {
 }
 
 .export-btn {
+    background: var(--surface);
+    border: 1px solid var(--primary);
     color: var(--primary);
-    border-color: var(--primary);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    min-height: 42px;
+    transition: all .15s ease;
+}
+
+.export-btn:hover {
+    background: #fbf1f1;
+    border-color: #5a1e1e;
+    color: #5a1e1e;
 }
 
 /* CONTENT LAYOUT & TABLE */
