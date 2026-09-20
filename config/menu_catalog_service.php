@@ -517,39 +517,61 @@ function boycold_menu_resolve_public_image_path(string $image, string $basePrefi
     return '/' . $normalized;
 }
 
+/**
+ * Detect the real image type of a file from its CONTENT (not its filename or
+ * browser-supplied MIME type). Returns 'jpg', 'png' or 'webp', or null when the
+ * file is not one of those image types.
+ */
+function boycold_menu_detect_image_extension(string $path): ?string
+{
+    // 1) getimagesize reads the file header. It is part of core PHP, needs no
+    //    extra extension, and understands JPEG, PNG and WebP (PHP 7.1+).
+    $info = @getimagesize($path);
+    if (is_array($info) && isset($info[2])) {
+        $byType = [
+            IMAGETYPE_JPEG => 'jpg',
+            IMAGETYPE_PNG  => 'png',
+        ];
+        if (defined('IMAGETYPE_WEBP')) {
+            $byType[IMAGETYPE_WEBP] = 'webp';
+        }
+        if (isset($byType[$info[2]])) {
+            return $byType[$info[2]];
+        }
+    }
+
+    // 2) Fallback for hosts where getimagesize cannot read a valid WebP: check the
+    //    RIFF....WEBP signature directly. No dependency on the fileinfo extension.
+    $handle = @fopen($path, 'rb');
+    if ($handle) {
+        $header = (string) fread($handle, 12);
+        fclose($handle);
+        if (strlen($header) === 12 && substr($header, 0, 4) === 'RIFF' && substr($header, 8, 4) === 'WEBP') {
+            return 'webp';
+        }
+    }
+
+    return null;
+}
+
 function boycold_menu_store_uploaded_image(?array $upload): ?string
 {
     if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
         return null;
     }
-    if ((int) ($upload['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+
+    $uploadError = (int) ($upload['error'] ?? UPLOAD_ERR_OK);
+    if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
+        throw new RuntimeException('Product images must be 2MB or smaller.');
+    }
+    if ($uploadError !== UPLOAD_ERR_OK) {
         throw new RuntimeException('The product image could not be uploaded.');
     }
     if ((int) ($upload['size'] ?? 0) < 1 || (int) $upload['size'] > 2 * 1024 * 1024) {
         throw new RuntimeException('Product images must be 2MB or smaller.');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = strtolower((string) $finfo->file((string) $upload['tmp_name']));
-    $filenameExt = strtolower(pathinfo((string) ($upload['name'] ?? ''), PATHINFO_EXTENSION));
-    $extensions = [
-        'image/jpeg' => 'jpg',
-        'image/jpg' => 'jpg',
-        'image/pjpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/x-png' => 'png',
-        'image/webp' => 'webp',
-    ];
-    $resolvedExt = $extensions[$mime] ?? null;
-    if ($resolvedExt === null) {
-        $resolvedExt = match ($filenameExt) {
-            'jpg', 'jpeg' => 'jpg',
-            'png' => 'png',
-            'webp' => 'webp',
-            default => null,
-        };
-    }
-
+    $resolvedExt = boycold_menu_detect_image_extension((string) $upload['tmp_name']);
     if ($resolvedExt === null) {
         throw new RuntimeException('Use a PNG, JPG, or WEBP image.');
     }

@@ -3942,11 +3942,11 @@ boycold_ensure_inventory_schema($connect);
                             <div class="upload-box" id="uploadBox">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
                                 <p class="upload-title">Drop your image here</p>
-                                <p class="upload-sub">Supports PNG, JPG (max 2MB)</p>
+                                <p class="upload-sub">Supports PNG, JPG, WEBP (max 2MB)</p>
                                 <label class="choose-file-btn" for="productImageInput">
                                     <i class="fa-solid fa-upload"></i> Browse File
                                 </label>
-                                <input type="file" id="productImageInput" accept="image/*" style="display:none;">
+                                <input type="file" id="productImageInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
                             </div>
                             <div class="image-preview-box" id="imagePreviewBox" style="display:none;">
                                 <img id="imagePreview" src="" alt="Preview">
@@ -4081,13 +4081,13 @@ boycold_ensure_inventory_schema($connect);
                                 <label class="choose-file-btn" for="editProductImageInput">
                                     <i class="fa-solid fa-image"></i> Change Image
                                 </label>
-                                <input type="file" id="editProductImageInput" accept="image/*" style="display:none;">
+                                <input type="file" id="editProductImageInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
                                 <button type="button" class="image-remove-edit-btn" id="editImageRemoveBtn"
                                     aria-label="Remove selected image" title="Remove selected image">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
-                            <p class="edit-image-note">PNG or JPG, maximum 2MB.</p>
+                            <p class="edit-image-note">PNG, JPG, or WEBP, maximum 2MB.</p>
                         </div>
                     </div>
 
@@ -5005,12 +5005,17 @@ boycold_ensure_inventory_schema($connect);
                 return collectModifierRows(milkChoiceList, 'milk choice');
             }
 
+            // Some Windows setups report an empty file.type for .webp, so also accept by extension.
+            function isAllowedProductImage(file) {
+                return ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/pjpeg']
+                    .includes((file.type || '').toLowerCase()) || /\.(png|jpe?g|webp)$/i.test(file.name || '');
+            }
+
             if (productImageInput && imagePreview && imagePreviewBox) {
                 productImageInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        const isValidImage = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/pjpeg']
-                            .includes((file.type || '').toLowerCase()) || /\.(png|jpe?g|webp)$/i.test(file.name || '');
+                        const isValidImage = isAllowedProductImage(file);
 
                         if (!isValidImage) {
                             alert('Please select a PNG, JPG/JPEG, or WEBP image.');
@@ -5196,8 +5201,8 @@ boycold_ensure_inventory_schema($connect);
                     const file = e.target.files?.[0];
                     if (!file) return;
 
-                    if (!file.type.startsWith('image/')) {
-                        alert('Please select an image file.');
+                    if (!isAllowedProductImage(file)) {
+                        alert('Please select a PNG, JPG/JPEG, or WEBP image.');
                         editProductImageInput.value = '';
                         return;
                     }
