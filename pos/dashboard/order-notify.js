@@ -15,6 +15,7 @@
     let latestOrderId = 0;
     let isInitialPoll = true;
     let popupSound = null;
+    let popupSoundGain = null;
     let popupSoundInterval = null;
 
     function ensurePopupHost() {
@@ -33,11 +34,29 @@
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (!AudioCtx) return null;
             popupSound = new AudioCtx();
+            popupSoundGain = popupSound.createGain();
+            popupSoundGain.gain.value = 1;
+            popupSoundGain.connect(popupSound.destination);
         }
         return popupSound;
     }
 
+    // Stop any notes that are already queued as soon as the POS is muted.
+    // Clearing the interval alone leaves the current two-note chime audible.
+    function setPopupSoundOutput(isMuted) {
+        if (!popupSound || !popupSoundGain) return;
+
+        const now = popupSound.currentTime;
+        popupSoundGain.gain.cancelScheduledValues(now);
+        popupSoundGain.gain.setValueAtTime(isMuted ? 0.0001 : 1, now);
+    }
+
     function playPopupSoundTick() {
+        if (isPopupSoundMuted()) {
+            stopPopupSound();
+            return;
+        }
+
         const ctx = createPopupSound();
         if (!ctx) return;
         if (ctx.state === 'suspended') {
@@ -54,7 +73,7 @@
             gain.gain.exponentialRampToValueAtTime(0.1, now + offset + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
             oscillator.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(popupSoundGain);
             oscillator.start(now + offset);
             oscillator.stop(now + offset + 0.2);
         });
@@ -66,19 +85,40 @@
             return;
         }
         if (popupSoundInterval) return;
+        setPopupSoundOutput(false);
         playPopupSoundTick();
         popupSoundInterval = setInterval(playPopupSoundTick, 1100);
     }
 
     function stopPopupSound() {
+        setPopupSoundOutput(true);
         if (!popupSoundInterval) return;
         clearInterval(popupSoundInterval);
         popupSoundInterval = null;
     }
 
     window.addEventListener('boycold:mute-toggle', (event) => {
-        const isMuted = Boolean(event.detail?.muted);
+        const isMuted = typeof event.detail?.muted === 'boolean'
+            ? event.detail.muted
+            : isPopupSoundMuted();
         if (isMuted) {
+            stopPopupSound();
+            return;
+        }
+
+        const popupHost = document.getElementById('popupHost');
+        if (popupHost && popupHost.style.display !== 'none' && popupHost.innerHTML.trim()) {
+            startPopupSound();
+        }
+    });
+
+    // The custom event above covers the current POS page. This keeps an
+    // already-open popup quiet when the sound button is changed in another
+    // POS tab/window as well.
+    window.addEventListener('storage', (event) => {
+        if (event.key !== 'boycold_pos_muted') return;
+
+        if (event.newValue === 'true') {
             stopPopupSound();
             return;
         }

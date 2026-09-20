@@ -195,6 +195,7 @@ if ($branchId > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoyCold - POS</title>
     <link rel="stylesheet" href="dash-css/pos-online.css">
+    <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="stylesheet" href="dash-css/order-notify.css">
     <link rel="icon" href="../img/LOGO 2.png">
