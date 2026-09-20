@@ -94,6 +94,41 @@ if ($result) {
 }
 $stmt->close();
 
+$rewardHistorySql = "SELECT lt.id, lt.user_id, lt.card_no, lt.created_at, lt.transaction_type,
+                           lt.points_awarded, lt.redeemed_product_name,
+                           u.user_name, u.phone AS user_phone,
+                           CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) AS customer_name
+                    FROM loyalty_transactions lt
+                    LEFT JOIN users u ON u.id = lt.user_id
+                    WHERE lt.branch_id = ? AND lt.transaction_type = 'redemption'
+                    ORDER BY lt.created_at DESC";
+
+$rewardHistory = [];
+$rewardStmt = $connect->prepare($rewardHistorySql);
+$rewardStmt->bind_param('i', $branchId);
+$rewardStmt->execute();
+$rewardResult = $rewardStmt->get_result();
+if ($rewardResult) {
+    while ($row = $rewardResult->fetch_assoc()) {
+        $rewardHistory[] = $row;
+    }
+}
+$rewardStmt->close();
+
+$historyEntries = [];
+foreach ($orders as $order) {
+    $historyEntries[] = ['kind' => 'order', 'data' => $order];
+}
+foreach ($rewardHistory as $reward) {
+    $historyEntries[] = ['kind' => 'reward', 'data' => $reward];
+}
+
+usort($historyEntries, function ($a, $b) {
+    $aTime = $a['kind'] === 'order' ? ($a['data']['created_at'] ?? '') : ($a['data']['created_at'] ?? '');
+    $bTime = $b['kind'] === 'order' ? ($b['data']['created_at'] ?? '') : ($b['data']['created_at'] ?? '');
+    return strcmp($bTime, $aTime);
+});
+
 // Orders placed by a customer through the app are "Online" (delivery /
 // pick up); orders keyed in by staff for a walk-in customer are
 // "Physical" (dine-in / take out).
@@ -319,6 +354,7 @@ function orderhis_format_group_label(string $dateStr): string {
                                         <option value="">All</option>
                                         <option value="cash">Cash</option>
                                         <option value="qrph">QR Ph</option>
+                                        <option value="reward">Reward</option>
                                     </select>
                                 </div>
                                 <div class="filter-field">
@@ -329,6 +365,7 @@ function orderhis_format_group_label(string $dateStr): string {
                                         <option value="pickup">Pick Up</option>
                                         <option value="dinein">Dine In</option>
                                         <option value="takeout">Take Out</option>
+                                        <option value="reward">Reward Redeemed</option>
                                     </select>
                                 </div>
                             </div>
@@ -364,12 +401,58 @@ function orderhis_format_group_label(string $dateStr): string {
                             <span>Status</span>
                         </div>
 
-                        <?php if (empty($orders)): ?>
+                        <?php if (empty($historyEntries)): ?>
                         <div class="table-empty" id="tableEmpty">No orders yet.</div>
                         <?php else: ?>
                         <?php $lastGroupLabel = null; ?>
-                        <?php foreach ($orders as $order): ?>
+                        <?php foreach ($historyEntries as $entry): ?>
                             <?php
+                                $kind = $entry['kind'];
+                                $createdAt = null;
+                                $rowHtml = null;
+
+                                if ($kind === 'reward') {
+                                    $reward = $entry['data'];
+                                    $customerName = trim((string) ($reward['customer_name'] ?? ''));
+                                    $userName = trim((string) ($reward['user_name'] ?? ''));
+                                    $displayName = $userName !== '' ? $userName : ($customerName !== '' ? $customerName : 'Customer');
+                                    $displayPhone = trim((string) ($reward['user_phone'] ?? '')) ?: '—';
+                                    $createdAt = new DateTime($reward['created_at'], new DateTimeZone('Asia/Manila'));
+                                    $rewardName = trim((string) ($reward['redeemed_product_name'] ?? 'Free Drink')) ?: 'Free Drink';
+
+                                    $groupLabel = orderhis_format_group_label($reward['created_at']);
+                                    $showGroupLabel = ($groupLabel !== $lastGroupLabel);
+                                    $lastGroupLabel = $groupLabel;
+
+                                    $value = 'Free';
+                            ?>
+                            <?php if ($showGroupLabel): ?>
+                        <div class="table-group-label"><?= htmlspecialchars($groupLabel) ?></div>
+                            <?php endif; ?>
+                        <div class="table-row"
+                            data-date="<?= $createdAt->format('Y-m-d') ?>"
+                            data-payment="reward"
+                            data-type="reward"
+                            data-amount="0">
+                            <span class="col-time"><?= $createdAt->format('g:i a') ?></span>
+                            <span class="col-orderno">
+                                <p class="order-no">REWARD-<?= $createdAt->format('Y') ?>-<?= (int) ($reward['id'] ?? 0) ?></p>
+                                <p class="order-source"><span class="source-dot reward"></span>Loyalty</p>
+                            </span>
+                            <span class="col-customer">
+                                <p class="customer-name"><?= htmlspecialchars($displayName) ?></p>
+                                <p class="customer-phone"><?= htmlspecialchars($displayPhone) ?></p>
+                            </span>
+                            <span class="col-type">Reward Redeemed</span>
+                            <span class="col-amount">
+                                <p class="amount-value"><?= htmlspecialchars($value) ?></p>
+                                <p class="amount-method"><?= htmlspecialchars($rewardName) ?></p>
+                            </span>
+                            <span class="col-status">Redeemed</span>
+                        </div>
+                            <?php } else { ?>
+                            <?php
+                                $order = $entry['data'];
                                 $type        = $order['order_type'] ?: 'delivery';
                                 $typeLabel   = $typeLabels[$type] ?? ucfirst($type);
                                 $typeCode    = $typeCodes[$type] ?? 'GEN';
@@ -378,8 +461,6 @@ function orderhis_format_group_label(string $dateStr): string {
                                 $sourceDot   = $isOnline ? 'online' : 'physical';
                                 $prefix      = $isOnline ? 'ONL' : 'POS';
 
-                                // Stored as a naive "Y-m-d H:i:s" string already in Manila
-                                // wall-clock time — pin the timezone explicitly here too.
                                 $createdAt   = new DateTime($order['created_at'], new DateTimeZone('Asia/Manila'));
                                 $orderNo     = sprintf('%s-%s-%s-%05d', $prefix, $typeCode, $createdAt->format('Y'), (int)$order['id']);
 
@@ -416,6 +497,7 @@ function orderhis_format_group_label(string $dateStr): string {
                             </span>
                             <span class="col-status"><?= htmlspecialchars(ucfirst($order['status'])) ?></span>
                         </div>
+                            <?php } ?>
                         <?php endforeach; ?>
                         <div class="table-empty" id="tableEmpty" style="display:none;">No orders match your filters.</div>
                         <?php endif; ?>

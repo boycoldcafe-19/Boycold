@@ -58,14 +58,46 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
     <style>
         .redeem-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .55); align-items: center; justify-content: center; z-index: 1000; }
         .redeem-overlay.open { display: flex; }
-        .redeem-box { background: var(--surface); color: var(--text); border-radius: 12px; padding: 24px; width: min(360px, 90vw); box-shadow: 0 10px 30px var(--shadow); }
-        .redeem-box h3 { margin-bottom: 6px; font-size: 1.1rem; }
-        .redeem-box p { color: var(--text-light); font-size: .85rem; margin-bottom: 16px; }
-        #redeemDrinkSelect { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 18px; font-size: .95rem; }
+        .redeem-box { background: var(--surface); color: var(--text); border-radius: 18px; padding: 24px 22px 20px; width: min(420px, 90vw); box-shadow: 0 16px 40px rgba(0, 0, 0, .22); border: 1px solid rgba(255, 255, 255, .06); }
+        .redeem-box h3 { margin-bottom: 8px; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .redeem-box h3 i { color: var(--primary); }
+        .redeem-box p { color: var(--text-light); font-size: .9rem; margin-bottom: 18px; line-height: 1.45; }
+        #redeemDrinkSelect {
+            width: 100%;
+            padding: 13px 46px 13px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.02)), var(--bg);
+            color: var(--text);
+            margin-bottom: 18px;
+            font-size: 0.97rem;
+            font-weight: 600;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-light) 50%), linear-gradient(135deg, var(--text-light) 50%, transparent 50%);
+            background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+            background-size: 6px 6px, 6px 6px;
+            background-repeat: no-repeat;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.04);
+            transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+        #redeemDrinkSelect:focus {
+            outline: none;
+            border-color: rgba(105, 39, 39, 0.75);
+            box-shadow: 0 0 0 4px rgba(105, 39, 39, 0.12);
+        }
+        #redeemDrinkSelect option {
+            padding: 10px 12px;
+            background: var(--surface);
+            color: var(--text);
+            font-weight: 600;
+        }
         .redeem-actions { display: flex; gap: 10px; justify-content: flex-end; }
-        .redeem-actions button { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; }
+        .redeem-actions button { padding: 11px 16px; border-radius: 10px; border: none; font-weight: 700; font-size: 0.92rem; transition: transform .15s ease, opacity .15s ease; }
+        .redeem-actions button:hover { transform: translateY(-1px); }
         .redeem-actions .btn-secondary { background: var(--border); color: var(--text); }
-        .redeem-actions .btn-primary { background: var(--primary); color: var(--primary-text); }
+        .redeem-actions .btn-primary { background: linear-gradient(135deg, #7a2f2f, var(--primary)); color: var(--primary-text); box-shadow: 0 10px 20px rgba(105, 39, 39, 0.18); }
     </style>
     <div class="redeem-overlay" id="redeemOverlay">
         <div class="redeem-box">
@@ -680,7 +712,7 @@ $redeemableDrinks = getRedeemableDrinkProducts($connect);
         const redeemConfirmBtn = document.getElementById('redeemConfirmBtn');
 
         redeemDrinkSelect.innerHTML = REDEEMABLE_DRINKS.map(drink =>
-            `<option value="${drink.id}">${drink.product_name} (\u20b1${Number(drink.price).toFixed(2)})</option>`
+            `<option value="${drink.id}">${drink.product_name}</option>`
         ).join('');
 
         function openRedeemModal() {

@@ -444,21 +444,21 @@ if ($shiftResult) {
         const notifBadge = document.getElementById("notifBadge");
         const notifList = document.getElementById("notifList");
 
-        if (notifBtn?.dataset.inventoryAlert !== "true") {
-        notifBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifDropdown.classList.toggle("open");
-        });
-        document.addEventListener("click", (e) => {
-            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-                notifDropdown.classList.remove("open");
-            }
-        });
-        markAllRead?.addEventListener("click", (e) => {
-            e.preventDefault();
-            notifList?.querySelectorAll(".notif-item.unread").forEach(item => item.classList.remove("unread"));
-            if (notifBadge) notifBadge.style.display = "none";
-        });
+        if (notifBtn && notifDropdown && notifBtn.dataset.inventoryAlert !== "true") {
+            notifBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle("open");
+            });
+            document.addEventListener("click", (e) => {
+                if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+                    notifDropdown.classList.remove("open");
+                }
+            });
+            markAllRead?.addEventListener("click", (e) => {
+                e.preventDefault();
+                notifList?.querySelectorAll(".notif-item.unread").forEach(item => item.classList.remove("unread"));
+                if (notifBadge) notifBadge.style.display = "none";
+            });
         }
 
         // ── Load the product picked on posmenu.html ──
@@ -472,9 +472,13 @@ if ($shiftResult) {
             window.location.href = 'pos-menu.php';
         }
 
-        document.getElementById('productImg').src = currentProduct.img;
-        document.getElementById('productName').textContent = currentProduct.name;
-        document.getElementById('productPrice').textContent = `₱${currentProduct.price.toFixed(2)}`;
+        const productImgEl = document.getElementById('productImg');
+        const productNameEl = document.getElementById('productName');
+        const productPriceEl = document.getElementById('productPrice');
+
+        if (productImgEl) productImgEl.src = currentProduct.img;
+        if (productNameEl) productNameEl.textContent = currentProduct.name;
+        if (productPriceEl) productPriceEl.textContent = `₱${currentProduct.price.toFixed(2)}`;
 
         // Bites/snacks customization rules:
         // - Waffles, quesadillas, beef nachos, and the Messy Tuna Spinach
@@ -651,23 +655,31 @@ if ($shiftResult) {
 
         // Quantity stepper
         const qtyValue = document.getElementById('qtyValue');
-        document.getElementById('qtyMinus').addEventListener('click', () => {
-            if (quantity > 1) {
-                quantity--;
-                qtyValue.textContent = quantity;
+        const qtyMinusBtn = document.getElementById('qtyMinus');
+        const qtyPlusBtn = document.getElementById('qtyPlus');
+
+        if (qtyMinusBtn) {
+            qtyMinusBtn.addEventListener('click', () => {
+                if (quantity > 1) {
+                    quantity--;
+                    if (qtyValue) qtyValue.textContent = quantity;
+                    updateTotal();
+                }
+            });
+        }
+
+        if (qtyPlusBtn) {
+            qtyPlusBtn.addEventListener('click', () => {
+                const maxServings = Number(currentProduct.availableServings || 0);
+                if (maxServings > 0 && quantity >= maxServings) {
+                    alert(`Only ${maxServings} serving${maxServings === 1 ? '' : 's'} available for this item.`);
+                    return;
+                }
+                quantity++;
+                if (qtyValue) qtyValue.textContent = quantity;
                 updateTotal();
-            }
-        });
-        document.getElementById('qtyPlus').addEventListener('click', () => {
-            const maxServings = Number(currentProduct.availableServings || 0);
-            if (maxServings > 0 && quantity >= maxServings) {
-                alert(`Only ${maxServings} serving${maxServings === 1 ? '' : 's'} available for this item.`);
-                return;
-            }
-            quantity++;
-            qtyValue.textContent = quantity;
-            updateTotal();
-        });
+            });
+        }
 
         function calculateItemTotal() {
             if (isNoCustomizationProduct(currentProduct)) {
@@ -1114,13 +1126,15 @@ if ($shiftResult) {
             }
         }
 
-        amountTendered.addEventListener('input', async () => {
-            const tendered = parseFloat(amountTendered.value) || 0;
-            const total = await getOrderTotal();
-            const change = tendered - total;
-            changeValue.textContent = `₱${(change > 0 ? change : 0).toFixed(2)}`;
-            changeValue.classList.toggle('negative', change < 0);
-        });
+        if (amountTendered && changeValue) {
+            amountTendered.addEventListener('input', async () => {
+                const tendered = parseFloat(amountTendered.value) || 0;
+                const total = await getOrderTotal();
+                const change = tendered - total;
+                changeValue.textContent = `₱${(change > 0 ? change : 0).toFixed(2)}`;
+                changeValue.classList.toggle('negative', change < 0);
+            });
+        }
 
         // Render the summary panel on load so cart persists across page loads
         renderSummary();
@@ -1267,19 +1281,25 @@ if ($shiftResult) {
         }
         
         // Print Receipt — was previously wired to nothing, so clicking it did nothing.
-        document.getElementById('printReceiptBtn').addEventListener('click', () => {
-            window.print();
-        });
+        const printReceiptBtn = document.getElementById('printReceiptBtn');
+        if (printReceiptBtn) {
+            printReceiptBtn.addEventListener('click', () => {
+                window.print();
+            });
+        }
 
         // Back to Menu — was previously wired to window.print() instead of
         // navigating anywhere, so the cashier got stuck on the receipt screen
         // after completing payment. Clear the cart/current product (the order
         // is already saved) and return to the POS menu.
-        document.getElementById('newOrderBtn').addEventListener('click', async () => {
-            await clearCart();
-            localStorage.removeItem('boycold_current_product');
-            window.location.href = 'pos-menu.php';
-        });
+        const newOrderBtn = document.getElementById('newOrderBtn');
+        if (newOrderBtn) {
+            newOrderBtn.addEventListener('click', async () => {
+                await clearCart();
+                localStorage.removeItem('boycold_current_product');
+                window.location.href = 'pos-menu.php';
+            });
+        }
         
 
     </script>
