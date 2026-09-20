@@ -92,15 +92,41 @@
 
     function stopPopupSound() {
         setPopupSoundOutput(true);
-        if (!popupSoundInterval) return;
-        clearInterval(popupSoundInterval);
-        popupSoundInterval = null;
+        if (popupSoundInterval) {
+            clearInterval(popupSoundInterval);
+            popupSoundInterval = null;
+        }
+
+        // A stopped interval does not stop oscillators already scheduled in
+        // the Web Audio graph. Closing this context is the hard mute: no
+        // pending popup note can continue after the Sound button is OFF.
+        if (popupSound) {
+            const audioContext = popupSound;
+            popupSound = null;
+            popupSoundGain = null;
+            if (audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+        }
     }
 
-    window.addEventListener('boycold:mute-toggle', (event) => {
-        const isMuted = typeof event.detail?.muted === 'boolean'
-            ? event.detail.muted
-            : isPopupSoundMuted();
+    function updateSoundToggleUI(isMuted) {
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        if (!soundToggleBtn || !soundIcon) return;
+
+        soundIcon.className = isMuted
+            ? 'fa-solid fa-volume-xmark'
+            : 'fa-solid fa-volume-high';
+        soundToggleBtn.classList.toggle('muted', isMuted);
+        soundToggleBtn.title = isMuted
+            ? 'Sound Muted (Click to Unmute)'
+            : 'Sound On (Click to Mute)';
+        soundToggleBtn.setAttribute('aria-pressed', String(!isMuted));
+    }
+
+    function syncPopupSoundWithToggle(isMuted) {
+        updateSoundToggleUI(isMuted);
         if (isMuted) {
             stopPopupSound();
             return;
@@ -110,6 +136,13 @@
         if (popupHost && popupHost.style.display !== 'none' && popupHost.innerHTML.trim()) {
             startPopupSound();
         }
+    }
+
+    window.addEventListener('boycold:mute-toggle', (event) => {
+        const isMuted = typeof event.detail?.muted === 'boolean'
+            ? event.detail.muted
+            : isPopupSoundMuted();
+        syncPopupSoundWithToggle(isMuted);
     });
 
     // The custom event above covers the current POS page. This keeps an
@@ -117,17 +150,30 @@
     // POS tab/window as well.
     window.addEventListener('storage', (event) => {
         if (event.key !== 'boycold_pos_muted') return;
-
-        if (event.newValue === 'true') {
-            stopPopupSound();
-            return;
-        }
-
-        const popupHost = document.getElementById('popupHost');
-        if (popupHost && popupHost.style.display !== 'none' && popupHost.innerHTML.trim()) {
-            startPopupSound();
-        }
+        syncPopupSoundWithToggle(event.newValue === 'true');
     });
+
+    // POS pages previously owned separate click handlers for this button.
+    // Capture the click here so the saved state, button UI, and popup chime
+    // always use one shared setting on every POS page.
+    document.addEventListener('click', (event) => {
+        const clickedElement = event.target instanceof Element ? event.target : null;
+        const soundToggleBtn = clickedElement?.closest('#soundToggleBtn');
+        if (!soundToggleBtn) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const isMuted = !isPopupSoundMuted();
+        localStorage.setItem('boycold_pos_muted', String(isMuted));
+        window.dispatchEvent(new CustomEvent('boycold:mute-toggle', {
+            detail: { muted: isMuted }
+        }));
+    }, true);
+
+    // Keep the initial icon in sync too, even on pages with their own older
+    // sound-button markup.
+    updateSoundToggleUI(isPopupSoundMuted());
 
     window.orderPopupSoundControl = {
         start: startPopupSound,

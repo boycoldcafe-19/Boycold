@@ -233,7 +233,6 @@ function orderhis_format_group_label(string $dateStr): string {
                         <a href="pos-online.php">
                             <span class="nav-icon2"><i class="fa-solid fa-bag-shopping"></i></span>
                             <span class="nav-label">Online Orders</span>
-                            <span class="nav-badge">3</span>
                             <i class="fa-solid fa-chevron-right nav-chevron"></i>
                         </a>
                     </li>
