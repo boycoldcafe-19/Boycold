@@ -15,13 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $chk->bind_param("s", $email); $chk->execute();
         $user = $chk->get_result()->fetch_assoc();
 
-        if ($user) {
+        // Admin accounts live in `employees`, not `users`, so check there too.
+        $adm = $connect->prepare("SELECT firstname, lastname FROM employees WHERE email=? AND role='admin' AND is_active=1 LIMIT 1");
+        $adm->bind_param("s", $email); $adm->execute();
+        $adminRow = $adm->get_result()->fetch_assoc();
+        $adm->close();
+
+        if ($user || $adminRow) {
             $exp = $connect->prepare("UPDATE otp SET status='expired' WHERE email=? AND type='reset' AND status='pending'");
             $exp->bind_param("s", $email); $exp->execute();
 
-            $otp      = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp      = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $ip       = $_SERVER['REMOTE_ADDR'];
-            $fullName = $user['firstname'] . ' ' . $user['lastname'];
+            $account  = $adminRow ?: $user;
+            $fullName = trim(($account['firstname'] ?? '') . ' ' . ($account['lastname'] ?? '')) ?: $email;
 
             $ins = $connect->prepare("INSERT INTO otp (email, otp, type, status, otp_sent, ip) VALUES (?, ?, 'reset', 'pending', NOW(), ?)");
             $ins->bind_param("sss", $email, $otp, $ip); $ins->execute();

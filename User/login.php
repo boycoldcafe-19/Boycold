@@ -127,7 +127,8 @@ function authenticatePosEmployee(mysqli $connect, string $email, string $passwor
 function authenticateAdminEmployee(mysqli $connect, string $email, string $password): ?array
 {
     $stmt = $connect->prepare(
-        "SELECT id, employee_name, firstname, lastname, email, password, avatar, branch_id, role, is_active
+        "SELECT id, employee_name, firstname, lastname, email, password, avatar, branch_id, role, is_active,
+                pos_password_failed_attempts, pos_password_locked_at
          FROM employees
          WHERE email = ? AND role = 'admin'
          LIMIT 1"
@@ -137,10 +138,25 @@ function authenticateAdminEmployee(mysqli $connect, string $email, string $passw
     $admin = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!$admin || !password_verify($password, $admin['password'])) {
+    if (!$admin) {
         return null;
     }
 
+    // Locked after POS_LOGIN_MAX_ATTEMPTS wrong passwords. Only completing
+    // Forgot Password (User/newpassword.php) clears it.
+    if (pos_login_credential_is_locked($admin, 'password')) {
+        $admin['_password_locked'] = true;
+        return $admin;
+    }
+
+    if (!password_verify($password, $admin['password'])) {
+        $lockout = pos_login_record_failed_attempt($connect, (int) $admin['id'], 'password');
+        $admin['_invalid_password'] = true;
+        $admin['_password_locked'] = $lockout['locked'];
+        return $admin;
+    }
+
+    pos_login_reset_credential_lockout($connect, (int) $admin['id'], 'password');
     return $admin;
 }
 
@@ -259,6 +275,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin = authenticateAdminEmployee($connect, $email, $password);
 
         if ($admin) {
+            if (!empty($admin['_password_locked'])) {
+                sendAuthResponse(false, 'login.php', pos_login_admin_lockout_message());
+            }
+
+            if (!empty($admin['_invalid_password'])) {
+                sendAuthResponse(false, 'login.php', 'Invalid email or password.');
+            }
+
             if ((int) $admin['is_active'] !== 1) {
                 sendAuthResponse(false, 'login.php', 'This admin account has been deactivated.');
             }

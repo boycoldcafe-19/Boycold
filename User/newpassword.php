@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_config.php';
+require_once '../config/activity_logger.php';
 
 if (empty($_SESSION['reset_email'])) {
     header('Location: forgotpass.php');
@@ -29,8 +30,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hashed = password_hash($password, PASSWORD_BCRYPT);
         $upd    = $connect->prepare("UPDATE users SET password=? WHERE email=?");
         $upd->bind_param("ss", $hashed, $email);
+        $userUpdated = $upd->execute() && $upd->affected_rows > 0;
 
-        if ($upd->execute() && $upd->affected_rows > 0) {
+        // Admin accounts live in `employees`, not `users`. The OTP already proved
+        // ownership of this inbox, so update the matching admin row(s) too and
+        // clear the 5-failed-attempts lock.
+        $adminTargets = [];
+        $adminTargetStmt = $connect->prepare(
+            "SELECT id, branch_id
+             FROM employees
+             WHERE email = ? AND role = 'admin' AND is_active = 1"
+        );
+        $adminTargetStmt->bind_param('s', $email);
+        $adminTargetStmt->execute();
+        $adminTargetResult = $adminTargetStmt->get_result();
+        while ($adminTarget = $adminTargetResult->fetch_assoc()) {
+            $adminTargets[] = $adminTarget;
+        }
+        $adminTargetStmt->close();
+
+        $adminUpd = $connect->prepare("UPDATE employees SET password=?, pos_password_failed_attempts=0, pos_password_locked_at=NULL WHERE email=? AND role='admin' AND is_active=1");
+        $adminUpd->bind_param("ss", $hashed, $email);
+        $adminUpdated = $adminUpd->execute() && $adminUpd->affected_rows > 0;
+        $adminUpd->close();
+
+        if ($adminUpdated) {
+            foreach ($adminTargets as $adminTarget) {
+                $adminId = (int) $adminTarget['id'];
+                boycold_log_activity($connect, [
+                    'category' => 'admin',
+                    'action' => 'admin_password_reset',
+                    'summary' => 'Admin Password Reset',
+                    'details' => 'An administrator reset their password through the User login password-recovery flow.',
+                    // The OTP verified ownership of this admin account before
+                    // the password was changed, so it is the event actor too.
+                    'actor_id' => $adminId,
+                    'actor_type' => 'admin',
+                    'branch_id' => (int) ($adminTarget['branch_id'] ?? 0),
+                    'entity_type' => 'employee',
+                    'entity_id' => $adminId,
+                ]);
+            }
+        }
+
+        if ($userUpdated || $adminUpdated) {
             unset($_SESSION['reset_email']);
             header('Location: login.php?reset=1');
             exit;

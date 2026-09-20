@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/session_config.php';
 boycold_start_session();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/pos_login_lockout.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     header('Content-Type: application/json; charset=utf-8');
@@ -18,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
 
     if (!$response['errors']) {
         $stmt = $connect->prepare(
-            "SELECT id, employee_name, email, password, avatar, branch_id, role, is_active
+            "SELECT id, employee_name, email, password, avatar, branch_id, role, is_active,
+                    pos_password_failed_attempts, pos_password_locked_at
              FROM employees
              WHERE email = ? AND is_active = 1
              LIMIT 1"
@@ -28,11 +30,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
         $admin = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$admin || !password_verify($password, $admin['password'])) {
+        $isAdminRow = is_array($admin) && ($admin['role'] ?? '') === 'admin';
+
+        if ($isAdminRow && pos_login_credential_is_locked($admin, 'password')) {
+            // Locked after 5 wrong passwords; only Forgot Password clears it.
+            $response['errors']['password'] = pos_login_admin_lockout_message();
+        } elseif (!$admin || !password_verify($password, $admin['password'])) {
             $response['errors']['password'] = 'Invalid email or password.';
+            if ($isAdminRow) {
+                $lockout = pos_login_record_failed_attempt($connect, (int) $admin['id'], 'password');
+                if ($lockout['locked']) {
+                    $response['errors']['password'] = pos_login_admin_lockout_message();
+                } else {
+                    $remaining = max(0, POS_LOGIN_MAX_ATTEMPTS - $lockout['attempts']);
+                    $response['errors']['password'] = 'Invalid email or password. '
+                        . $remaining . ' attempt' . ($remaining === 1 ? '' : 's') . ' remaining.';
+                }
+            }
         } elseif (($admin['role'] ?? '') !== 'admin') {
             $response['errors']['password'] = 'This account does not have admin access.';
         } else {
+            pos_login_reset_credential_lockout($connect, (int) $admin['id'], 'password');
             session_regenerate_id(true);
             $_SESSION = [];
             $_SESSION['admin_logged_in'] = true;

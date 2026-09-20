@@ -116,6 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
     }
 
     $hashedPin = password_hash($newPin, PASSWORD_DEFAULT);
+    // PIN maintenance is intentionally independent from shift_logs.
+    // Changing a POS PIN must keep the branch's current open shift open.
     $pinStmt = $connect->prepare(
         "UPDATE employees
          SET pin = ?,
@@ -144,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
 
     echo json_encode(
         $updated
-            ? ['success' => true, 'message' => 'PIN changed successfully.']
+            ? ['success' => true, 'message' => 'PIN changed successfully. The current POS shift remains open.']
             : ['success' => false, 'errors' => ['form' => 'Unable to change PIN. Please try again.']]
     );
     exit;
@@ -749,27 +751,16 @@ if ($loginTableCheck && $loginTableCheck->num_rows > 0) {
             }
         });
 
-
-        const lightbtn = document.getElementById("lightMode");
-        const darkbtn = document.getElementById("darkMode");
-
         document.getElementById('posSettingsBranchSelect')?.addEventListener('change', function() {
             const url = new URL(window.location.href);
             url.searchParams.set('branch_id', this.value);
             window.location.href = url.toString();
         });
 
-        function applyTheme(theme) {
-            if (theme === "dark") {
-                document.body.classList.add("dark-theme");
-                darkbtn?.classList.add("active");
-                lightbtn?.classList.remove("active");
-            } else {
-                document.body.classList.remove("dark-theme");
-                lightbtn?.classList.add("active");
-                darkbtn?.classList.remove("active");
-            }
-        }
+        // POS Settings follows the standard light Admin UI. It has no theme
+        // picker, so a stale `boycold_theme=dark` value from another page must
+        // not force this hosted page into dark mode.
+        document.body.classList.remove('dark-theme');
 
         const notifBtn = document.getElementById("notifBtn");
         const notifDropdown = document.getElementById("notifDropdown");
@@ -796,24 +787,6 @@ if ($loginTableCheck && $loginTableCheck->num_rows > 0) {
                 });
                 if (notifBadge) notifBadge.style.display = "none";
             });
-        }
-
-        // Apply saved theme on load (defaults to dark to match this page, matching body class already in markup)
-        const savedTheme = localStorage.getItem("boycold_theme") || "dark";
-        applyTheme(savedTheme);
-
-        if (lightbtn) {
-            lightbtn.onclick = () => {
-                localStorage.setItem("boycold_theme", "light");
-                applyTheme("light");
-            };
-        }
-
-        if (darkbtn) {
-            darkbtn.onclick = () => {
-                localStorage.setItem("boycold_theme", "dark");
-                applyTheme("dark");
-            };
         }
     </script>
     <script src="admin-js/inventory-warning.js"></script>

@@ -91,3 +91,14 @@ function pos_login_lockout_message(string $credential): string
     return "$label is locked after " . POS_LOGIN_MAX_ATTEMPTS
         . ' failed attempts. An administrator must change it in POS Settings.';
 }
+
+/**
+ * Admin accounts reuse the same employees.pos_password_* lock columns as POS
+ * cashiers. Unlike cashiers, an admin lock is cleared only by finishing the
+ * Forgot Password flow (User/forgotpass.php -> User/newpassword.php).
+ */
+function pos_login_admin_lockout_message(): string
+{
+    return 'This admin account is locked after ' . POS_LOGIN_MAX_ATTEMPTS
+        . ' failed attempts. Please use Forgot Password to reset your password.';
+}

@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $exp->execute();
                 $exp->close();
 
-                $otp = str_pad(rand(0, 60), 6, '0', STR_PAD_LEFT);
+                $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
                 $ip = $_SERVER['REMOTE_ADDR'];
                 $fullName = $email;
 
