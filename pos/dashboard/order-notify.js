@@ -331,6 +331,34 @@
         popupHost.style.display = 'none';
     }
 
+    // New-order polling intentionally returns only pending/confirmed rows, so
+    // it cannot tell us when an already-open popup was cancelled by the
+    // customer. Check that one order separately and close the popup at once.
+    async function closePopupIfCustomerCancelled() {
+        const popupFrame = document.querySelector('#popupHost .order-popup-frame[data-order-id]');
+        const orderId = Number(popupFrame?.dataset.orderId);
+        if (!Number.isInteger(orderId) || orderId <= 0) return false;
+
+        try {
+            const res = await fetch(
+                `${ORDER_API}?action=payment_status&order_id=${encodeURIComponent(orderId)}`,
+                { cache: 'no-store' }
+            );
+            const data = await res.json();
+            if (!data.success || String(data.order_status).toLowerCase() !== 'cancelled') {
+                return false;
+            }
+
+            closePopup();
+            refreshOrderCount();
+            refreshNotificationList();
+            return true;
+        } catch (err) {
+            console.error('Failed to check the open order popup status', err);
+            return false;
+        }
+    }
+
     async function refreshOnlineOrdersTable() {
         // Only pos-online.php has this table. On any other page (menu,
         // history, shift, etc.) there's nothing to refresh, so bail out.
@@ -412,8 +440,11 @@
                 });
             }
 
+            await closePopupIfCustomerCancelled();
+
             // Keep the open POS list in sync when a customer cancels QRPh
-            // from the user checkout page.
+            // from the user checkout page, including a popup that was open
+            // when the customer cancelled the order.
             await refreshOnlineOrdersTable();
         } catch (err) {
             console.error('Online order poll failed', err);
