@@ -877,34 +877,40 @@ if ($shiftResult) {
         });
 
         // Clear all
-        document.getElementById('clearAllBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            const cart = await getCart();
-            if (cart.length === 0) return;
-            if (confirm('Clear all items from the order summary?')) {
-                const success = await clearCart();
-                if (success) {
-                    renderSummary();
+        const clearAllBtnEl = document.getElementById('clearAllBtn');
+        if (clearAllBtnEl) {
+            clearAllBtnEl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const cart = await getCart();
+                if (cart.length === 0) return;
+                if (confirm('Clear all items from the order summary?')) {
+                    const success = await clearCart();
+                    if (success) {
+                        renderSummary();
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Add Order - go back to menu to add more items to current order
-        document.getElementById('addOrderBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            const cartItem = buildCurrentCartItem();
-            if (!cartItem) return;
+        const addOrderBtnEl = document.getElementById('addOrderBtn');
+        if (addOrderBtnEl) {
+            addOrderBtnEl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const cartItem = buildCurrentCartItem();
+                if (!cartItem) return;
 
-            const addOrderButton = e.currentTarget;
-            addOrderButton.disabled = true;
-            const success = await saveCartItem(cartItem);
-            if (success.success) {
-                window.location.href = 'pos-menu.php';
-            } else {
-                addOrderButton.disabled = false;
-                alert(`Failed to add item to cart: ${success.error}`);
-            }
-        });
+                const addOrderButton = e.currentTarget;
+                addOrderButton.disabled = true;
+                const success = await saveCartItem(cartItem);
+                if (success.success) {
+                    window.location.href = 'pos-menu.php';
+                } else {
+                    addOrderButton.disabled = false;
+                    alert(`Failed to add item to cart: ${success.error}`);
+                }
+            });
+        }
 
         const customizeView = document.getElementById('customizeView');
         const checkoutWrapper = document.getElementById('checkoutWrapper');
@@ -925,91 +931,88 @@ if ($shiftResult) {
         }
 
         // ── Printable receipt overlay ──
-        // NOTE: this id must match the id on the ".receipt-page" element in the
-        // HTML. Previously the element had no id at all (only the class
-        // "receipt-page"), so this lookup returned null and every call below threw
-        // a TypeError — which also meant the receipt markup had no default
-        // "display: none" applied to it via JS/CSS and stayed visible underneath
-        // the order customization and checkout screens the whole time.
         const receiptOverlay = document.getElementById('receiptOverlay');
 
-        checkoutBtnEl.addEventListener('click', () => {
-            if (getCart().length === 0) {
-                alert('Your order summary is empty.');
-                return;
-            }
-            customizeView.style.display = 'none';
-            checkoutWrapper.style.display = 'block';
-            checkoutBtnEl.style.display = 'none';
-            receiptOverlay.style.display = 'none';
-        });
+        if (checkoutBtnEl) {
+            checkoutBtnEl.addEventListener('click', () => {
+                if (getCart().length === 0) {
+                    alert('Your order summary is empty.');
+                    return;
+                }
+                if (customizeView) customizeView.style.display = 'none';
+                if (checkoutWrapper) checkoutWrapper.style.display = 'block';
+                checkoutBtnEl.style.display = 'none';
+                if (receiptOverlay) receiptOverlay.style.display = 'none';
+            });
+        }
 
-        document.getElementById('cancelOrderBtn').addEventListener('click', async () => {
-            if (confirm('Cancel this order? This will clear your order summary.')) {
-                await clearCart();
-                renderSummary();
-                checkoutWrapper.style.display = 'none';
-                customizeView.style.display = 'block';
-                checkoutBtnEl.style.display = 'flex';
-                receiptOverlay.style.display = 'none';
-            }
-        });
+        const cancelOrderBtnEl = document.getElementById('cancelOrderBtn');
+        if (cancelOrderBtnEl) {
+            cancelOrderBtnEl.addEventListener('click', async () => {
+                if (confirm('Cancel this order? This will clear your order summary.')) {
+                    await clearCart();
+                    renderSummary();
+                    if (checkoutWrapper) checkoutWrapper.style.display = 'none';
+                    if (customizeView) customizeView.style.display = 'block';
+                    if (checkoutBtnEl) checkoutBtnEl.style.display = 'flex';
+                    if (receiptOverlay) receiptOverlay.style.display = 'none';
+                }
+            });
+        }
 
         // Force-enable Complete Payment regardless of whatever CSS/disabled
-        // state it starts in — it was showing up unclickable/disabled-looking
-        // even though nothing in this file ever set it disabled.
+        // state it starts in.
         const completePaymentBtnEl = document.getElementById('completePaymentBtn');
-        completePaymentBtnEl.disabled = false;
-        completePaymentBtnEl.removeAttribute('disabled');
-        completePaymentBtnEl.style.opacity = '1';
-        completePaymentBtnEl.style.pointerEvents = 'auto';
-        completePaymentBtnEl.style.cursor = 'pointer';
+        if (completePaymentBtnEl) {
+            completePaymentBtnEl.disabled = false;
+            completePaymentBtnEl.removeAttribute('disabled');
+            completePaymentBtnEl.style.opacity = '1';
+            completePaymentBtnEl.style.pointerEvents = 'auto';
+            completePaymentBtnEl.style.cursor = 'pointer';
 
-        completePaymentBtnEl.addEventListener('click', async () => {
-            const activeMethod = document.querySelector('.payment-option.active')?.dataset?.method || 'cash';
-            const cart = await getCart();
-            const total = await getOrderTotal();
-            let tendered = 0;
+            completePaymentBtnEl.addEventListener('click', async () => {
+                const activeMethod = document.querySelector('.payment-option.active')?.dataset?.method || 'cash';
+                const cart = await getCart();
+                const total = await getOrderTotal();
+                let tendered = 0;
 
-            if (cart.length === 0) {
-                alert('Your order summary is empty.');
-                return;
-            }
-
-            if (activeMethod === 'cash') {
-                tendered = parseFloat(amountTendered.value) || 0;
-                if (tendered < total) {
-                    alert('Amount tendered is less than the total amount due.');
-                    return;
-                }
-            }
-
-            try {
-                const saved = await savePosOrder(cart, total, activeMethod);
-                if (!saved) {
+                if (cart.length === 0) {
+                    alert('Your order summary is empty.');
                     return;
                 }
 
-                // Build and show the receipt with the order that was just paid for,
-                // then swap the POS interface out for the centered receipt overlay.
-                const savedTotal = parseFloat(saved.total) || total;
-                showReceipt(cart, savedTotal, activeMethod, tendered, saved);
-                backToMenu.style.display = 'none';
-                orderLayout.style.display = 'none';
+                if (activeMethod === 'cash') {
+                    tendered = parseFloat(amountTendered.value) || 0;
+                    if (tendered < total) {
+                        alert('Amount tendered is less than the total amount due.');
+                        return;
+                    }
+                }
 
-                // Reset everything for the next order
-                await clearCart();
-                renderSummary();
-                checkoutWrapper.style.display = 'none';
-                customizeView.style.display = 'block';
-                checkoutBtnEl.style.display = 'block';
-                amountTendered.value = '';
-                changeValue.textContent = '₱0.00';
-            } catch (err) {
-                console.error('Unable to complete payment:', err);
-                alert('Unable to complete payment. ' + (err?.message || 'Please try again.'));
-            }
-        });
+                try {
+                    const saved = await savePosOrder(cart, total, activeMethod);
+                    if (!saved) {
+                        return;
+                    }
+
+                    const savedTotal = parseFloat(saved.total) || total;
+                    showReceipt(cart, savedTotal, activeMethod, tendered, saved);
+                    if (backToMenu) backToMenu.style.display = 'none';
+                    if (orderLayout) orderLayout.style.display = 'none';
+
+                    await clearCart();
+                    renderSummary();
+                    if (checkoutWrapper) checkoutWrapper.style.display = 'none';
+                    if (customizeView) customizeView.style.display = 'block';
+                    if (checkoutBtnEl) checkoutBtnEl.style.display = 'block';
+                    amountTendered.value = '';
+                    changeValue.textContent = '₱0.00';
+                } catch (err) {
+                    console.error('Unable to complete payment:', err);
+                    alert('Unable to complete payment. ' + (err?.message || 'Please try again.'));
+                }
+            });
+        }
 
         // Payment method toggle
         const paymentOptions = document.querySelectorAll('.payment-option');
