@@ -490,8 +490,31 @@ function boycold_menu_resolve_public_image_path(string $image, string $basePrefi
         return $image;
     }
 
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    $publicRoot = '';
+    if ($scriptName !== '') {
+        $pathParts = array_values(array_filter(explode('/', trim($scriptName, '/')), static fn ($segment) => $segment !== ''));
+        if (count($pathParts) > 1) {
+            $rootSegments = [];
+            foreach ($pathParts as $index => $segment) {
+                if ($index === count($pathParts) - 1) {
+                    break;
+                }
+                if (in_array($segment, ['User', 'admin', 'pos', 'dashboard', 'auth', 'api', 'config', 'store', 'footer-link'], true)) {
+                    break;
+                }
+                $rootSegments[] = $segment;
+            }
+            $publicRoot = '/' . implode('/', $rootSegments);
+        }
+    }
+
     $normalized = ltrim($image, '/');
-    return $basePrefix . $normalized;
+    if ($publicRoot !== '') {
+        return rtrim($publicRoot, '/') . '/' . $normalized;
+    }
+
+    return '/' . $normalized;
 }
 
 function boycold_menu_store_uploaded_image(?array $upload): ?string
