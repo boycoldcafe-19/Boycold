@@ -4641,8 +4641,11 @@ boycold_ensure_inventory_schema($connect);
 
             function adminProductImageUrl(value) {
                 const image = String(value || '').trim();
-                if (!image || /^(?:data:image\/|https?:\/\/|\/\/|\/)/i.test(image) || image.startsWith('../')) {
-                    return image;
+                if (!image) return '';
+                if (/^(?:data:image\/|https?:\/\/|\/\/)/i.test(image)) return image;
+                if (image.startsWith('../') || image.startsWith('/')) return image;
+                if (image.startsWith('uploads/') || image.startsWith('picture/') || image.startsWith('img/')) {
+                    return `../${image.replace(/^\.\//, '')}`;
                 }
                 return `../${image.replace(/^\.\//, '')}`;
             }

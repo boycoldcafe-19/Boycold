@@ -456,7 +456,18 @@
             { id: "messy-tuna-spinach", name: "Messy Tuna Spinach", price: 179, category: "Snacks", img: "Messy Tuna Spinach.png" },
         ];
 
-        const IMG_BASE = "../picture/";
+        const IMG_BASE = "../";
+
+        function resolveMenuImagePath(value) {
+            const image = String(value || '').trim();
+            if (!image) return "../img/default.png";
+            if (/^(?:data:image\/|https?:\/\/|\/\/)/i.test(image) || image.startsWith('../')) return image;
+            if (image.startsWith('/')) return `.${image}`;
+            if (image.startsWith('uploads/') || image.startsWith('picture/') || image.startsWith('img/')) {
+                return `../${image.replace(/^\.\//, '')}`;
+            }
+            return `../${image.replace(/^\.\//, '')}`;
+        }
 
         async function loadProducts() {
             const response = await fetch('admin_data_api.php?action=products', { cache: 'no-store' });
@@ -470,7 +481,7 @@
                 name: product.product_name,
                 price: Number(product.price) || 0,
                 category: product.category || 'Uncategorized',
-                img: String(product.image || '').replace(/^\/picture\//, ''),
+                img: resolveMenuImagePath(product.image),
                 available: Number(product.is_available) !== 0
             }));
 
@@ -557,7 +568,7 @@
                 .map(
                     (m) => `
                 <button type="button" class="menu-item ${m.id === selectedItemId ? "selected" : ""}" data-id="${m.id}">
-                    <span class="menu-item-thumb"><img src="${IMG_BASE}${m.img}" alt="${m.name}" loading="lazy"></span>
+                    <span class="menu-item-thumb"><img src="${resolveMenuImagePath(m.img)}" alt="${m.name}" loading="lazy"></span>
                     <span class="menu-item-info">
                         <span class="menu-item-name">${m.name}</span>
                         <span class="menu-item-price">${peso(m.price)}</span>
@@ -613,7 +624,7 @@
             panel.innerHTML = `
                 <div class="item-info-bar">
                     <div class="item-info-left">
-                        <span class="item-info-thumb"><img src="${IMG_BASE}${item.img}" alt="${item.name}"></span>
+                        <span class="item-info-thumb"><img src="${resolveMenuImagePath(item.img)}" alt="${item.name}"></span>
                         <span class="item-info-text">
                             <span class="item-info-name">${item.name}</span>
                             <span class="item-info-sub">Category: ${item.category}</span>

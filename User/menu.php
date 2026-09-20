@@ -228,13 +228,21 @@ $menuCategories = boycold_menu_get_categories($connect);
                                             <?php endif; ?>
                                             <button class="card-heart"><i class="fa-solid fa-heart"></i></button>
                                         </div>
-                                        <?php if (strpos($image, '/public/') === 0): ?>
-                                            <img src="<?= $image ?>" alt="<?= $name ?>">
-                                        <?php elseif (strpos($image, '../') === 0): ?>
-                                            <img src="<?= $image ?>" alt="<?= $name ?>">
-                                        <?php else: ?>
-                                            <img src="../<?= ltrim($image, '/') ?>" alt="<?= $name ?>">
-                                        <?php endif; ?>
+                                        <?php
+                                            $normalizedImage = trim((string) $image);
+                                            if ($normalizedImage === '') {
+                                                $imageSrc = '../img/default.png';
+                                            } elseif (preg_match('/^(?:https?:)?\/\//i', $normalizedImage) || preg_match('/^data:image\//i', $normalizedImage) || strpos($normalizedImage, '../') === 0) {
+                                                $imageSrc = $normalizedImage;
+                                            } elseif (strpos($normalizedImage, '/') === 0) {
+                                                $imageSrc = '../' . ltrim($normalizedImage, '/');
+                                            } elseif (strpos($normalizedImage, 'uploads/') === 0 || strpos($normalizedImage, 'picture/') === 0 || strpos($normalizedImage, 'img/') === 0) {
+                                                $imageSrc = '../' . $normalizedImage;
+                                            } else {
+                                                $imageSrc = '../' . ltrim($normalizedImage, '/');
+                                            }
+                                        ?>
+                                        <img src="<?= htmlspecialchars($imageSrc, ENT_QUOTES) ?>" alt="<?= $name ?>">
                                     </div>
                                 </div>
                                 <div class="card-info">

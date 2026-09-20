@@ -462,6 +462,10 @@ if ($shiftResult) {
         }
 
         // ── Load the product picked on posmenu.html ──
+        function clearCurrentProductSelection() {
+            localStorage.removeItem('boycold_current_product');
+        }
+
         const productRaw = localStorage.getItem('boycold_current_product');
         let currentProduct = { id: '', name: 'Unknown Item', price: 0, img: '', category: '' };
 
@@ -861,6 +865,7 @@ if ($shiftResult) {
 
             const success = await saveCartItem(cartItem);
             if (success.success) {
+                clearCurrentProductSelection();
                 renderSummary();
 
                 // Reset the form for the next customization
@@ -916,6 +921,7 @@ if ($shiftResult) {
                 addOrderButton.disabled = true;
                 const success = await saveCartItem(cartItem);
                 if (success.success) {
+                    clearCurrentProductSelection();
                     window.location.href = 'pos-menu.php';
                 } else {
                     addOrderButton.disabled = false;
@@ -1296,7 +1302,7 @@ if ($shiftResult) {
         if (newOrderBtn) {
             newOrderBtn.addEventListener('click', async () => {
                 await clearCart();
-                localStorage.removeItem('boycold_current_product');
+                clearCurrentProductSelection();
                 window.location.href = 'pos-menu.php';
             });
         }

@@ -216,7 +216,7 @@
                             <option value="All">All Status</option>
                             <option value="Active">Active</option>
                             <option value="Inactive">Inactive</option>
-                            <option value="Completed">Completed</option>
+                            <option value="Ready to be Claimed">Ready to be Claimed</option>
                         </select>
                         <i class="fa-solid fa-chevron-down"
                             style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
@@ -466,6 +466,19 @@
             return '<img class="avatar-circle avatar-image" src="../img/LOGO.png" alt="BoyCold Cafe">';
         }
 
+        function normalizeStatusLabel(status, stamps = 0, redeemed = false) {
+            const normalized = String(status || '').trim();
+            const claimReady = stamps >= 10 && !redeemed;
+
+            if (claimReady || normalized.toLowerCase() === 'completed') {
+                return 'Ready to be Claimed';
+            }
+
+            if (normalized.toLowerCase() === 'active') return 'Active';
+            if (normalized.toLowerCase() === 'inactive') return 'Inactive';
+            return normalized || 'Active';
+        }
+
         // Filter and Render Logic
         function renderFilteredTable() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -474,11 +487,12 @@
             const dateTo = document.getElementById('dateTo').value;
 
             const filteredData = cardsData.filter(item => {
+                const statusLabel = normalizeStatusLabel(item.status, item.stamps, item.redeemed);
                 const matchesSearch = item.id.toLowerCase().includes(searchValue) ||
                     item.customer.toLowerCase().includes(searchValue) ||
                     item.phone.toLowerCase().includes(searchValue);
 
-                const matchesStatus = (selectedStatus === 'All') || (item.status === selectedStatus);
+                const matchesStatus = (selectedStatus === 'All') || (statusLabel === selectedStatus);
 
                 const matchesDate = (!dateFrom || item.activationDate >= dateFrom) &&
                     (!dateTo || item.activationDate <= dateTo);
@@ -492,12 +506,16 @@
             filteredData.forEach((item) => {
                 const originalIndex = cardsData.findIndex(card => card.id === item.id);
                 const tr = document.createElement('tr');
+                tr.className = (item.stamps >= 10 && !item.redeemed) ? 'ready-to-claim-row' : '';
                 tr.onclick = (e) => {
                     if (e.target.closest('.action-cell')) return;
                     openDrawer(item);
                 };
 
+                const statusLabel = normalizeStatusLabel(item.status, item.stamps, item.redeemed);
+                const canShowActionMenu = item.redeemed || item.stamps < 10;
                 const needsReactivation = item.status === 'Inactive' || item.status === 'Completed' || item.stamps >= 10;
+                const actionIsClaimed = Boolean(item.redeemed);
 
                 tr.innerHTML = `
                     <td>
@@ -519,45 +537,47 @@
                     </td>
                     <td>
                         <div class="reward-cell">
-                            <div class="reward-box-icon ${item.redeemed ? 'completed' : ''}">
+                            <div class="reward-box-icon ${item.redeemed ? 'completed' : (item.stamps >= 10 ? 'claim-ready' : '')}">
                                 <i class="fa-solid fa-gift"></i>
                             </div>
                             <div class="reward-info">
                                 <strong>${item.reward}</strong>
-                                ${item.stamps >= 10
-                        ? `<span>Ready to be Claimed</span>`
-                        : (item.redeemed
-                            ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
+                                ${item.redeemed
+                        ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
+                        : (item.stamps >= 10
+                            ? `<span>Ready to be Claimed</span>`
                             : `<span>Not Redeemed</span>`)}
                             </div>
                         </div>
                     </td>
                     <td>
-                        <span class="status-pill ${item.status.toLowerCase()}">
-                            <span class="dot"></span> ${item.status}
+                        <span class="status-pill ${statusLabel.toLowerCase().replace(/\s+/g, '-')}">
+                            <span class="dot"></span> ${statusLabel}
                         </span>
                     </td>
-                    <td class="action-cell">
-                        <button class="three-dots-btn" onclick="toggleActionMenu(event, ${originalIndex})">
-                            <i class="fa-solid fa-ellipsis-vertical"></i>
-                        </button>
-                        <div class="action-menu" id="actionMenu-${originalIndex}">
-                            ${needsReactivation ? `
-                                <div class="action-menu-item reactivate" onclick="reactivateCard(event, ${originalIndex})">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="8" cy="8" r="7" stroke="#13A101" stroke-width="1.5"/>
-                                        <path d="M5 8L7 10L11 6" stroke="#13A101" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg> Reactivate Card
-                                </div>
-                            ` : `
-                                <div class="action-menu-item deactivate" onclick="deactivateCard(event, ${originalIndex})">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M8 14.25C11.4518 14.25 14.25 11.4518 14.25 8C14.25 4.54822 11.4518 1.75 8 1.75C4.54822 1.75 1.75 4.54822 1.75 8C1.75 11.4518 4.54822 14.25 8 14.25Z" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M4.75 8H11.25" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg> Deactivate Card
-                                </div>
-                            `}
-                        </div>
+                    <td class="action-cell ${actionIsClaimed ? 'claimed' : ''}">
+                        ${canShowActionMenu ? `
+                            <button class="three-dots-btn" onclick="toggleActionMenu(event, ${originalIndex})">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <div class="action-menu" id="actionMenu-${originalIndex}">
+                                ${needsReactivation ? `
+                                    <div class="action-menu-item reactivate" onclick="reactivateCard(event, ${originalIndex})">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="8" cy="8" r="7" stroke="#13A101" stroke-width="1.5"/>
+                                            <path d="M5 8L7 10L11 6" stroke="#13A101" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg> Reactivate Card
+                                    </div>
+                                ` : `
+                                    <div class="action-menu-item deactivate" onclick="deactivateCard(event, ${originalIndex})">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M8 14.25C11.4518 14.25 14.25 11.4518 14.25 8C14.25 4.54822 11.4518 1.75 8 1.75C4.54822 1.75 1.75 4.54822 1.75 8C1.75 11.4518 4.54822 14.25 8 14.25Z" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M4.75 8H11.25" stroke="#D81414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg> Deactivate Card
+                                    </div>
+                                `}
+                            </div>
+                        ` : ''}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -599,6 +619,7 @@
 
         function openDrawer(item) {
             const drawerAvatar = document.getElementById('drawerAvatar');
+            const statusLabel = normalizeStatusLabel(item.status, item.stamps, item.redeemed);
             drawerAvatar.innerHTML = '<img class="avatar-circle avatar-image" src="../img/LOGO.png" alt="BoyCold Cafe">';
             document.getElementById('drawerCustomerName').innerText = item.customer;
             document.getElementById('drawerCustomerPhone').innerText = item.phone;
@@ -608,8 +629,8 @@
             document.getElementById('drawerBeansSubText').innerText = `${item.stamps}/10 stamps`;
 
             document.getElementById('drawerStatusBadge').innerHTML = `
-                <span class="status-pill ${item.status.toLowerCase()}">
-                    <span class="dot"></span> ${item.status}
+                <span class="status-pill ${statusLabel.toLowerCase().replace(/\s+/g, '-')}">
+                    <span class="dot"></span> ${statusLabel}
                 </span>
             `;
 
@@ -635,7 +656,7 @@
                 c.phone,
                 `${c.stamps}/10`,
                 c.reward,
-                c.status
+                normalizeStatusLabel(c.status, c.stamps, c.redeemed)
             ]);
 
             doc.autoTable({
@@ -693,7 +714,8 @@
                             ? new Date(String(card.date_redeemed).replace(' ', 'T')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                             : '',
                         activationDate: String(card.activation_date || card.created_at).slice(0, 10),
-                        status: (card.loyalty_card_status || 'active').charAt(0).toUpperCase() + (card.loyalty_card_status || 'active').slice(1)
+                        status: (card.loyalty_card_status || 'active').charAt(0).toUpperCase() + (card.loyalty_card_status || 'active').slice(1),
+                        statusLabel: normalizeStatusLabel((card.loyalty_card_status || 'active').charAt(0).toUpperCase() + (card.loyalty_card_status || 'active').slice(1), Math.min(10, Math.max(0, Number(card.loyalty_stamps || 0))), Boolean(card.date_redeemed))
                     }));
                 renderFilteredTable();
             } catch (error) {

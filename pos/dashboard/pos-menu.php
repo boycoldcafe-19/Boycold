@@ -267,27 +267,22 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             <div class="card-image">
                                 <div class="card-image-placeholder">
                                     <?php
-                                    $storedImage = ltrim((string) ($product['image'] ?? ''), '/');
-                                    if (str_starts_with($storedImage, 'uploads/menu/')) {
-                                        $uploadImageFile = __DIR__ . '/../../' . $storedImage;
-                                        $imagePath = is_file($uploadImageFile)
-                                            ? '../../' . implode('/', array_map('rawurlencode', explode('/', $storedImage)))
-                                            : '../img/default.png';
-                                    } else {
-                                        $imageUrlPath = parse_url((string) ($product['image'] ?? ''), PHP_URL_PATH);
-                                        $imageName = is_string($imageUrlPath) ? basename($imageUrlPath) : '';
-                                        $posImageFile = __DIR__ . '/../img/' . $imageName;
-                                        $pictureImageFile = __DIR__ . '/../../picture/' . $imageName;
-                                        if ($imageName === '' || (!is_file($posImageFile) && !is_file($pictureImageFile))) {
-                                            $imagePath = '../img/default.png';
-                                        } elseif (is_file($posImageFile)) {
-                                            $imagePath = '../img/' . rawurlencode($imageName);
+                                    $storedImage = trim((string) ($product['image'] ?? ''));
+                                    $imagePath = '../img/default.png';
+
+                                    if ($storedImage !== '') {
+                                        if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../')) {
+                                            $imagePath = $storedImage;
+                                        } elseif (str_starts_with($storedImage, '/')) {
+                                            $imagePath = '../' . ltrim($storedImage, '/');
+                                        } elseif (str_starts_with($storedImage, 'uploads/') || str_starts_with($storedImage, 'picture/') || str_starts_with($storedImage, 'img/')) {
+                                            $imagePath = '../../' . $storedImage;
                                         } else {
-                                            $imagePath = '../../picture/' . rawurlencode($imageName);
+                                            $imagePath = '../../' . ltrim($storedImage, '/');
                                         }
                                     }
                                     ?>
-                                    <img src="<?= htmlspecialchars($imagePath) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">
+                                    <img src="<?= htmlspecialchars($imagePath, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">
                                 </div>
                             </div>
                             <div class="card-info">
@@ -848,6 +843,10 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             }
         }
 
+        function clearCurrentProductSelection() {
+            localStorage.removeItem('boycold_current_product');
+        }
+
         function attachOrderButtonHandlers() {
             document.querySelectorAll('.product-card').forEach(card => {
                 const orderBtn = card.querySelector('.btn-order');
@@ -897,7 +896,8 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             // On error, clear cart to be safe
                             fetch('../api/pos_cart_api.php?action=clear_cart').catch(() => {});
                         });
-                    
+
+                    clearCurrentProductSelection();
                     localStorage.setItem('boycold_current_product', JSON.stringify(product));
                     window.location.href = 'ordersum.php';
                 });
