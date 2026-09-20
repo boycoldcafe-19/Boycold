@@ -4641,7 +4641,7 @@ boycold_ensure_inventory_schema($connect);
 
             function adminProductImageUrl(value) {
                 const image = String(value || '').trim();
-                if (!image) return '';
+                if (!image) return '../img/default.png';
                 if (/^(?:data:image\/|https?:\/\/|\/\/)/i.test(image)) return image;
                 if (image.startsWith('../') || image.startsWith('/')) return image;
                 if (image.startsWith('uploads/') || image.startsWith('picture/') || image.startsWith('img/')) {
@@ -5026,22 +5026,32 @@ boycold_ensure_inventory_schema($connect);
                     .includes((file.type || '').toLowerCase()) || /\.(png|jpe?g|webp)$/i.test(file.name || '');
             }
 
+            // True when the last picked file was refused; used to warn before saving without a picture.
+            let productImageRejected = false;
+
             if (productImageInput && imagePreview && imagePreviewBox) {
+                const rejectPickedImage = (message) => {
+                    alert(message);
+                    productImageInput.value = '';
+                    imagePreview.src = '';
+                    imagePreviewBox.style.display = 'none';
+                    productImageRejected = true;
+                };
+
                 productImageInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
                         const isValidImage = isAllowedProductImage(file);
 
                         if (!isValidImage) {
-                            alert('Please select a PNG, JPG/JPEG, or WEBP image.');
-                            productImageInput.value = '';
+                            rejectPickedImage('Please select a PNG, JPG/JPEG, or WEBP image.');
                             return;
                         }
                         if (file.size > 8 * 1024 * 1024) {
-                            alert('Image must be 8MB or smaller.');
-                            productImageInput.value = '';
+                            rejectPickedImage('Image must be 8MB or smaller.');
                             return;
                         }
+                        productImageRejected = false;
                         const reader = new FileReader();
                         reader.onload = (ev) => {
                             imagePreview.src = ev.target.result;
@@ -5055,6 +5065,7 @@ boycold_ensure_inventory_schema($connect);
                     productImageInput.value = '';
                     imagePreview.src = '';
                     imagePreviewBox.style.display = 'none';
+                    productImageRejected = false;
                 });
             }
 
@@ -5070,6 +5081,12 @@ boycold_ensure_inventory_schema($connect);
                     if (!nameInput.value.trim() || !categorySelect.value || !priceInput.value) {
                         alert('Please fill in all required fields (Name, Category, Price).');
                         return;
+                    }
+
+                    if (productImageRejected && !productImageInput?.files?.[0]) {
+                        if (!confirm('The image you picked was not accepted, so this item will be saved WITHOUT a picture. Save anyway?')) {
+                            return;
+                        }
                     }
 
                     const name = nameInput.value.trim();
