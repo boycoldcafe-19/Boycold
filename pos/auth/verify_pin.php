@@ -2,6 +2,7 @@
 require_once __DIR__ . '/guard.php';
 pos_start_session();
 require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../../config/pos_login_lockout.php';
 
 // Check if user is logged in
 if (empty($_SESSION['employee_id'])) {
@@ -20,14 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
     }
 
     if (empty($response['errors'])) {
-        $lockedUntil = (int) ($_SESSION['pos_pin_locked_until'] ?? 0);
-        if ($lockedUntil > time()) {
-            $response['errors']['pin'] = 'Too many attempts. Please try again later.';
-            echo json_encode($response);
-            exit;
-        }
-
-        $stmt = $connect->prepare('SELECT id, employee_name, email, role, pin, is_active, branch_id FROM employees WHERE id = ? LIMIT 1');
+        $stmt = $connect->prepare(
+            'SELECT id, employee_name, email, role, pin, is_active, branch_id,
+                    pos_password_failed_attempts, pos_password_locked_at,
+                    pos_pin_failed_attempts, pos_pin_locked_at
+             FROM employees
+             WHERE id = ?
+             LIMIT 1'
+        );
         $stmt->bind_param('i', $_SESSION['employee_id']);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
@@ -35,17 +36,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
 
         $employeeIsValid = $result
             && (int) $result['is_active'] === 1
-            && in_array($result['role'], ['cashier', 'admin'], true)
+            && $result['role'] === 'cashier'
             && (int) $result['branch_id'] > 0;
 
-        if (!$employeeIsValid || empty($result['pin']) || !password_verify($pin, $result['pin'])) {
+        if (!$employeeIsValid) {
             $response['errors']['pin'] = 'Incorrect PIN.';
-            $_SESSION['pos_pin_attempts'] = (int) ($_SESSION['pos_pin_attempts'] ?? 0) + 1;
-            if ($_SESSION['pos_pin_attempts'] >= 5) {
-                $_SESSION['pos_pin_locked_until'] = time() + 300;
-                $_SESSION['pos_pin_attempts'] = 0;
+        } elseif (pos_login_account_is_locked($result)) {
+            $response['errors']['pin'] = pos_login_credential_is_locked($result, 'pin')
+                ? pos_login_lockout_message('pin')
+                : pos_login_lockout_message('password');
+            $response['locked'] = true;
+            $response['redirect'] = '../../User/login.php';
+            pos_clear_session();
+        } elseif (empty($result['pin']) || !password_verify($pin, $result['pin'])) {
+            $lockout = pos_login_record_failed_attempt($connect, (int) $result['id'], 'pin');
+            if ($lockout['locked']) {
+                $response['errors']['pin'] = pos_login_lockout_message('pin');
+                $response['locked'] = true;
+                $response['redirect'] = '../../User/login.php';
+                pos_clear_session();
+            } else {
+                $remaining = max(0, POS_LOGIN_MAX_ATTEMPTS - $lockout['attempts']);
+                $response['errors']['pin'] = "Incorrect PIN. $remaining attempt" . ($remaining === 1 ? '' : 's') . ' remaining.';
             }
         } else {
+            pos_login_reset_credential_lockout($connect, (int) $result['id'], 'pin');
             session_regenerate_id(true);
             // Refresh branch identity from the verified database record so a stale
             // POS session cannot reject a correct PIN after switching branches.
@@ -57,8 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
             $_SESSION['pos_pin_verified'] = true;
             $_SESSION['pos_authenticated'] = true;
             $_SESSION['pos_login_at'] = date('c');
-            $_SESSION['pos_pin_attempts'] = 0;
-            unset($_SESSION['pos_pin_locked_until']);
             $response['success'] = true;
             $response['redirect'] = '../dashboard/pos-shift.php';
         }
@@ -180,6 +193,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
 
                     if (!data.success) {
                         if (data.errors.pin) pinError.textContent = data.errors.pin;
+                        if (data.locked && data.redirect) {
+                            verifyBtn.disabled = true;
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 1800);
+                        }
                         return;
                     }
 

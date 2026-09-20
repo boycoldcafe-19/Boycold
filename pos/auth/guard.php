@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../config/pos_login_lockout.php';
+
 function pos_start_session(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -47,6 +49,7 @@ function pos_require_employee(mysqli $connect, bool $json = false): array
 
     $stmt = $connect->prepare(
         "SELECT e.id, e.employee_name, e.email, e.role, e.is_active, e.branch_id,
+                e.pos_password_locked_at, e.pos_pin_locked_at,
                 b.branch_code, b.branch_name, b.status AS branch_status
          FROM employees e
          LEFT JOIN branches b ON b.id = e.branch_id
@@ -60,16 +63,23 @@ function pos_require_employee(mysqli $connect, bool $json = false): array
 
     $accountValid = $employee
         && (int) $employee['is_active'] === 1
-        && in_array($employee['role'], ['cashier', 'admin'], true)
-        && ((int) $employee['branch_id'] > 0 && $employee['branch_status'] === 'active'
-            || $employee['role'] === 'admin' && (int) $employee['branch_id'] === 0)
+        && $employee['role'] === 'cashier'
+        && (int) $employee['branch_id'] > 0
+        && $employee['branch_status'] === 'active'
+        && !pos_login_account_is_locked($employee)
         && (int) ($_SESSION['branch_id'] ?? 0) === (int) $employee['branch_id'];
 
     if (!$accountValid) {
+        $isLocked = $employee && pos_login_account_is_locked($employee);
         pos_clear_session();
         if ($json) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'Unauthorized access.']);
+            http_response_code($isLocked ? 423 : 401);
+            echo json_encode([
+                'success' => false,
+                'error' => $isLocked
+                    ? 'This POS account is locked. An administrator must change the locked POS credential in POS Settings.'
+                    : 'Unauthorized access.',
+            ]);
             exit;
         }
         $script = $_SERVER['SCRIPT_NAME'] ?? '';

@@ -4,6 +4,7 @@ require_once '../config/db_config.php';
 require_once __DIR__ . '/../config/session_config.php';
 boycold_start_session('PHPSESSID');
 require_once __DIR__ . '/../pos/auth/guard.php';
+require_once __DIR__ . '/../config/pos_login_lockout.php';
 
 function clearPosSessionIfPresent(): void
 {
@@ -81,10 +82,12 @@ function authenticatePosEmployee(mysqli $connect, string $email, string $passwor
 {
     $stmt = $connect->prepare(
         "SELECT e.id, e.employee_name, e.email, e.password, e.role, e.is_active, e.branch_id,
+                e.pos_password_failed_attempts, e.pos_password_locked_at,
+                e.pos_pin_failed_attempts, e.pos_pin_locked_at,
             b.branch_code, b.branch_name, b.status AS branch_status
          FROM employees e
          LEFT JOIN branches b ON b.id = e.branch_id
-         WHERE e.email = ? AND e.branch_id > 0
+         WHERE e.email = ? AND e.branch_id > 0 AND e.role = 'cashier'
          LIMIT 1"
     );
     $stmt->bind_param('s', $email);
@@ -92,14 +95,32 @@ function authenticatePosEmployee(mysqli $connect, string $email, string $passwor
     $employee = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!$employee || !password_verify($password, $employee['password'])) {
+    if (!$employee) {
         return null;
     }
 
     if ((int) $employee['is_active'] !== 1 || ($employee['branch_status'] ?? '') !== 'active') {
         $employee['_inactive'] = true;
+        return $employee;
     }
 
+    if (pos_login_credential_is_locked($employee, 'password')) {
+        $employee['_password_locked'] = true;
+        return $employee;
+    }
+
+    if (!password_verify($password, $employee['password'])) {
+        $lockout = pos_login_record_failed_attempt($connect, (int) $employee['id'], 'password');
+        $employee['_invalid_password'] = true;
+        $employee['_password_locked'] = $lockout['locked'];
+        $employee['_password_attempts_remaining'] = max(0, POS_LOGIN_MAX_ATTEMPTS - $lockout['attempts']);
+        return $employee;
+    }
+
+    // A correct password clears only its own counter. PIN failures are kept
+    // separate and still require the POS PIN to be changed by an admin once
+    // the PIN has reached its five-attempt lock limit.
+    pos_login_reset_credential_lockout($connect, (int) $employee['id'], 'password');
     return $employee;
 }
 
@@ -252,6 +273,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($employee) {
             if (!empty($employee['_inactive'])) {
                 sendAuthResponse(false, '../pos/auth/flashscreen.php', 'This POS account has been deactivated.');
+            }
+
+            if (!empty($employee['_password_locked'])) {
+                sendAuthResponse(false, 'login.php', pos_login_lockout_message('password'));
+            }
+
+            if (!empty($employee['_invalid_password'])) {
+                $message = 'Invalid email or password.';
+                if (!empty($employee['_password_locked'])) {
+                    $message = pos_login_lockout_message('password');
+                }
+                sendAuthResponse(false, 'login.php', $message);
             }
 
             recordEmployeeLogin($connect, $employee);

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/admin_auth.php';
 require_once __DIR__ . '/../config/inventory_service.php';
 require_once __DIR__ . '/../config/menu_catalog_service.php';
+require_once __DIR__ . '/../config/activity_logger.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -130,9 +131,22 @@ try {
             $lastname = $parts[1] ?? '';
             $stmt = $connect->prepare('UPDATE employees SET firstname = ?, lastname = ?, email = ? WHERE id = ?');
             $stmt->bind_param('sssi', $firstname, $lastname, $email, $admin['id']);
-            $stmt->execute();
+            $updated = $stmt->execute();
+            $stmt->close();
+            if (!$updated) response(['success' => false, 'error' => 'Profile could not be updated. Please try again.'], 500);
             $_SESSION['employee_name'] = $name;
             $_SESSION['employee_email'] = $email;
+            boycold_log_activity($connect, [
+                'category' => 'admin',
+                'action' => 'profile_updated',
+                'summary' => 'Admin Profile Updated',
+                'details' => 'The administrator profile details were updated.',
+                'actor_id' => (int) $admin['id'],
+                'actor_type' => 'admin',
+                'branch_id' => (int) ($admin['branch_id'] ?? 0),
+                'entity_type' => 'employee',
+                'entity_id' => (int) $admin['id'],
+            ]);
             response(['success' => true]);
 
         case 'settings_password':
@@ -152,7 +166,45 @@ try {
             $updated = $stmt->affected_rows;
             $stmt->close();
             if ($updated !== 1) response(['success' => false, 'error' => 'Password could not be updated. Please try again.'], 500);
+            boycold_log_activity($connect, [
+                'category' => 'admin',
+                'action' => 'password_updated',
+                'summary' => 'Admin Password Updated',
+                'details' => 'The administrator account password was updated.',
+                'actor_id' => (int) $admin['id'],
+                'actor_type' => 'admin',
+                'branch_id' => (int) ($admin['branch_id'] ?? 0),
+                'entity_type' => 'employee',
+                'entity_id' => (int) $admin['id'],
+            ]);
             response(['success' => true, 'message' => 'Password updated successfully.']);
+
+        case 'activity_export':
+            $report = strtolower(trim((string) ($data['report'] ?? '')));
+            $reports = [
+                'dashboard' => 'Dashboard report',
+                'analytics' => 'Data analytics report',
+                'forecast' => 'Forecast report',
+                'inventory' => 'Inventory report',
+            ];
+            if (!isset($reports[$report])) {
+                response(['success' => false, 'error' => 'Invalid report export'], 422);
+            }
+
+            $admin = currentAdmin($connect);
+            if (!$admin) response(['success' => false, 'error' => 'Admin login required'], 401);
+            boycold_log_activity($connect, [
+                'category' => 'exports',
+                'action' => 'report_export_requested',
+                'summary' => 'Report Export Requested',
+                'details' => $reports[$report] . ' export was started by the administrator.',
+                'actor_id' => (int) $admin['id'],
+                'actor_type' => 'admin',
+                'branch_id' => (int) ($admin['branch_id'] ?? 0),
+                'entity_type' => 'report',
+                'metadata' => ['report' => $report],
+            ]);
+            response(['success' => true]);
 
         case 'customers':
             $sql = "SELECT u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
@@ -612,6 +664,19 @@ try {
             }
             $deleted = $stmt->affected_rows;
             $stmt->close();
+            if ($deleted === 1) {
+                boycold_log_activity($connect, [
+                    'category' => 'menu',
+                    'action' => 'product_deleted',
+                    'summary' => 'Menu Item Deleted',
+                    'details' => $productName !== ''
+                        ? $productName . ' was removed from the menu.'
+                        : 'Menu item #' . $id . ' was removed from the menu.',
+                    'actor_type' => 'admin',
+                    'entity_type' => 'product',
+                    'entity_id' => $id,
+                ]);
+            }
             response(['success' => $deleted === 1, 'error' => $deleted === 1 ? null : 'Product was not found.']);
 
         case 'ingredient_create':

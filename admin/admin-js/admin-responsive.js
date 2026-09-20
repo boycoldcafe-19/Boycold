@@ -1,4 +1,30 @@
 (function () {
+    // Exported reports are created in the browser, so capture the user action
+    // here and persist it through the authenticated admin API.
+    const exportButtons = [
+        ['exportDashboardBtn', 'dashboard'],
+        ['exportAnalyticsBtn', 'analytics'],
+        ['exportForecastBtn', 'forecast'],
+        ['exportInventoryBtn', 'inventory']
+    ];
+
+    exportButtons.forEach(([buttonId, report]) => {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+
+        button.addEventListener('click', () => {
+            fetch('admin_data_api.php?action=activity_export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ report }),
+                keepalive: true,
+                credentials: 'same-origin'
+            }).catch(() => {
+                // Activity logging is supplementary; never interrupt an export.
+            });
+        });
+    });
+
     const sidebar = document.getElementById('sidebar');
     const header = document.querySelector('.top-header');
     if (!sidebar || !header) return;
