@@ -204,16 +204,7 @@ $menuCategories = boycold_menu_get_categories($connect);
                             $popularCategory = htmlspecialchars($popularCategory);
 
                             $storedImage = trim((string) ($product['image'] ?? ''));
-                            $resolvedImage = '../img/default.png';
-                            if ($storedImage !== '') {
-                                if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../') || str_starts_with($storedImage, './')) {
-                                    $resolvedImage = $storedImage;
-                                } else {
-                                    $normalizedImage = ltrim($storedImage, '/');
-                                    $resolvedImage = '../' . $normalizedImage;
-                                }
-                            }
-                            $resolvedImage = htmlspecialchars($resolvedImage, ENT_QUOTES);
+                            $resolvedImage = htmlspecialchars(boycold_menu_resolve_public_image_path($storedImage, '../'), ENT_QUOTES);
                             $dataCategory = $category;
                     ?>
 

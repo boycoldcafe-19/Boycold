@@ -251,6 +251,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                             $ingredientStatus = htmlspecialchars((string) ($availabilityInfo['ingredient_status'] ?? 'Insufficient'), ENT_QUOTES);
                             $servings = (int) ($availabilityInfo['available_servings'] ?? 0);
                             $canOrder = !empty($availabilityInfo['can_order']);
+                            $productImagePath = htmlspecialchars(boycold_menu_resolve_public_image_path((string) ($product['image'] ?? ''), '../../'), ENT_QUOTES);
                         ?>
                         <div class="product-card"
                              data-category="<?= htmlspecialchars($product['category'], ENT_QUOTES) ?>"
@@ -266,20 +267,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                              data-stock-reason="<?= $stockReason ?>">
                             <div class="card-image">
                                 <div class="card-image-placeholder">
-                                    <?php
-                                    $storedImage = trim((string) ($product['image'] ?? ''));
-                                    $imagePath = '../img/default.png';
-
-                                    if ($storedImage !== '') {
-                                        if (preg_match('/^(?:https?:)?\/\//i', $storedImage) || preg_match('/^data:image\//i', $storedImage) || str_starts_with($storedImage, '../') || str_starts_with($storedImage, './')) {
-                                            $imagePath = $storedImage;
-                                        } else {
-                                            $normalizedImage = ltrim($storedImage, '/');
-                                            $imagePath = '../../' . $normalizedImage;
-                                        }
-                                    }
-                                    ?>
-                                    <img src="<?= htmlspecialchars($imagePath, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">
+                                    <img src="<?= $productImagePath ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">
                                 </div>
                             </div>
                             <div class="card-info">
@@ -547,20 +535,24 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         const viewToggle = document.getElementById("viewToggle");
         const productGrid = document.querySelector(".product-grid");
         const header = document.querySelector(".product-list-header");
-        const icon = viewToggle.querySelector("i");
+        const icon = viewToggle ? viewToggle.querySelector("i") : null;
 
-        viewToggle.addEventListener("click", () => {
-            const isListView = productGrid.classList.toggle("list-view");
-            header.classList.toggle("active", isListView);
+        if (viewToggle && productGrid && header) {
+            viewToggle.addEventListener("click", () => {
+                const isListView = productGrid.classList.toggle("list-view");
+                header.classList.toggle("active", isListView);
 
-            if (isListView) {
-                icon.classList.remove("fa-bars");
-                icon.classList.add("fa-table-cells");
-            } else {
-                icon.classList.remove("fa-table-cells");
-                icon.classList.add("fa-bars");
-            }
-        });
+                if (icon) {
+                    if (isListView) {
+                        icon.classList.remove("fa-bars");
+                        icon.classList.add("fa-table-cells");
+                    } else {
+                        icon.classList.remove("fa-table-cells");
+                        icon.classList.add("fa-bars");
+                    }
+                }
+            });
+        }
 
         const notifBtn = document.getElementById("notifBtn");
         const notifDropdown = document.getElementById("notifDropdown");
@@ -568,25 +560,27 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         const notifBadge = document.getElementById("notifBadge");
         const notifList = document.getElementById("notifList");
 
-        if (notifBtn?.dataset.inventoryAlert !== "true") {
-        notifBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifDropdown.classList.toggle("open");
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-                notifDropdown.classList.remove("open");
-            }
-        });
-
-        markAllRead?.addEventListener("click", (e) => {
-            e.preventDefault();
-            notifList?.querySelectorAll(".notif-item.unread").forEach(item => {
-                item.classList.remove("unread");
+        if (notifBtn && notifBtn?.dataset.inventoryAlert !== "true") {
+            notifBtn.addEventListener("click", (e) => {
+                if (!notifDropdown) return;
+                e.stopPropagation();
+                notifDropdown.classList.toggle("open");
             });
-            if (notifBadge) notifBadge.style.display = "none";
-        });
+
+            document.addEventListener("click", (e) => {
+                if (!notifDropdown || !notifBtn) return;
+                if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+                    notifDropdown.classList.remove("open");
+                }
+            });
+
+            markAllRead?.addEventListener("click", (e) => {
+                e.preventDefault();
+                notifList?.querySelectorAll(".notif-item.unread").forEach(item => {
+                    item.classList.remove("unread");
+                });
+                if (notifBadge) notifBadge.style.display = "none";
+            });
         }
         
         const addProductBtn = document.getElementById("addProductBtn");
@@ -596,7 +590,17 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         const saveProductBtn = document.getElementById("saveProductBtn");
         const productCategorySelect = document.getElementById("productCategory");
 
+        if (addProductBtn) addProductBtn.addEventListener("click", openAddProductModal);
+        if (closeAddProduct) closeAddProduct.addEventListener("click", closeAddProductModal);
+        if (cancelAddProduct) cancelAddProduct.addEventListener("click", closeAddProductModal);
+        if (addProductOverlay) {
+            addProductOverlay.addEventListener("click", (e) => {
+                if (e.target === addProductOverlay) closeAddProductModal();
+            });
+        }
+
         function populateCategoryOptions() {
+            if (!productCategorySelect) return;
             productCategorySelect.innerHTML = '<option value="" disabled selected>Select category</option>';
             document.querySelectorAll('.category-bar .cat-pill').forEach(pill => {
                 const value = pill.getAttribute('data-filter');
@@ -618,13 +622,6 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             resetProductForm();
         }
 
-        addProductBtn.addEventListener("click", openAddProductModal);
-        closeAddProduct.addEventListener("click", closeAddProductModal);
-        cancelAddProduct.addEventListener("click", closeAddProductModal);
-
-        addProductOverlay.addEventListener("click", (e) => {
-            if (e.target === addProductOverlay) closeAddProductModal();
-        });
         const INVENTORY_KEY = 'boycold_inventory';
 
         async function loadInventory() {
@@ -931,22 +928,26 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         const uploadBox = document.getElementById("uploadBox");
         const deleteImageBtn = document.getElementById("deleteImageBtn");
 
-        productImageInput.addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                imagePreview.src = evt.target.result;
-                imagePreviewBox.style.display = "flex";
-            };
-            reader.readAsDataURL(file);
-        });
+        if (productImageInput && imagePreview && imagePreviewBox) {
+            productImageInput.addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    imagePreview.src = evt.target.result;
+                    imagePreviewBox.style.display = "flex";
+                };
+                reader.readAsDataURL(file);
+            });
+        }
 
-        deleteImageBtn.addEventListener("click", () => {
-            imagePreview.src = "";
-            imagePreviewBox.style.display = "none";
-            productImageInput.value = "";
-        });
+        if (deleteImageBtn && imagePreview && imagePreviewBox && productImageInput) {
+            deleteImageBtn.addEventListener("click", () => {
+                imagePreview.src = "";
+                imagePreviewBox.style.display = "none";
+                productImageInput.value = "";
+            });
+        }
 
         // Add-ons
         const addonList = document.getElementById("addonList");
@@ -966,18 +967,22 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             addonList.appendChild(row);
         }
 
-        addAddonBtn.addEventListener("click", createAddonRow);
+        if (addAddonBtn) addAddonBtn.addEventListener("click", createAddonRow);
 
-        addonList.querySelectorAll(".addon-remove").forEach(btn => {
-            btn.addEventListener("click", () => btn.closest(".addon-row").remove());
-        });
+        if (addonList) {
+            addonList.querySelectorAll(".addon-remove").forEach(btn => {
+                btn.addEventListener("click", () => btn.closest(".addon-row").remove());
+            });
+        }
 
         // Toggle status label
         const productStatus = document.getElementById("productStatus");
         const statusLabel = document.getElementById("statusLabel");
-        productStatus.addEventListener("change", () => {
-            statusLabel.textContent = productStatus.checked ? "Active" : "Inactive";
-        });
+        if (productStatus && statusLabel) {
+            productStatus.addEventListener("change", () => {
+                statusLabel.textContent = productStatus.checked ? "Active" : "Inactive";
+            });
+        }
 
         // Save product
         function resetProductForm() {

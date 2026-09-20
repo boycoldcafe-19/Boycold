@@ -475,6 +475,25 @@ function boycold_menu_get_categories(mysqli $connect, bool $activeOnly = true): 
     return $result->fetch_all(MYSQLI_ASSOC);
 }
 
+function boycold_menu_resolve_public_image_path(string $image, string $basePrefix = '../'): string
+{
+    $image = trim($image);
+    if ($image === '') {
+        return $basePrefix . 'img/default.png';
+    }
+
+    if (preg_match('/^(?:https?:)?\/\//i', $image) || preg_match('/^data:image\//i', $image)) {
+        return $image;
+    }
+
+    if (preg_match('/^\.\.?\//', $image)) {
+        return $image;
+    }
+
+    $normalized = ltrim($image, '/');
+    return $basePrefix . $normalized;
+}
+
 function boycold_menu_store_uploaded_image(?array $upload): ?string
 {
     if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
