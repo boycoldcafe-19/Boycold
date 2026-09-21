@@ -1502,7 +1502,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .void-qty-value {
-    min-width: 22px;
+    width: 42px;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
     text-align: center;
     font-weight: 700;
     font-size: 14px;

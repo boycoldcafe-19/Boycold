@@ -266,7 +266,7 @@ if ($shiftResult) {
                                     <div class="option-label"><i class="fa-solid fa-cart-shopping"></i> Quantity</div>
                                     <div class="qty-stepper">
                                         <button id="qtyMinus" type="button" aria-label="Decrease quantity">−</button>
-                                        <span id="qtyValue">1</span>
+                                        <input id="qtyValue" class="qty-value-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="1" aria-label="Quantity" autocomplete="off">
                                         <button id="qtyPlus" type="button" aria-label="Increase quantity">+</button>
                                     </div>
                                 </div>
@@ -672,27 +672,56 @@ if ($shiftResult) {
         const qtyValue = document.getElementById('qtyValue');
         const qtyMinusBtn = document.getElementById('qtyMinus');
         const qtyPlusBtn = document.getElementById('qtyPlus');
+        const MAX_ORDER_ITEM_QUANTITY = 9999;
+
+        function orderQuantityLimit() {
+            const maxServings = Math.floor(Number(currentProduct.availableServings || 0));
+            return maxServings > 0
+                ? Math.min(MAX_ORDER_ITEM_QUANTITY, maxServings)
+                : MAX_ORDER_ITEM_QUANTITY;
+        }
+
+        function setOrderQuantity(value) {
+            quantity = Math.min(orderQuantityLimit(), Math.max(1, Number.parseInt(value, 10) || 1));
+            if (qtyValue) qtyValue.value = String(quantity);
+            updateTotal();
+        }
+
+        function allowOnlyQuantityKeys(event) {
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (event.ctrlKey || event.metaKey || allowedKeys.includes(event.key) || /^\d$/.test(event.key)) return;
+            event.preventDefault();
+        }
+
+        qtyValue?.addEventListener('keydown', allowOnlyQuantityKeys);
+        qtyValue?.addEventListener('input', (event) => {
+            const input = event.currentTarget;
+            const digits = input.value.replace(/\D/g, '').slice(0, 4);
+            if (input.value !== digits) input.value = digits;
+            if (digits === '') return;
+
+            setOrderQuantity(digits);
+        });
+        qtyValue?.addEventListener('blur', () => setOrderQuantity(qtyValue.value));
 
         if (qtyMinusBtn) {
             qtyMinusBtn.addEventListener('click', () => {
                 if (quantity > 1) {
-                    quantity--;
-                    if (qtyValue) qtyValue.textContent = quantity;
-                    updateTotal();
+                    setOrderQuantity(quantity - 1);
                 }
             });
         }
 
         if (qtyPlusBtn) {
             qtyPlusBtn.addEventListener('click', () => {
-                const maxServings = Number(currentProduct.availableServings || 0);
-                if (maxServings > 0 && quantity >= maxServings) {
-                    alert(`Only ${maxServings} serving${maxServings === 1 ? '' : 's'} available for this item.`);
+                const maxServings = Math.floor(Number(currentProduct.availableServings || 0));
+                if (quantity >= orderQuantityLimit()) {
+                    if (maxServings > 0) {
+                        alert(`Only ${maxServings} serving${maxServings === 1 ? '' : 's'} available for this item.`);
+                    }
                     return;
                 }
-                quantity++;
-                if (qtyValue) qtyValue.textContent = quantity;
-                updateTotal();
+                setOrderQuantity(quantity + 1);
             });
         }
 
@@ -889,7 +918,7 @@ if ($shiftResult) {
 
                 // Reset the form for the next customization
                 quantity = 1;
-                qtyValue.textContent = 1;
+                qtyValue.value = '1';
                 selectedAddons = [];
                 addonOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
                 milkOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));

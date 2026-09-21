@@ -237,10 +237,10 @@ $branchId = $sessionBranchId > 0
                                 </div>
                             </div>
                         </div>
-                        <button class="export-btn" id="exportForecastBtn" type="button">
-                            <i class="fa-solid fa-arrow-down-to-line"></i>
-                            Export Report
-                        </button>
+                        <button type="button" class="export-btn" id="exportBtn">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export report</span>
+                    </button>
                         <div class="last-update-badge" id="lastUpdateBadge">
                             <i class="fa-solid fa-circle" style="color: #4CAF50; font-size: 8px;"></i>
                             <span id="lastUpdateText">Live</span>
@@ -634,14 +634,17 @@ $branchId = $sessionBranchId > 0
             doc.save(`forecasting-report_${fileDate}.pdf`);
         }
 
-        document.getElementById('exportForecastBtn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('exportForecastBtn');
+        document.getElementById('exportBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportBtn');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
             try {
                 await generateForecastPdfReport();
+            } catch (error) {
+                console.error('Forecast PDF export failed:', error);
+                alert('Unable to generate the forecasting report. Please refresh the page and try again.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;

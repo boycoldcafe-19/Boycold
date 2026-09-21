@@ -251,13 +251,6 @@
                     <section class="panel">
                         <div class="panel-header">
                             <span class="panel-title">Map Ingredients</span>
-                            <label class="toggle-field">
-                                Show inactive orders
-                                <span class="switch">
-                                    <input type="checkbox" id="showInactiveToggle">
-                                    <span class="switch-slider"></span>
-                                </span>
-                            </label>
                         </div>
                         <div class="map-panel-body" id="mapPanel"></div>
                     </section>

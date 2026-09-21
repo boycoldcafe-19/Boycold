@@ -513,10 +513,10 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
                             <i class="fa-solid fa-circle" style="color: #4CAF50; font-size: 8px;"></i>
                             <span id="lastUpdateText">Live</span>
                         </span>
-                        <button class="export-btn" id="exportDashboardBtn" type="button">
-                            <i class="fa-solid fa-arrow-down-to-line"></i>
-                            Export Report
-                        </button>
+                        <button type="button" class="export-btn" id="exportBtn">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export report</span>
+                    </button>
                         <button class="refresh-btn" id="refreshDataBtn">
                             <i class="fa-solid fa-arrows-rotate"></i>
                             Refresh Data
@@ -1049,14 +1049,17 @@ $statusCancelled = isset($dashboard['status_counts']['cancelled']) ? $dashboard[
             doc.save(`dashboard-report_${fileDate}.pdf`);
         }
 
-        document.getElementById('exportDashboardBtn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('exportDashboardBtn');
+        document.getElementById('exportBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportBtn');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
             try {
                 await generateDashboardPdfReport();
+            } catch (error) {
+                console.error('Dashboard PDF export failed:', error);
+                alert('Unable to generate the dashboard report. Please refresh the page and try again.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;

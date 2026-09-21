@@ -1214,6 +1214,7 @@ function orderhis_format_group_label(string $dateStr): string {
             let voidRowIdCounter = 0;
             let currentVoidOriginalPaid = 0;
             let currentVoidOrderId = 0;
+            const MAX_VOID_ITEM_QUANTITY = 9999;
 
             function productForVoidRow(rowState) {
                 return voidProducts.find((product) => Number(product.id) === Number(rowState.product_id)) || null;
@@ -1283,7 +1284,10 @@ function orderhis_format_group_label(string $dateStr): string {
                     return {
                         id: voidRowIdCounter++,
                         product_id: product ? Number(product.id) : 0,
-                        quantity: Math.max(1, Number.parseInt(item.quantity, 10) || 1),
+                        quantity: Math.min(
+                            MAX_VOID_ITEM_QUANTITY,
+                            Math.max(1, Number.parseInt(item.quantity, 10) || 1)
+                        ),
                         milk: matchingModifierName(item.milk, milkOptions),
                         addons: modifierNames(item.addons)
                             .map((addon) => matchingModifierName(addon, addonOptions))
@@ -1367,7 +1371,7 @@ function orderhis_format_group_label(string $dateStr): string {
                             <div class="void-item-right">
                                 <div class="void-qty-stepper">
                                     <button type="button" class="void-qty-minus" aria-label="Decrease quantity">−</button>
-                                    <span class="void-qty-value">${rowState.quantity}</span>
+                                    <input class="void-qty-value" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${rowState.quantity}" aria-label="Quantity" autocomplete="off">
                                     <button type="button" class="void-qty-plus" aria-label="Increase quantity">+</button>
                                 </div>
                                 ${voidRows.length > 1 ? '<button type="button" class="void-row-remove" aria-label="Remove item"><i class="fa-solid fa-trash"></i></button>' : ""}
@@ -1404,8 +1408,33 @@ function orderhis_format_group_label(string $dateStr): string {
                     rowEl.querySelector(".void-item-notes").addEventListener("input", (event) => {
                         rowState.notes = event.target.value;
                     });
+                    const quantityInput = rowEl.querySelector(".void-qty-value");
+                    quantityInput.addEventListener("keydown", (event) => {
+                        const allowedKeys = ["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "Home", "End"];
+                        if (event.ctrlKey || event.metaKey || allowedKeys.includes(event.key) || /^\d$/.test(event.key)) return;
+                        event.preventDefault();
+                    });
+                    quantityInput.addEventListener("input", (event) => {
+                        const input = event.currentTarget;
+                        const digits = input.value.replace(/\D/g, "").slice(0, 4);
+                        if (input.value !== digits) input.value = digits;
+                        if (digits === "") return;
+
+                        rowState.quantity = Math.min(
+                            MAX_VOID_ITEM_QUANTITY,
+                            Math.max(1, Number.parseInt(digits, 10) || 1)
+                        );
+                        updateVoidTotals();
+                    });
+                    quantityInput.addEventListener("blur", () => {
+                        rowState.quantity = Math.min(
+                            MAX_VOID_ITEM_QUANTITY,
+                            Math.max(1, Number.parseInt(quantityInput.value, 10) || 1)
+                        );
+                        renderVoidItems();
+                    });
                     rowEl.querySelector(".void-qty-plus").addEventListener("click", () => {
-                        rowState.quantity = Math.min(99, rowState.quantity + 1);
+                        rowState.quantity = Math.min(MAX_VOID_ITEM_QUANTITY, rowState.quantity + 1);
                         renderVoidItems();
                     });
                     rowEl.querySelector(".void-qty-minus").addEventListener("click", () => {
@@ -1681,7 +1710,9 @@ function orderhis_format_group_label(string $dateStr): string {
                     addons: Array.isArray(row.addons) ? row.addons : [],
                     notes: row.notes || ""
                 }));
-                if (!items.length || items.some((item) => item.product_id <= 0 || item.quantity <= 0)) return;
+                if (!items.length || items.some((item) =>
+                    item.product_id <= 0 || item.quantity < 1 || item.quantity > MAX_VOID_ITEM_QUANTITY
+                )) return;
 
                 voidConfirmBtn.disabled = true;
                 try {

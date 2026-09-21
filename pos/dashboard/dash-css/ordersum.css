@@ -502,10 +502,14 @@ body.dark-theme .profile-avatar .logo-dark {
     justify-content: center;
 }
 
-.qty-stepper span {
+.qty-value-input {
+    width: 42px;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
     font-weight: 600;
     font-size: 20px;
-    min-width: 16px;
     text-align: center;
     color: var(--text);
 }

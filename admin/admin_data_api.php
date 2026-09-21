@@ -242,9 +242,12 @@ try {
             $statusColumn = $connect->query("SHOW COLUMNS FROM users LIKE 'loyalty_card_status'");
             $hasStatusColumn = $statusColumn && $statusColumn->num_rows > 0;
             if (!$hasStatusColumn) {
-                $connect->query("ALTER TABLE users ADD COLUMN loyalty_card_status ENUM('active','inactive','completed') NOT NULL DEFAULT 'active' AFTER loyalty_stamps");
+                $connect->query("ALTER TABLE users ADD COLUMN loyalty_card_status ENUM('active','inactive') NOT NULL DEFAULT 'active' AFTER loyalty_stamps");
                 $hasStatusColumn = true;
             }
+            // The reward (not the card status) indicates when ten stamps are
+            // ready to redeem. Normalize legacy completed cards to Active.
+            $connect->query("UPDATE users SET loyalty_card_status = 'active' WHERE loyalty_card_status = 'completed'");
             $statusSelect = $hasStatusColumn ? 'MAX(u.loyalty_card_status) AS loyalty_card_status' : "'active' AS loyalty_card_status";
                  $result = $connect->query("SELECT u.id, u.card_no, u.firstname, u.lastname, u.phone, u.avatar, u.created_at,
                                     LEAST(10, GREATEST(0, u.loyalty_stamps)) AS loyalty_stamps, $statusSelect,
@@ -275,7 +278,7 @@ try {
         case 'loyalty_status':
             $id = (int)($data['id'] ?? 0);
             $status = $data['status'] ?? '';
-            if ($id < 1 || !in_array($status, ['active', 'inactive', 'completed'], true)) response(['success' => false, 'error' => 'Invalid loyalty update'], 422);
+            if ($id < 1 || !in_array($status, ['active', 'inactive'], true)) response(['success' => false, 'error' => 'Invalid loyalty update'], 422);
             
             $stmt = $connect->prepare('UPDATE users SET loyalty_card_status = ? WHERE id = ?');
             $stmt->bind_param('si', $status, $id);

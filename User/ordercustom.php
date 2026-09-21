@@ -332,9 +332,9 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
                                 Quantity
                             </div>
                             <div class="quantity-box">
-                                <button class="qty-btn" id="qtyMinus">-</button>
-                                <div class="qty-number" id="qtyValue">1</div>
-                                <button class="qty-btn" id="qtyPlus">+</button>
+                                <button class="qty-btn" id="qtyMinus" type="button" aria-label="Decrease quantity">-</button>
+                                <input class="qty-number" id="qtyValue" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="1" aria-label="Quantity" autocomplete="off">
+                                <button class="qty-btn" id="qtyPlus" type="button" aria-label="Increase quantity">+</button>
                             </div>
                         </div>
                     </div>
@@ -443,7 +443,7 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
         }
 
         function recalcTotal() {
-            const qty = parseInt(document.getElementById('qtyValue').textContent) || 1;
+            const qty = parseInt(document.getElementById('qtyValue').value, 10) || 1;
             const total = (basePrice + addOnTotal) * qty;
             document.getElementById('totalPrice').textContent = '₱' + total.toFixed(2);
         }
@@ -503,7 +503,7 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
             const orderText = activeOrder ? activeOrder.textContent.trim() : 'Pick-Up';
             document.getElementById('miniAddons').textContent = addonText ? addonText + ' • ' + orderText : orderText;
 
-            const qty = parseInt(document.getElementById('qtyValue').textContent) || 1;
+            const qty = parseInt(document.getElementById('qtyValue').value, 10) || 1;
             document.getElementById('miniQty').textContent = 'Qty: ' + qty;
         }
 
@@ -524,7 +524,7 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
 
         /* ── Build cart item from current page state ── */
         function buildCartItem() {
-            const qty = parseInt(document.getElementById('qtyValue').textContent) || 1;
+            const qty = parseInt(document.getElementById('qtyValue').value, 10) || 1;
 
             // Milk
             let milk = '';
@@ -635,25 +635,53 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
         });
 
         /* ── Quantity ── */
-        document.getElementById('qtyMinus').addEventListener('click', function() {
-            const el = document.getElementById('qtyValue');
-            let q = parseInt(el.textContent);
-            if (q > 1) {
-                el.textContent = q - 1;
-                recalcTotal();
-                updateMiniCard();
-            }
-        });
-        document.getElementById('qtyPlus').addEventListener('click', function() {
-            const el = document.getElementById('qtyValue');
-            const nextQty = parseInt(el.textContent) + 1;
-            if (availableServings > 0 && nextQty > availableServings) {
-                alert(`Only ${availableServings} serving${availableServings === 1 ? '' : 's'} available for this item.`);
-                return;
-            }
-            el.textContent = nextQty;
+        const qtyValue = document.getElementById('qtyValue');
+        const MAX_CUSTOM_ORDER_QUANTITY = 9999;
+
+        function customOrderQuantityLimit() {
+            const inventoryLimit = Math.floor(Number(availableServings) || 0);
+            return inventoryLimit > 0
+                ? Math.min(MAX_CUSTOM_ORDER_QUANTITY, inventoryLimit)
+                : MAX_CUSTOM_ORDER_QUANTITY;
+        }
+
+        function setCustomOrderQuantity(value) {
+            const normalizedQuantity = Math.min(
+                customOrderQuantityLimit(),
+                Math.max(1, parseInt(value, 10) || 1)
+            );
+            qtyValue.value = String(normalizedQuantity);
             recalcTotal();
             updateMiniCard();
+        }
+
+        qtyValue.addEventListener('keydown', function(event) {
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (event.ctrlKey || event.metaKey || allowedKeys.includes(event.key) || /^\d$/.test(event.key)) return;
+            event.preventDefault();
+        });
+        qtyValue.addEventListener('input', function() {
+            const digits = this.value.replace(/\D/g, '').slice(0, 4);
+            if (this.value !== digits) this.value = digits;
+            if (digits === '') return;
+            setCustomOrderQuantity(digits);
+        });
+        qtyValue.addEventListener('blur', function() {
+            setCustomOrderQuantity(this.value);
+        });
+
+        document.getElementById('qtyMinus').addEventListener('click', function() {
+            setCustomOrderQuantity((parseInt(qtyValue.value, 10) || 1) - 1);
+        });
+        document.getElementById('qtyPlus').addEventListener('click', function() {
+            const currentQuantity = parseInt(qtyValue.value, 10) || 1;
+            if (currentQuantity >= customOrderQuantityLimit()) {
+                if (availableServings > 0) {
+                    alert(`Only ${availableServings} serving${availableServings === 1 ? '' : 's'} available for this item.`);
+                }
+                return;
+            }
+            setCustomOrderQuantity(currentQuantity + 1);
         });
 
         /* ── Nav Sidebar ── */

@@ -230,8 +230,8 @@ function pos_void_normalize_adjusted_items(mysqli $connect, mixed $requestedItem
         $productId = (int) ($requested['product_id'] ?? 0);
         $quantity = (int) ($requested['quantity'] ?? 0);
         $product = $productsById[$productId] ?? null;
-        if (!$product || $quantity < 1 || $quantity > 99) {
-            throw new RuntimeException('Choose an available menu item and valid quantity.');
+        if (!$product || $quantity < 1 || $quantity > 9999) {
+            throw new RuntimeException('Choose an available menu item and a quantity from 1 to 9999.');
         }
 
         $milkName = preg_replace('/\s+/', ' ', trim((string) ($requested['milk'] ?? '')));

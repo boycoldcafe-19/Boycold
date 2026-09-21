@@ -577,10 +577,10 @@ if (($_GET['format'] ?? '') === 'json') {
                                 </div>
                             </div>
                         </div>
-                        <button class="export-btn" id="exportAnalyticsBtn" type="button">
-                            <i class="fa-solid fa-arrow-down-to-line"></i>
-                            Export Report
-                        </button>
+                        <button type="button" class="export-btn" id="exportBtn">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export report</span>
+                    </button>
                     </div>
                 </div>
 
@@ -1115,14 +1115,17 @@ if (($_GET['format'] ?? '') === 'json') {
             doc.save(`data-analytics-report_${fileDate}.pdf`);
         }
 
-        document.getElementById('exportAnalyticsBtn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('exportAnalyticsBtn');
+        document.getElementById('exportBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('exportBtn');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
             try {
                 await generateAnalyticsPdfReport();
+            } catch (error) {
+                console.error('Analytics PDF export failed:', error);
+                alert('Unable to generate the data analytics report. Please refresh the page and try again.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;

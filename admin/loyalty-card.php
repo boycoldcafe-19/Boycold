@@ -239,7 +239,6 @@
                             <option value="All">All Status</option>
                             <option value="Active">Active</option>
                             <option value="Inactive">Inactive</option>
-                            <option value="Ready to be Claimed">Ready to be Claimed</option>
                         </select>
                         <i class="fa-solid fa-chevron-down"
                             style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
@@ -255,7 +254,7 @@
 
                     <button class="export-btn" id="exportBtn">
                         <i class="fa-solid fa-download"></i>
-                        <span>Export List</span>
+                        <span>Export report</span>
                     </button>
                 </div>
 
@@ -323,7 +322,7 @@
                         <span class="info-label">Reward</span>
                         <span class="info-value" id="drawerRewardText"
                             style="display: flex; align-items: center; gap: 6px;">
-                            <i class="fa-solid fa-gift" style="color: var(--primary);"></i> Free Drink
+                            <i class="fa-solid fa-gift" style="color: var(--primary);"></i> Ready to be Claimed
                         </span>
                     </div>
                 </div>
@@ -490,38 +489,35 @@
         }
 
         function normalizeStatusLabel(status, stamps = 0, redeemed = false) {
-            const normalized = String(status || '').trim();
-            const claimReady = stamps >= 10 && !redeemed;
-
-            if (claimReady || normalized.toLowerCase() === 'completed') {
-                return 'Ready to be Claimed';
-            }
-
-            if (normalized.toLowerCase() === 'active') return 'Active';
-            if (normalized.toLowerCase() === 'inactive') return 'Inactive';
-            return normalized || 'Active';
+            // Card account status is independent of reward eligibility.
+            // A full card remains Active; its reward cell shows the claim state.
+            return String(status || '').trim().toLowerCase() === 'inactive'
+                ? 'Inactive'
+                : 'Active';
         }
 
-        // Filter and Render Logic
-        function renderFilteredTable() {
+        function getFilteredLoyaltyCards() {
             const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
             const selectedStatus = document.getElementById('statusFilter').value;
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
 
-            const filteredData = cardsData.filter(item => {
+            return cardsData.filter(item => {
                 const statusLabel = normalizeStatusLabel(item.status, item.stamps, item.redeemed);
                 const matchesSearch = item.id.toLowerCase().includes(searchValue) ||
                     item.customer.toLowerCase().includes(searchValue) ||
                     item.phone.toLowerCase().includes(searchValue);
-
-                const matchesStatus = (selectedStatus === 'All') || (statusLabel === selectedStatus);
-
+                const matchesStatus = selectedStatus === 'All' || statusLabel === selectedStatus;
                 const matchesDate = (!dateFrom || item.activationDate >= dateFrom) &&
                     (!dateTo || item.activationDate <= dateTo);
 
                 return matchesSearch && matchesStatus && matchesDate;
             });
+        }
+
+        // Filter and Render Logic
+        function renderFilteredTable() {
+            const filteredData = getFilteredLoyaltyCards();
 
             const tbody = document.getElementById('loyaltyTableBody');
             tbody.innerHTML = '';
@@ -539,11 +535,12 @@
                 const canShowActionMenu = item.redeemed || item.stamps < 10;
                 const needsReactivation = item.status === 'Inactive' || item.status === 'Completed' || item.stamps >= 10;
                 const actionIsClaimed = Boolean(item.redeemed);
+                const rewardTitle = item.stamps >= 10 && !item.redeemed
+                    ? 'Ready to be Claimed'
+                    : item.reward;
                 const rewardText = item.redeemed
                     ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
-                    : (item.stamps >= 10
-                        ? `<span>Ready to be Claimed</span>`
-                        : (item.stamps === 0 ? '' : `<span>Not Redeemed</span>`));
+                    : (item.stamps === 0 ? '' : (item.stamps >= 10 ? '' : `<span>Not Redeemed</span>`));
 
                 tr.innerHTML = `
                     <td>
@@ -569,7 +566,7 @@
                                 <i class="fa-solid fa-gift"></i>
                             </div>
                             <div class="reward-info">
-                                <strong>${item.reward}</strong>
+                                <strong>${rewardTitle}</strong>
                                 ${rewardText}
                             </div>
                         </div>
@@ -666,32 +663,177 @@
         // Header Dropdowns Handlers
 
 
-        // Export PDF Handler
-        document.getElementById('exportBtn').onclick = function () {
+        // Same letterhead and table treatment used by the other Admin reports.
+        const LOYALTY_REPORT_MAROON = [105, 39, 39];
+
+        function loadLoyaltyReportLogo() {
+            return new Promise((resolve) => {
+                const image = new Image();
+                image.crossOrigin = 'anonymous';
+                image.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = image.naturalWidth;
+                        canvas.height = image.naturalHeight;
+                        canvas.getContext('2d').drawImage(image, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (error) {
+                        resolve(null);
+                    }
+                };
+                image.onerror = () => resolve(null);
+                image.src = new URL('../img/LOGO.png', document.baseURI).href;
+            });
+        }
+
+        function loyaltyRewardLabel(card) {
+            if (card.redeemed) return card.dateRedeemed ? `Redeemed\n${card.dateRedeemed}` : 'Redeemed';
+            return card.stamps >= 10 ? 'Ready to be Claimed' : 'Free Drink';
+        }
+
+        async function generateLoyaltyPdfReport(cards) {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const marginX = 15;
+            const now = new Date();
+            const generatedOn = now.toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
 
-            doc.setFontSize(18);
-            doc.text('BoyCold Cafe - Loyalty Cards List', 14, 20);
+            const logoDataUrl = await loadLoyaltyReportLogo();
+            const logoSize = 18;
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'PNG', marginX, 12, logoSize, logoSize);
+            }
 
-            const tableRows = cardsData.map(c => [
-                c.id,
-                c.customer,
-                c.phone,
-                `${c.stamps}/10`,
-                c.reward,
-                normalizeStatusLabel(c.status, c.stamps, c.redeemed)
+            doc.setTextColor(20, 20, 20);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('BOYCOLD CAFE', marginX + logoSize + 6, 19);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(110, 110, 110);
+            doc.text('Administration Panel', marginX + logoSize + 6, 25);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...LOYALTY_REPORT_MAROON);
+            doc.text('LOYALTY CARD REPORT', pageWidth - marginX, 18, { align: 'right' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(110, 110, 110);
+            doc.text(`Generated: ${generatedOn}`, pageWidth - marginX, 24, { align: 'right' });
+
+            doc.setDrawColor(...LOYALTY_REPORT_MAROON);
+            doc.setLineWidth(0.8);
+            doc.line(marginX, 34, pageWidth - marginX, 34);
+
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const statusLabel = statusFilter === 'All' ? 'All Status' : `${statusFilter} only`;
+            const dateLabel = dateFrom && dateTo
+                ? `${dateFrom} to ${dateTo}`
+                : (dateFrom ? `From ${dateFrom}` : (dateTo ? `Until ${dateTo}` : 'All dates'));
+
+            doc.setFontSize(9.5);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Scope:', marginX, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text('All loyalty cards', marginX + 18, 41);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Prepared By:', marginX, 46.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Admin', marginX + 24, 46.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Filter:', pageWidth - marginX - 65, 41);
+            doc.setFont('helvetica', 'normal');
+            doc.text(statusLabel, pageWidth - marginX - 40, 41);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Date Range:', pageWidth - marginX - 65, 46.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text(dateLabel, pageWidth - marginX - 40, 46.5);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Records:', pageWidth - marginX - 65, 52);
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(cards.length), pageWidth - marginX - 40, 52);
+
+            const tableRows = cards.map(card => [
+                card.id,
+                `${card.customer}\n${card.phone}`,
+                `${card.stamps}/10`,
+                loyaltyRewardLabel(card),
+                normalizeStatusLabel(card.status, card.stamps, card.redeemed)
             ]);
 
             doc.autoTable({
-                startY: 30,
-                head: [['Card ID', 'Customer', 'Phone', 'Progress', 'Reward', 'Status']],
+                startY: 58,
+                margin: { left: marginX, right: marginX },
+                head: [['Card ID', 'Customer', 'Progress', 'Reward', 'Status']],
                 body: tableRows,
-                headStyles: { fillColor: [105, 39, 39] }
+                styles: {
+                    font: 'helvetica', fontSize: 8.5, cellPadding: 3,
+                    lineColor: [196, 193, 193], lineWidth: 0.1, valign: 'middle'
+                },
+                headStyles: {
+                    fillColor: LOYALTY_REPORT_MAROON, textColor: [255, 255, 255],
+                    fontStyle: 'bold', halign: 'left'
+                },
+                alternateRowStyles: { fillColor: [247, 245, 243] },
+                columnStyles: {
+                    0: { cellWidth: 26 },
+                    2: { cellWidth: 24, halign: 'center' },
+                    4: { cellWidth: 26, halign: 'center' }
+                },
+                didParseCell: (data) => {
+                    if (data.section !== 'body') return;
+                    if (data.column.index === 3 && String(data.cell.raw).startsWith('Ready to be Claimed')) {
+                        data.cell.styles.textColor = [30, 156, 78];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                    if (data.column.index === 4) {
+                        const active = data.cell.raw === 'Active';
+                        data.cell.styles.textColor = active ? [30, 156, 78] : [196, 60, 60];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                },
+                didDrawPage: () => {
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(140, 140, 140);
+                    doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth - marginX, pageHeight - 10, { align: 'right' });
+                    doc.text('BoyCold Cafe - Internal Document', marginX, pageHeight - 10);
+                }
             });
 
-            doc.save('loyalty-cards-export.pdf');
-        };
+            doc.save(`loyalty-card-report_${now.toISOString().slice(0, 10)}.pdf`);
+        }
+
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', async () => {
+                const cardsToExport = getFilteredLoyaltyCards();
+                if (!cardsToExport.length) return;
+
+                const originalHtml = exportBtn.innerHTML;
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Generating...</span>';
+                try {
+                    await generateLoyaltyPdfReport(cardsToExport);
+                } finally {
+                    exportBtn.disabled = false;
+                    exportBtn.innerHTML = originalHtml;
+                }
+            });
+        }
 
         // Event Listeners for Filters
         document.getElementById('searchInput').addEventListener('input', renderFilteredTable);

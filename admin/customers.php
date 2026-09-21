@@ -246,8 +246,8 @@
                     </div>
 
                     <button class="export-btn" id="exportBtn">
-                        <i class="fa-solid fa-arrow-down-to-line"></i>
-                        Export List
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export report</span>
                     </button>
                 </div>
 

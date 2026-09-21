@@ -200,10 +200,10 @@ boycold_ensure_inventory_schema($connect);
                                 <option value="">Loading branches...</option>
                             </select>
                         </label>
-                        <button type="button" class="export-inventory-btn" id="exportInventoryBtn">
-                            <i class="fa-solid fa-arrow-down-to-line"></i>
-                            Export Report
-                        </button>
+                        <button type="button" class="export-btn" id="exportBtn">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export report</span>
+                    </button>
                     </div>
                 </div>
 
@@ -567,7 +567,7 @@ boycold_ensure_inventory_schema($connect);
             const searchInput = document.getElementById("ingredientSearch");
             const emptyState = document.getElementById("ingredientsEmpty");
             const branchSelect = document.getElementById("inventoryBranchSelect");
-            const exportButton = document.getElementById("exportInventoryBtn");
+            const exportButton = document.getElementById("exportBtn");
             let selectedBranchId = "";
 
             // ADD THIS BLOCK - it is missing entirely right now
@@ -810,6 +810,9 @@ boycold_ensure_inventory_schema($connect);
 
                 try {
                     await generateInventoryPdfReport();
+                } catch (error) {
+                    console.error('Inventory PDF export failed:', error);
+                    alert('Unable to generate the inventory report. Please refresh the page and try again.');
                 } finally {
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;

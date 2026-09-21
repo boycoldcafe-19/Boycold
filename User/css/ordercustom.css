@@ -583,12 +583,18 @@ html {
 
 .qty-number {
     width: 40px;
+    padding: 0;
     text-align: center;
     border-top: 1px solid #555;
     border-bottom: 1px solid #555;
+    border-left: 0;
+    border-right: 0;
+    outline: 0;
+    background: #fff;
     height: 32px;
     line-height: 32px;
     font-size: 15px;
+    font-family: 'Afacad', sans-serif;
     font-weight: 600;
 }
 

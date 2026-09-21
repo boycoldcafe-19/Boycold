@@ -361,12 +361,12 @@ $_SESSION['user_email'] = $user['email'];
                 ${item.addons ? `<p class="item-meta">Add-ons: ${item.addons}</p>` : ''}
             </div>
             <div class="cart-item-qty">
-                <button class="qty-btn" onclick="updateQty(${item.cartId}, -1)">−</button>
-                <input class="qty-val" type="number" min="1" max="${item.availableServings || item.qty}" value="${item.qty}"
+                <button class="qty-btn" type="button" onclick="updateQty(${item.cartId}, -1)">−</button>
+                <input class="qty-val" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${item.qty}"
                     aria-label="Quantity for ${item.name}"
-                    oninput="resizeQtyInput(this)"
+                    oninput="sanitizeQtyInput(this)"
                     onchange="setQty(${item.cartId}, this.value)">
-                <button class="qty-btn" onclick="updateQty(${item.cartId}, 1)">+</button>
+                <button class="qty-btn" type="button" onclick="updateQty(${item.cartId}, 1)">+</button>
             </div>
             <div class="cart-item-price">₱${item.total.toFixed(2)}</div>
             <button class="cart-item-delete" onclick="removeItem(${item.cartId})"><i class="fa-solid fa-trash"></i></button>
@@ -374,7 +374,22 @@ $_SESSION['user_email'] = $user['email'];
     `).join('');
             
             container.innerHTML = html;
-            container.querySelectorAll('.qty-val').forEach(resizeQtyInput);
+            container.querySelectorAll('.qty-val').forEach((input) => {
+                input.addEventListener('keydown', allowOnlyQuantityKeys);
+                resizeQtyInput(input);
+            });
+        }
+
+        function allowOnlyQuantityKeys(event) {
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (event.ctrlKey || event.metaKey || allowedKeys.includes(event.key) || /^\d$/.test(event.key)) return;
+            event.preventDefault();
+        }
+
+        function sanitizeQtyInput(input) {
+            const digits = String(input.value || '').replace(/\D/g, '').slice(0, 4);
+            if (input.value !== digits) input.value = digits;
+            resizeQtyInput(input);
         }
 
         function resizeQtyInput(input) {
