@@ -27,10 +27,19 @@ function activityLogIcon(string $category, string $action = ''): array
     if ($category === 'login' && $action === 'logout') return ['icon-red', 'fa-right-from-bracket'];
     if ($category === 'login' && $action === 'failed_login') return ['icon-red', 'fa-triangle-exclamation'];
 
+    if ($category === 'menu') {
+        return match ($action) {
+            'product_deleted', 'category_deleted' => ['icon-red', 'fa-trash'],
+            'stock_in' => ['icon-green', 'fa-boxes-stacked'],
+            'category_created' => ['icon-green', 'fa-folder-plus'],
+            'category_updated' => ['icon-orange', 'fa-pen-to-square'],
+            default => ['icon-orange', 'fa-mug-hot'],
+        };
+    }
+
     return match ($category) {
         'exports' => ['icon-purple', 'fa-file-arrow-down'],
         'loyalty' => ['icon-olive', 'fa-award'],
-        'menu' => [$action === 'product_deleted' ? 'icon-red' : 'icon-orange', $action === 'product_deleted' ? 'fa-trash' : 'fa-mug-hot'],
         'login' => ['icon-blue', 'fa-right-to-bracket'],
         'orders' => ['icon-green', 'fa-file-lines'],
         'shift' => ['icon-maroon', 'fa-clock'],
@@ -178,6 +187,21 @@ if (activityLogHasTable($connect, 'loyalty_transactions')) {
 }
 
 if (activityLogHasTable($connect, 'products')) {
+    $existingMenuLogs = activityLogResult($connect, "
+        SELECT action, summary, details
+        FROM activity_logs
+        WHERE category = 'menu'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 500
+    ");
+    $menuLogSignatures = [];
+    while ($existingLog = $existingMenuLogs?->fetch_assoc()) {
+        $action = strtolower((string) ($existingLog['action'] ?? ''));
+        $summary = strtolower((string) ($existingLog['summary'] ?? ''));
+        $details = strtolower((string) ($existingLog['details'] ?? ''));
+        $menuLogSignatures[$action . '|' . $summary . '|' . $details] = true;
+    }
+
     $products = activityLogResult($connect, "
         SELECT id, product_name, category, created_at, updated_at
         FROM products
@@ -189,24 +213,32 @@ if (activityLogHasTable($connect, 'products')) {
         $name = trim((string) ($product['product_name'] ?? 'Menu item'));
         $category = trim((string) ($product['category'] ?? ''));
         $categoryText = $category !== '' ? ' in ' . ucwords(str_replace('-', ' ', $category)) : '';
-        activityLogAdd(
-            $activities,
-            'menu',
-            'product_created',
-            'Menu Item Added',
-            $name . ' was added to the menu' . $categoryText . '.',
-            $product['created_at'] ?? null
-        );
-
-        if (!empty($product['updated_at']) && strtotime((string) $product['updated_at']) > strtotime((string) $product['created_at'])) {
+        $createdMessage = $name . ' was added to the menu' . $categoryText . '.';
+        $createdSignature = 'product_created|menu item added|' . strtolower($createdMessage);
+        if (!isset($menuLogSignatures[$createdSignature])) {
             activityLogAdd(
                 $activities,
                 'menu',
-                'product_updated',
-                'Menu Item Updated',
-                $name . ' was updated' . $categoryText . '.',
-                $product['updated_at']
+                'product_created',
+                'Menu Item Added',
+                $createdMessage,
+                $product['created_at'] ?? null
             );
+        }
+
+        if (!empty($product['updated_at']) && strtotime((string) $product['updated_at']) > strtotime((string) $product['created_at'])) {
+            $updatedMessage = $name . ' was updated' . $categoryText . '.';
+            $updatedSignature = 'product_updated|menu item updated|' . strtolower($updatedMessage);
+            if (!isset($menuLogSignatures[$updatedSignature])) {
+                activityLogAdd(
+                    $activities,
+                    'menu',
+                    'product_updated',
+                    'Menu Item Updated',
+                    $updatedMessage,
+                    $product['updated_at']
+                );
+            }
         }
     }
 }

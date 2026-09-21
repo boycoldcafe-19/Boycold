@@ -8,9 +8,10 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     boycold_ensure_inventory_schema($connect);
 
-    // No branch means the customer is still browsing before selecting a
-    // store. Return combined availability; a chosen branch gets its own
-    // stock only.
+    // No selected store means the customer is still browsing the menu. Show
+    // the combined available servings across active branches. Once a branch is
+    // selected in checkout, only that branch's stock is used for validation and
+    // deduction.
     $branchId = isset($_GET['branch_id']) && (int) $_GET['branch_id'] > 0
         ? (int) $_GET['branch_id']
         : 0;

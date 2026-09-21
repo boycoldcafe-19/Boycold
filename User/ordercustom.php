@@ -32,9 +32,6 @@ $productPrice = isset($_GET['price']) ? htmlspecialchars(strip_tags($_GET['price
 $productImage = isset($_GET['image']) ? htmlspecialchars(strip_tags($_GET['image'])) : '../picture/SC-Einspanner Latte _ 149 1.png';
 $productAddon = isset($_GET['addon']) ? htmlspecialchars(strip_tags($_GET['addon'])) : '';
 $availableServings = isset($_GET['servings']) ? max(0, (int) $_GET['servings']) : 0;
-$selectedBranchId = isset($_GET['branch_id']) && (int) $_GET['branch_id'] > 0
-    ? (int) $_GET['branch_id']
-    : 0;
 
 // Product category controls customization; order_type is only the pickup/delivery choice.
 $requestedProductId = isset($_GET['product_id']) ? max(0, (int) $_GET['product_id']) : 0;
@@ -403,7 +400,6 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
         let passedAddon = <?= json_encode($selectedSauce ?: ($productAddon ?: 'No Sauce')) ?>;
         let addOnTotal = 0;
         const availableServings = <?= (int) $availableServings ?>;
-        const selectedBranchId = <?= (int) $selectedBranchId ?>;
 
         function optionText(name, price) {
             return `${name}${Number(price) > 0 ? ` +₱${Number(price).toFixed(2)}` : ''}`;
@@ -568,16 +564,8 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
             };
         }
 
-        function requireSelectedStore() {
-            if (selectedBranchId > 0) return true;
-            alert('Please choose a store location first so your order uses that branch\'s ingredients.');
-            window.location.href = '../store/store.php';
-            return false;
-        }
-
         /* ── Add to Cart button ── */
         document.querySelector('.btn.cart-btn').addEventListener('click', async function() {
-            if (!requireSelectedStore()) return;
             const item = buildCartItem();
 
             try {
@@ -594,8 +582,7 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
                         milk: item.milk,
                         addons: item.addons,
                         order_type: item.orderType,
-                        notes: item.notes,
-                        branch_id: selectedBranchId
+                        notes: item.notes
                     })
                 });
                 const data = await res.json();
@@ -617,7 +604,6 @@ $showAddonChoices = !$isNoAddonItem && ($isBitesItem || !empty($productAddons));
            checkout.php checks for this and, when present, checks out
            only this single item instead of loading the full cart. */
         document.querySelector('.btn.checkout-btn').addEventListener('click', function() {
-            if (!requireSelectedStore()) return;
             const item = buildCartItem();
             sessionStorage.setItem('boycold_direct_order', JSON.stringify(item));
             // Also store the order type separately for pre-selection in checkout

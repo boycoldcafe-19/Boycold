@@ -320,7 +320,12 @@ $statusLabel = $statusLabels[$orderStatus] ?? ucfirst($orderStatus);
 $paymentMethodKey = strtolower($order['payment_method'] ?? '');
 $paymentStatusKey = strtolower($order['payment_status'] ?? '');
 $paymentMethodLabel = $paymentLabels[$paymentMethodKey] ?? ucfirst($paymentMethodKey);
-$paymentStepLabel = ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid') ? 'Payment on Delivery' : 'Payment Confirmed';
+$paymentStepLabel = 'Payment Confirmed';
+if ($paymentMethodKey === 'cod' && $paymentStatusKey !== 'paid') {
+    $paymentStepLabel = 'Payment on Delivery';
+} elseif ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
+    $paymentStepLabel = 'Payment Pending';
+}
 $addressLabel = $typeKey === 'delivery' ? 'Delivery Address' : ($typeKey === 'pickup' ? 'Pickup Branch' : 'Location');
 $addressValue = trim((string) ($order['address'] ?? '')) !== '' ? $order['address'] : $addressLabel;
 $statusMessage = $statusMessages[$orderStatus] ?? ['Order status updated.', ''];
@@ -338,71 +343,43 @@ if ($paymentMethodKey === 'qrph' && $paymentStatusKey !== 'paid') {
     $statusMessages['pending'] = ['Waiting for QRPh payment.', 'This order is confirmed automatically after PayMongo verifies the payment.'];
 }
 
-// Define different status flows based on payment method
-if ($paymentMethodKey === 'qrph') {
-    // QRPh flow: Order Confirm → Payment Pending → Preparing → Out for Delivery → Delivered
-    $statusIndex = [
-        'pending'   => 0,
-        'confirmed' => 0,
-        'preparing' => 2,
-        'ready'     => 3,
-        'delivered' => 4,
-        'completed' => 4,
-    ][$orderStatus] ?? 0;
+// Render one five-step status layout for every branch. QRPh and COD still
+// keep their correct payment state, but payment no longer changes the
+// position or the structure of the POS status UI.
+$statusIndex = [
+    'pending'   => 0,
+    'confirmed' => 0,
+    'preparing' => 2,
+    'ready'     => 3,
+    'delivered' => 4,
+    'completed' => 4,
+][$orderStatus] ?? 0;
 
-    $paymentReached = $paymentStatusKey === 'paid';
-    $stepReached = [
-        in_array($orderStatus, ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
-        in_array($orderStatus, ['confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
-        $paymentReached,
-        in_array($orderStatus, ['preparing', 'ready', 'delivered', 'completed'], true),
-        in_array($orderStatus, ['ready', 'delivered', 'completed'], true),
-    ];
+$paymentReached = $paymentStatusKey === 'paid';
+$stepReached = [
+    in_array($orderStatus, ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
+    $paymentReached,
+    in_array($orderStatus, ['preparing', 'ready', 'delivered', 'completed'], true),
+    in_array($orderStatus, ['ready', 'delivered', 'completed'], true),
+    in_array($orderStatus, ['delivered', 'completed'], true),
+];
 
-    $steps = [
-        ['title' => $orderStatus === 'pending' ? 'Order Pending' : 'Order Confirmed', 'icon' => $orderStatus === 'pending' ? 'fa-clock' : 'fa-check', 'note' => ''],
-        ['title' => $paymentStepLabel, 'icon' => 'fa-clipboard-check', 'note' => ''],
-        ['title' => 'Preparing', 'icon' => 'fa-mug-hot', 'note' => 'The order is being prepared'],
-        ['title' => 'Out for Delivery', 'icon' => 'fa-truck', 'note' => ''],
-        ['title' => 'Delivered', 'icon' => 'fa-house', 'note' => ''],
-    ];
-} else {
-    // COD flow: Order Confirm → Preparing → Out for Delivery → Payment Confirm → Delivered
-    $statusIndex = [
-        'pending'   => 0,
-        'confirmed' => 0,
-        'preparing' => 1,
-        'ready'     => 2,
-        'delivered' => 4,
-        'completed' => 4,
-    ][$orderStatus] ?? 0;
-
-    $paymentReached = $paymentStatusKey === 'paid';
-    $stepReached = [
-        in_array($orderStatus, ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'completed'], true),
-        in_array($orderStatus, ['preparing', 'ready', 'delivered', 'completed'], true),
-        in_array($orderStatus, ['ready', 'delivered', 'completed'], true),
-        $paymentReached,
-        in_array($orderStatus, ['delivered', 'completed'], true),
-    ];
-
-    $steps = [
-        ['title' => $orderStatus === 'pending' ? 'Order Pending' : 'Order Confirmed', 'icon' => $orderStatus === 'pending' ? 'fa-clock' : 'fa-check', 'note' => ''],
-        ['title' => 'Preparing', 'icon' => 'fa-mug-hot', 'note' => 'The order is being prepared'],
-        ['title' => 'Out for Delivery', 'icon' => 'fa-truck', 'note' => ''],
-        ['title' => 'Payment Confirm', 'icon' => 'fa-credit-card', 'note' => ''],
-        ['title' => 'Delivered', 'icon' => 'fa-house', 'note' => ''],
-    ];
-}
+$steps = [
+    ['title' => $orderStatus === 'pending' ? 'Order Pending' : 'Order Confirmed', 'icon' => $orderStatus === 'pending' ? 'fa-clock' : 'fa-check', 'note' => ''],
+    ['title' => $paymentStepLabel, 'icon' => 'fa-credit-card', 'note' => ''],
+    ['title' => 'Preparing', 'icon' => 'fa-mug-hot', 'note' => 'The order is being prepared'],
+    ['title' => 'Out for Delivery', 'icon' => 'fa-truck', 'note' => ''],
+    ['title' => 'Delivered', 'icon' => 'fa-house', 'note' => ''],
+];
 ?>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="dash-css/pos-status.css">
-    <link rel="stylesheet" href="dash-css/pos-controls.css">
-    <link rel="stylesheet" href="dash-css/pos-responsive.css">
+    <link rel="stylesheet" href="dash-css/pos-status.css?v=20260921-branch-unified">
+    <link rel="stylesheet" href="dash-css/pos-controls.css?v=20260921-branch-unified">
+    <link rel="stylesheet" href="dash-css/pos-responsive.css?v=20260921-branch-unified">
     <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -959,7 +936,7 @@ if ($paymentMethodKey === 'qrph') {
         })();
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js?v=20260921-popup-queue"></script>
+    <script src="order-notify.js?v=20260921-track-order"></script>
     <script src="shift-monitor.js"></script>
 </body>
 

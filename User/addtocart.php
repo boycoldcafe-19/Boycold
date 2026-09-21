@@ -255,34 +255,9 @@ $_SESSION['user_email'] = $user['email'];
 
         let currentCart = [];
 
-        function getSelectedBranchId() {
-            try {
-                const selectedStore = JSON.parse(
-                    sessionStorage.getItem('boycold_selected_store')
-                    || localStorage.getItem('boycold_selected_store')
-                    || 'null'
-                );
-                const branchId = Number(selectedStore?.branchId);
-                return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function requireSelectedStore() {
-            if (getSelectedBranchId()) return true;
-            alert('Please choose a store location first so your cart uses that branch\'s ingredients.');
-            window.location.href = '../store/store.php';
-            return false;
-        }
-
         async function loadCart() {
             try {
-                const branchId = getSelectedBranchId();
-                const query = branchId
-                    ? `?action=get&branch_id=${encodeURIComponent(branchId)}`
-                    : '?action=get';
-                const res = await fetch(`${CART_API}${query}`);
+                const res = await fetch(`${CART_API}?action=get`);
                 const data = await res.json();
                 if (data.success) {
                     currentCart = data.items;
@@ -422,7 +397,6 @@ $_SESSION['user_email'] = $user['email'];
         }
 
         async function saveQty(cartId, newQty) {
-            if (!requireSelectedStore()) return;
             try {
                 const res = await fetch(CART_API, {
                     method: 'POST',
@@ -432,8 +406,7 @@ $_SESSION['user_email'] = $user['email'];
                     body: JSON.stringify({
                         action: 'update',
                         cart_id: cartId,
-                        quantity: newQty,
-                        branch_id: getSelectedBranchId()
+                        quantity: newQty
                     })
                 });
                 const data = await res.json();

@@ -192,51 +192,14 @@ function applyFavUIAll() {
 
 function getSelectedStore() {
     try {
-        return JSON.parse(
-            sessionStorage.getItem('boycold_selected_store')
-            || localStorage.getItem('boycold_selected_store')
-            || 'null'
-        );
-    } catch (e) {
+        const raw = sessionStorage.getItem('boycold_selected_store') || localStorage.getItem('boycold_selected_store');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Number.isFinite(Number(parsed.branchId)) || Number(parsed.branchId) <= 0) return null;
+        return parsed;
+    } catch (error) {
         return null;
     }
-}
-
-function getSelectedBranchId() {
-    const branchId = Number(getSelectedStore()?.branchId);
-    return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
-}
-
-function updateMenuInventoryScope(branchId = getSelectedBranchId()) {
-    const scope = document.getElementById('menuInventoryScope');
-    if (!scope) return;
-
-    const selectedStore = getSelectedStore();
-    const branchName = String(selectedStore?.branchName || 'your selected store').trim();
-    scope.innerHTML = branchId
-        ? `<i class="fa-solid fa-store"></i><span>Showing ingredient availability for ${branchName}.</span>`
-        : '<i class="fa-solid fa-store"></i><span>Showing combined ingredient availability from all branches. Select a store before ordering.</span>';
-}
-
-async function isStoreOpen(branchId = getSelectedBranchId()) {
-    if (!branchId) {
-        alert('Please choose a store location first so we can use that branch\'s current ingredients.');
-        window.location.href = '../store/store.php';
-        return false;
-    }
-
-    try {
-        const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
-        const response = await fetch(`../api/store_status_api.php${query}`);
-        const data = await response.json();
-        if (data.success && !data.is_open) {
-            alert(data.message || 'Store is closed as of now. Please come back later.');
-            return false;
-        }
-    } catch (e) {
-        console.error('Unable to check store status:', e);
-    }
-    return true;
 }
 
 function productCanOrder(card) {
@@ -305,12 +268,13 @@ function applyProductAvailability(card, info) {
 
 async function refreshMenuAvailability() {
     try {
-        const branchId = getSelectedBranchId();
-        updateMenuInventoryScope(branchId);
-        const query = branchId
-            ? `?branch_id=${encodeURIComponent(branchId)}`
-            : '?scope=all';
-        const response = await fetch(`../api/inventory_availability_api.php${query}`, { cache: 'no-store' });
+        const selectedStore = getSelectedStore();
+        const branchId = selectedStore ? Number(selectedStore.branchId) : 0;
+        const url = branchId > 0
+            ? `../api/inventory_availability_api.php?branch_id=${encodeURIComponent(branchId)}`
+            : '../api/inventory_availability_api.php';
+
+        const response = await fetch(url, { cache: 'no-store' });
         const data = await response.json();
         if (!data.success || !data.availability) return;
 
@@ -384,15 +348,12 @@ document.addEventListener('click', async function(e) {
         if (!productCanOrder(card)) return;
         const name  = card.dataset.productName || card.querySelector('.card-name')?.textContent.trim() || '';
         if (!name) return;
-        const branchId = getSelectedBranchId();
-        if (!await isStoreOpen(branchId)) return;
-
         cartBtn.disabled = true;
         try {
             const res  = await fetch('../api/cart_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'add', product_name: name, quantity: 1, branch_id: branchId })
+                body: JSON.stringify({ action: 'add', product_name: name, quantity: 1 })
             });
             const data = await res.json();
             if (data.success) {
@@ -420,11 +381,8 @@ document.addEventListener('click', async function(e) {
         const price  = card.querySelector('.card-price')?.textContent.replace('₱','').trim() || '';
         const image  = card.querySelector('.card-image img')?.getAttribute('src') || '';
         const servings = card.dataset.availableServings || '0';
-        const branchId = getSelectedBranchId();
-        if (!await isStoreOpen(branchId)) return;
-
         const productId = card.dataset.productId || '';
-        const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId, product_id: productId });
+        const params = new URLSearchParams({ name, price, image, servings, product_id: productId });
         window.location.href = 'ordercustom.php?' + params.toString();
         return;
     }

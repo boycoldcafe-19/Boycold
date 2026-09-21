@@ -41,9 +41,9 @@ if (!$isLoyaltyCardComplete) {
     $_SESSION['loyalty_popup_shown_for_completion'] = false;
 }
 
-// The store picker is browser-side. Before the customer chooses a store,
-// show the combined availability of active branches rather than silently
-// using Baliuag as the selected branch.
+// User menu serving counts are the total complete servings available across
+// active branches. The checkout store selector decides which branch is used
+// for final inventory validation and deduction.
 // Fetch all products from DB
 boycold_ensure_inventory_schema($connect);
 $branchId = 0;
@@ -177,10 +177,6 @@ $menuCategories = boycold_menu_get_categories($connect);
                     <p class="nsr-title">No results found</p>
                     <p class="nsr-sub">Try searching for something else.</p>
                 </div>
-                <div class="menu-inventory-scope" id="menuInventoryScope" role="status">
-                    <i class="fa-solid fa-store"></i>
-                    <span>Showing combined ingredient availability from all branches. Select a store before ordering.</span>
-                </div>
                 <div class="product-grid" id="productGrid">
                     <?php
                     if (!empty($productsList)) {
@@ -284,7 +280,7 @@ $menuCategories = boycold_menu_get_categories($connect);
                 </div>
             </div>
         </footer>
-        <script src="../scr/menu.js"></script>
+        <script src="../scr/menu.js?v=20260921-checkout-branch"></script>
         <!-- CART TOAST -->
 
         <div id="cartToast" style="

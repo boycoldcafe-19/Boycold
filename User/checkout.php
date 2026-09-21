@@ -702,11 +702,10 @@ $branches = $branches ?? [];
             }
 
             try {
-                const selectedBranchId = Number(document.getElementById('branchSelect')?.value) || 0;
-                const cartQuery = selectedBranchId > 0
-                    ? '?action=get&branch_id=' + encodeURIComponent(selectedBranchId)
-                    : '?action=get';
-                const res  = await fetch(CART_API + cartQuery);
+                // Cart quantities use the combined menu serving count. The
+                // selected checkout branch is validated authoritatively only
+                // when the order is placed, before its stock is reserved.
+                const res  = await fetch(CART_API + '?action=get');
                 const data = await res.json();
                 if (data.success) {
                     let allItems = data.items;

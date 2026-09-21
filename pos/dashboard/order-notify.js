@@ -443,7 +443,7 @@
         renderNextPopup();
     }
 
-    function closePopup(orderId = activePopupOrderId) {
+    function closePopup(orderId = activePopupOrderId, showNextPopup = true) {
         const normalizedOrderId = Number(orderId);
         if (Number.isInteger(normalizedOrderId) && normalizedOrderId > 0) {
             popupQueue = popupQueue.filter((queuedOrderId) => queuedOrderId !== normalizedOrderId);
@@ -458,7 +458,7 @@
         }
 
         savePopupState();
-        renderNextPopup();
+        if (showNextPopup) renderNextPopup();
     }
 
     // A customer can cancel QRPh while their order is in the visible popup or
@@ -553,7 +553,7 @@
 
     window.addEventListener('message', (event) => {
         const type = event.data?.type;
-        if (!['orderAccepted', 'orderCancelled', 'closeOrderPopup', 'orderUpdated'].includes(type)) {
+        if (!['orderAccepted', 'orderCancelled', 'closeOrderPopup', 'orderUpdated', 'trackOrder'].includes(type)) {
             return;
         }
 
@@ -567,6 +567,28 @@
             if (['orderAccepted', 'orderCancelled', 'orderUpdated'].includes(type)) {
                 refreshOnlineOrdersTable();
                 refreshOrderCount();
+            }
+            return;
+        }
+
+        if (type === 'trackOrder') {
+            try {
+                const trackUrl = new URL(String(event.data?.trackUrl || ''), window.location.href);
+                const targetOrderId = Number(trackUrl.searchParams.get('order_id'));
+                const isPosStatusPage = /\/pos\/dashboard\/pos-status\.php$/i.test(trackUrl.pathname);
+
+                // Never navigate the POS from data sent by another origin or
+                // to a URL that does not belong to the visible order popup.
+                if (event.origin !== window.location.origin
+                    || !isPosStatusPage
+                    || targetOrderId !== activePopupOrderId) {
+                    return;
+                }
+
+                closePopup(activePopupOrderId, false);
+                window.location.assign(`${trackUrl.pathname}${trackUrl.search}${trackUrl.hash}`);
+            } catch (error) {
+                console.error('Unable to open the tracked order status page', error);
             }
             return;
         }

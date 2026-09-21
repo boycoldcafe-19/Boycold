@@ -1070,6 +1070,57 @@ function boycold_get_product_inventory_availability(
     $availability = [];
     $isAllBranchesView = $branchId <= 0;
 
+    // Customer menu browsing has no checkout branch yet. Combine the number
+    // of complete servings from each active branch, rather than pooling raw
+    // ingredient stock across branches. Pooling ingredients can incorrectly
+    // make a drink look available when its ingredients exist in separate
+    // branches but neither branch can make the complete drink by itself.
+    if ($isAllBranchesView) {
+        $branchAvailability = [];
+        foreach (boycold_inventory_active_branch_ids($connect) as $activeBranchId) {
+            $branchAvailability[$activeBranchId] = boycold_get_product_inventory_availability(
+                $connect,
+                $activeBranchId,
+                $names
+            );
+        }
+
+        foreach ($products as $productKey => $product) {
+            $productName = (string) $product['product_name'];
+            $branchProducts = array_values(array_filter(
+                array_map(
+                    static fn (array $items) => $items[$productKey] ?? null,
+                    $branchAvailability
+                )
+            ));
+            $availableServings = array_sum(array_map(
+                static fn (array $item) => max(0, (int) ($item['available_servings'] ?? 0)),
+                $branchProducts
+            ));
+            $canOrder = (int) ($product['is_available'] ?? 0) === 1
+                && (bool) array_filter($branchProducts, static fn (array $item) => !empty($item['can_order']));
+            $reasons = array_values(array_unique(array_filter(array_map(
+                static fn (array $item) => trim((string) ($item['reason'] ?? '')),
+                $branchProducts
+            ))));
+
+            $availability[$productKey] = [
+                'key' => $productKey,
+                'product_id' => (int) ($product['id'] ?? 0),
+                'product_name' => $productName,
+                'status' => $canOrder ? 'available' : 'unavailable',
+                'status_label' => $canOrder ? 'Available' : 'Unavailable',
+                'ingredient_status' => $canOrder ? 'Sufficient' : 'Unavailable',
+                'can_order' => $canOrder,
+                'available_servings' => $availableServings,
+                'reason' => $canOrder ? '' : implode('; ', $reasons),
+                'ingredients' => [],
+            ];
+        }
+
+        return $availability;
+    }
+
     foreach ($products as $productKey => $product) {
         $productName = (string) $product['product_name'];
         $rows = $mappingRows[$productKey] ?? [];

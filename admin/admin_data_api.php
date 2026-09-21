@@ -460,6 +460,25 @@ try {
                 }
             }
 
+            $addedCategoryNames = [];
+            $updatedCategoryNames = [];
+            $removedCategoryNames = [];
+            foreach ($categories as $slug => $category) {
+                if (!isset($existingBySlug[$slug])) {
+                    $addedCategoryNames[$slug] = $category['name'];
+                } elseif (trim((string) ($existingBySlug[$slug]['name'] ?? '')) !== trim((string) $category['name'])) {
+                    $updatedCategoryNames[$slug] = [
+                        'old_name' => trim((string) ($existingBySlug[$slug]['name'] ?? '')),
+                        'new_name' => trim((string) $category['name']),
+                    ];
+                }
+            }
+            foreach ($existingBySlug as $slug => $existingCategory) {
+                if ((int) $existingCategory['is_active'] === 1 && !isset($categories[$slug])) {
+                    $removedCategoryNames[$slug] = trim((string) ($existingCategory['name'] ?? ''));
+                }
+            }
+
             $connect->begin_transaction();
             try {
                 $updateCategory = $connect->prepare(
@@ -498,6 +517,40 @@ try {
             } catch (Throwable $error) {
                 $connect->rollback();
                 throw $error;
+            }
+
+            foreach ($addedCategoryNames as $slug => $name) {
+                boycold_log_activity($connect, [
+                    'category' => 'menu',
+                    'action' => 'category_created',
+                    'summary' => 'Category Added',
+                    'details' => 'The ' . $name . ' category was added to the menu.',
+                    'actor_type' => 'admin',
+                    'entity_type' => 'menu_category',
+                    'metadata' => ['category_slug' => $slug, 'category_name' => $name],
+                ]);
+            }
+            foreach ($updatedCategoryNames as $slug => $change) {
+                boycold_log_activity($connect, [
+                    'category' => 'menu',
+                    'action' => 'category_updated',
+                    'summary' => 'Category Updated',
+                    'details' => 'The ' . $change['old_name'] . ' category was renamed to ' . $change['new_name'] . '.',
+                    'actor_type' => 'admin',
+                    'entity_type' => 'menu_category',
+                    'metadata' => ['category_slug' => $slug, 'old_name' => $change['old_name'], 'new_name' => $change['new_name']],
+                ]);
+            }
+            foreach ($removedCategoryNames as $slug => $name) {
+                boycold_log_activity($connect, [
+                    'category' => 'menu',
+                    'action' => 'category_deleted',
+                    'summary' => 'Category Removed',
+                    'details' => 'The ' . $name . ' category was removed from the menu.',
+                    'actor_type' => 'admin',
+                    'entity_type' => 'menu_category',
+                    'metadata' => ['category_slug' => $slug, 'category_name' => $name],
+                ]);
             }
 
             response(['success' => true, 'categories' => boycold_menu_get_categories($connect)]);
@@ -768,13 +821,34 @@ try {
             $connect->begin_transaction();
             $update = $connect->prepare('UPDATE ingredients SET stock = stock + ? WHERE id = ? AND branch_id = ?');
             $movement = $connect->prepare("INSERT INTO ingredient_stock_movements (ingredient_id, movement_type, quantity, resulting_stock) SELECT id, 'stock_in', ?, stock FROM ingredients WHERE id = ? AND branch_id = ?");
+            $loggedStockEntries = [];
             foreach ($items as $item) {
                 $id = (int)($item['id'] ?? 0);
                 if ($id < 1 && !empty($item['name'])) {
-                    $lookup = $connect->prepare('SELECT id FROM ingredients WHERE name = ? AND branch_id = ? LIMIT 1');
+                    $lookup = $connect->prepare('SELECT id, name FROM ingredients WHERE name = ? AND branch_id = ? LIMIT 1');
                     $lookup->bind_param('si', $item['name'], $branchId);
                     $lookup->execute();
-                    $id = (int)($lookup->get_result()->fetch_assoc()['id'] ?? 0);
+                    $ingredient = $lookup->get_result()->fetch_assoc();
+                    $id = (int)($ingredient['id'] ?? 0);
+                    if ($id > 0) {
+                        $loggedStockEntries[] = [
+                            'name' => trim((string) ($ingredient['name'] ?? (string) $item['name'])),
+                            'quantity' => (float) ($item['quantity'] ?? 0),
+                        ];
+                    }
+                    $lookup->close();
+                } else {
+                    $ingredientNameStmt = $connect->prepare('SELECT name FROM ingredients WHERE id = ? AND branch_id = ? LIMIT 1');
+                    $ingredientNameStmt->bind_param('ii', $id, $branchId);
+                    $ingredientNameStmt->execute();
+                    $ingredient = $ingredientNameStmt->get_result()->fetch_assoc();
+                    $ingredientNameStmt->close();
+                    if ($id > 0) {
+                        $loggedStockEntries[] = [
+                            'name' => trim((string) ($ingredient['name'] ?? 'Ingredient')),
+                            'quantity' => (float) ($item['quantity'] ?? 0),
+                        ];
+                    }
                 }
                 $quantity = (float)($item['quantity'] ?? 0);
                 if ($id < 1 || $quantity <= 0) continue;
@@ -784,6 +858,22 @@ try {
                 $movement->execute();
             }
             $connect->commit();
+
+            foreach ($loggedStockEntries as $entry) {
+                $quantity = (float) ($entry['quantity'] ?? 0);
+                if ($quantity <= 0) {
+                    continue;
+                }
+                boycold_log_activity($connect, [
+                    'category' => 'menu',
+                    'action' => 'stock_in',
+                    'summary' => 'Stock In',
+                    'details' => $entry['name'] . ' stock was increased by ' . number_format($quantity, 2) . '.',
+                    'actor_type' => 'admin',
+                    'entity_type' => 'ingredient',
+                    'metadata' => ['ingredient_name' => $entry['name'], 'quantity' => $quantity, 'branch_id' => $branchId],
+                ]);
+            }
             response(['success' => true]);
 
         case 'stock_history':

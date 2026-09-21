@@ -1194,7 +1194,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         })();
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js?v=20260921-popup-queue"></script>
+    <script src="order-notify.js?v=20260921-track-order"></script>
     <script src="shift-monitor.js"></script>
 </body>
 </html>

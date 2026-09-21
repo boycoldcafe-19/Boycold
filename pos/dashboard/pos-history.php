@@ -1755,7 +1755,7 @@ function orderhis_format_group_label(string $dateStr): string {
     </script>
 
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js?v=20260921-popup-queue"></script>
+    <script src="order-notify.js?v=20260921-track-order"></script>
     <script src="shift-monitor.js"></script>
     <script>
         (function refreshHistoryData() {

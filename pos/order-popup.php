@@ -322,7 +322,7 @@ $isQrphUnpaid = $order
                     <button type="button" class="btn" id="declineBtn" onclick="declineOrder(<?= $orderId ?>)">Decline Order</button>
                     <button type="button" class="btn btn-confirm" id="acceptBtn" onclick="acceptOrder(<?= $orderId ?>)">Confirm Order</button>
                 <?php else: ?>
-                    <button type="button" class="btn btn-confirm btn-single" onclick="goTop('<?= htmlspecialchars($trackUrl, ENT_QUOTES) ?>')">Track Order</button>
+                    <button type="button" class="btn btn-confirm btn-single" onclick="trackOrder('<?= htmlspecialchars($trackUrl, ENT_QUOTES) ?>', <?= $orderId ?>)">Track Order</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -341,6 +341,22 @@ $isQrphUnpaid = $order
             }
 
             goTop(fallbackUrl);
+        }
+
+        // The auto-popup lives inside the POS page as an iframe. Tell its
+        // parent to remove the overlay before it opens the order status page.
+        // A standalone popup keeps the normal top-level navigation behavior.
+        function trackOrder(url, orderId) {
+            if (isEmbeddedPopup()) {
+                window.top.postMessage({
+                    type: 'trackOrder',
+                    orderId: Number(orderId),
+                    trackUrl: new URL(url, window.location.href).href
+                }, window.location.origin);
+                return;
+            }
+
+            goTop(url);
         }
 
         // Navigates the top-level window for standalone popup pages.

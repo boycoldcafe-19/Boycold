@@ -1256,7 +1256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     })();
   </script>
-  <script src="order-notify.js?v=20260921-popup-queue"></script>
+  <script src="order-notify.js?v=20260921-track-order"></script>
   <script src="shift-monitor.js"></script>
 </body>
 
