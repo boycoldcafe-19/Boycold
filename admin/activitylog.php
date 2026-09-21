@@ -245,7 +245,27 @@ if (activityLogHasTable($connect, 'products')) {
 
 if (activityLogHasTable($connect, 'shift_logs')) {
     $shifts = activityLogResult($connect, "
-        SELECT s.id, s.status, s.opening_cash_float, s.cash_sales, s.gcash_sales, s.total_sales,
+         SELECT s.id, s.status, s.opening_cash_float, s.cash_sales, s.gcash_sales, s.total_sales,
+             COALESCE((
+                 SELECT SUM(GREATEST(replacement.total - original.total, 0))
+                 FROM orders replacement
+                 INNER JOIN orders original ON original.id = replacement.void_replacement_for_order_id
+                 WHERE replacement.shift_id = s.id
+                AND replacement.user_id IS NULL
+                AND replacement.status <> 'cancelled'
+                AND original.status = 'cancelled'
+                AND original.voided_at IS NOT NULL
+             ), 0) AS void_pay_in,
+             COALESCE((
+                 SELECT SUM(GREATEST(original.total - replacement.total, 0))
+                 FROM orders replacement
+                 INNER JOIN orders original ON original.id = replacement.void_replacement_for_order_id
+                 WHERE replacement.shift_id = s.id
+                AND replacement.user_id IS NULL
+                AND replacement.status <> 'cancelled'
+                AND original.status = 'cancelled'
+                AND original.voided_at IS NOT NULL
+             ), 0) AS void_pay_out,
                s.opened_at, s.closed_at, b.branch_name,
                COALESCE(NULLIF(TRIM(e.employee_name), ''), NULLIF(TRIM(CONCAT_WS(' ', e.firstname, e.lastname)), ''), 'POS employee') AS employee_name
         FROM shift_logs s
@@ -264,6 +284,8 @@ if (activityLogHasTable($connect, 'shift_logs')) {
             'cash_sales' => (float) ($shift['cash_sales'] ?? 0),
             'qr_sales' => (float) ($shift['gcash_sales'] ?? 0),
             'total_sales' => (float) ($shift['total_sales'] ?? 0),
+            'pay_in' => (float) ($shift['void_pay_in'] ?? 0),
+            'pay_out' => (float) ($shift['void_pay_out'] ?? 0),
         ];
         activityLogAdd(
             $activities,
@@ -620,6 +642,8 @@ $activities = array_slice($activities, 0, 250);
                                         data-cash="<?php echo activityLogEsc(number_format((float) ($activity['cash_sales'] ?? 0), 2, '.', '')); ?>"
                                         data-qrph="<?php echo activityLogEsc(number_format((float) ($activity['qr_sales'] ?? 0), 2, '.', '')); ?>"
                                         data-total-sales="<?php echo activityLogEsc(number_format((float) ($activity['total_sales'] ?? 0), 2, '.', '')); ?>"
+                                        data-payin="<?php echo activityLogEsc(number_format((float) ($activity['pay_in'] ?? 0), 2, '.', '')); ?>"
+                                        data-payout="<?php echo activityLogEsc(number_format((float) ($activity['pay_out'] ?? 0), 2, '.', '')); ?>"
                                     <?php endif; ?>>
                                     <div class="activity-icon <?php echo activityLogEsc((string) $activity['icon_class']); ?>">
                                         <i class="fa-solid <?php echo activityLogEsc((string) $activity['icon_name']); ?>"></i>
@@ -1089,14 +1113,16 @@ $activities = array_slice($activities, 0, 250);
                 const cashFloat = Number(item.dataset.cashfloat || 0);
                 const cashSales = Number(item.dataset.cash || 0);
                 const qrSales = Number(item.dataset.qrph || 0);
+                const payIn = Number(item.dataset.payin || 0);
+                const payOut = Number(item.dataset.payout || 0);
                 const totalSales = Number(item.dataset.totalSales || (cashSales + qrSales));
 
                 document.getElementById('shiftCashFloat').textContent = peso(cashFloat);
                 document.getElementById('shiftCashSales').textContent = peso(cashSales);
                 document.getElementById('shiftQrSales').textContent = peso(qrSales);
                 document.getElementById('shiftTotalSales').textContent = peso(totalSales);
-                document.getElementById('shiftPayIn').textContent = '+ ' + peso(0);
-                document.getElementById('shiftPayOut').textContent = '− ' + peso(0);
+                document.getElementById('shiftPayIn').textContent = '+ ' + peso(payIn);
+                document.getElementById('shiftPayOut').textContent = '− ' + peso(payOut);
                 // The POS opening float is shown separately below. It is not
                 // deducted from the Sales Total in this read-only summary.
                 document.getElementById('shiftSalesTotal').textContent = peso(totalSales);
