@@ -810,6 +810,11 @@ boycold_ensure_inventory_schema($connect);
 
                 try {
                     await generateInventoryPdfReport();
+                    await fetch('admin_data_api.php?action=activity_export', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ report: 'inventory' })
+                    });
                 } catch (error) {
                     console.error('Inventory PDF export failed:', error);
                     alert('Unable to generate the inventory report. Please refresh the page and try again.');

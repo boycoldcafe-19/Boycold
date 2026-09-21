@@ -187,6 +187,8 @@ try {
                 'analytics' => 'Data analytics report',
                 'forecast' => 'Forecast report',
                 'inventory' => 'Inventory report',
+                'customers' => 'Customer report',
+                'loyalty' => 'Loyalty report',
             ];
             if (!isset($reports[$report])) {
                 response(['success' => false, 'error' => 'Invalid report export'], 422);

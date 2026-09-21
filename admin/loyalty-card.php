@@ -828,6 +828,11 @@
                 exportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Generating...</span>';
                 try {
                     await generateLoyaltyPdfReport(cardsToExport);
+                    await fetch('admin_data_api.php?action=activity_export', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ report: 'loyalty' })
+                    });
                 } finally {
                     exportBtn.disabled = false;
                     exportBtn.innerHTML = originalHtml;

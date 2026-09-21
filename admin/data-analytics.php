@@ -1123,6 +1123,11 @@ if (($_GET['format'] ?? '') === 'json') {
 
             try {
                 await generateAnalyticsPdfReport();
+                await fetch('admin_data_api.php?action=activity_export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report: 'analytics' })
+                });
             } catch (error) {
                 console.error('Analytics PDF export failed:', error);
                 alert('Unable to generate the data analytics report. Please refresh the page and try again.');

@@ -176,7 +176,7 @@ function orderhis_format_group_label(string $dateStr): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="dash-css/pos-history.css">
+    <link rel="stylesheet" href="dash-css/pos-history.css?v=20260921-void-modal">
     <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">

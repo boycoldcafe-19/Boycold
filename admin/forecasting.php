@@ -642,6 +642,11 @@ $branchId = $sessionBranchId > 0
 
             try {
                 await generateForecastPdfReport();
+                await fetch('admin_data_api.php?action=activity_export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report: 'forecast' })
+                });
             } catch (error) {
                 console.error('Forecast PDF export failed:', error);
                 alert('Unable to generate the forecasting report. Please refresh the page and try again.');

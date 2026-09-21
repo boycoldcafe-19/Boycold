@@ -1010,6 +1010,11 @@
 
                 try {
                     await generatePdfReport(rowsToExport);
+                    await fetch('admin_data_api.php?action=activity_export', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ report: 'customers' })
+                    });
                 } finally {
                     exportBtn.disabled = false;
                     exportBtn.innerHTML = originalHtml;
