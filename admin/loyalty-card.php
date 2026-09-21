@@ -540,7 +540,7 @@
                     : item.reward;
                 const rewardText = item.redeemed
                     ? `<span>Redeemed</span><br><span class="date-green">${item.dateRedeemed}</span>`
-                    : (item.stamps === 0 ? '' : (item.stamps >= 10 ? '' : `<span>Not Redeemed</span>`));
+                    : (item.stamps === 0 ? '' : (item.stamps >= 10 ? '' : `<span>In Progress</span>`));
 
                 tr.innerHTML = `
                     <td>

@@ -9,6 +9,8 @@ pos_start_session();
 require_once '../config/db_config.php';
 $guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
+require_once '../../config/order_void_service.php';
+boycold_ensure_order_void_schema($connect);
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -161,6 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'qrph_orders' => $sales['digital_orders'],
         'online_sales' => $sales['online_sales'],
         'online_orders' => $sales['online_orders'],
+        'void_pay_in' => $sales['void_pay_in'],
+        'void_pay_out' => $sales['void_pay_out'],
         'total_sales' => $sales['total_sales'],
         'total_orders' => $sales['total_orders']
       ];
@@ -468,6 +472,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <span class="row-value" id="ssOnlineSales">₱0.00</span>
                   <span class="row-sub" id="ssOnlineOrders">0 Orders</span>
                 </span>
+              </div>
+
+              <div class="row" id="ssVoidPayInRow" style="display:none;">
+                <span class="row-label">Void Pay In</span>
+                <span class="row-value green" id="ssVoidPayIn">₱0.00</span>
+              </div>
+
+              <div class="row" id="ssVoidPayOutRow" style="display:none;">
+                <span class="row-label">Void Pay Out</span>
+                <span class="row-value negative" id="ssVoidPayOut">-₱0.00</span>
               </div>
 
               <div class="highlight-box">
@@ -817,6 +831,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       const ssDigitalOrders = document.getElementById('ssDigitalOrders');
       const ssOnlineSales = document.getElementById('ssOnlineSales');
       const ssOnlineOrders = document.getElementById('ssOnlineOrders');
+      const ssVoidPayInRow = document.getElementById('ssVoidPayInRow');
+      const ssVoidPayIn = document.getElementById('ssVoidPayIn');
+      const ssVoidPayOutRow = document.getElementById('ssVoidPayOutRow');
+      const ssVoidPayOut = document.getElementById('ssVoidPayOut');
       const ssTotalSales = document.getElementById('ssTotalSales');
       const ssTotalOrders = document.getElementById('ssTotalOrders');
 
@@ -832,7 +850,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         digital: 0,
         digitalOrders: 0,
         online: 0,
-        onlineOrders: 0
+        onlineOrders: 0,
+        voidPayIn: 0,
+        voidPayOut: 0
       };
 
       function showTab(tabName) {
@@ -898,6 +918,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               liveSales.digitalOrders = data.sales.qrph_orders;
               liveSales.online = data.sales.online_sales;
               liveSales.onlineOrders = data.sales.online_orders;
+              liveSales.voidPayIn = Number(data.sales.void_pay_in || 0);
+              liveSales.voidPayOut = Number(data.sales.void_pay_out || 0);
               renderSalesSummary();
               renderCashFloat();
             }
@@ -944,6 +966,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         ssOnlineSales.textContent = formatPeso(liveSales.online);
         ssOnlineOrders.textContent = liveSales.onlineOrders + ' Orders';
+
+        ssVoidPayIn.textContent = formatPeso(liveSales.voidPayIn);
+        ssVoidPayInRow.style.display = liveSales.voidPayIn > 0 ? '' : 'none';
+        ssVoidPayOut.textContent = '-' + formatPeso(liveSales.voidPayOut);
+        ssVoidPayOutRow.style.display = liveSales.voidPayOut > 0 ? '' : 'none';
 
         const totalSales = liveSales.cash + liveSales.digital + liveSales.online;
         const totalOrders = liveSales.cashOrders + liveSales.digitalOrders + liveSales.onlineOrders;

@@ -37,12 +37,63 @@ function pos_shift_sales(mysqli $connect, int $shiftId): array
          FROM orders
                  WHERE shift_id = ?
                      AND user_id IS NULL
+                     AND (void_replacement_for_order_id IS NULL OR void_replacement_for_order_id = 0)
                      AND (status != 'cancelled' OR status IS NULL)"
     );
     $stmt->bind_param('i', $shiftId);
     $stmt->execute();
     $sales = $stmt->get_result()->fetch_assoc() ?: [];
     $stmt->close();
+
+    // Apply the difference between each voided original and its replacement.
+    $voidStmt = $connect->prepare(
+        "SELECT original.total AS original_total, replacement.total AS replacement_total,
+                original.payment_method
+         FROM orders replacement
+         INNER JOIN orders original ON original.id = replacement.void_replacement_for_order_id
+         WHERE replacement.shift_id = ?
+           AND replacement.user_id IS NULL
+           AND replacement.status <> 'cancelled'
+           AND original.status = 'cancelled'
+           AND original.voided_at IS NOT NULL"
+    );
+    $voidStmt->bind_param('i', $shiftId);
+    $voidStmt->execute();
+    $voidResult = $voidStmt->get_result();
+    $voidPayIn = 0.0;
+    $voidPayOut = 0.0;
+    $voidOriginalSales = 0.0;
+    $voidOriginalCashSales = 0.0;
+    $voidOriginalDigitalSales = 0.0;
+    $voidCashOrders = 0;
+    $voidDigitalOrders = 0;
+    $voidCashSales = 0.0;
+    $voidDigitalSales = 0.0;
+    while ($void = $voidResult->fetch_assoc()) {
+        $originalTotal = (float) ($void['original_total'] ?? 0);
+        $difference = round(
+            (float) ($void['replacement_total'] ?? 0) - $originalTotal,
+            2
+        );
+        $voidOriginalSales += $originalTotal;
+        if ($difference > 0) {
+            $voidPayIn += $difference;
+        } elseif ($difference < 0) {
+            $voidPayOut += abs($difference);
+        }
+
+        $paymentMethod = strtolower((string) ($void['payment_method'] ?? ''));
+        if (in_array($paymentMethod, ['cod', 'cash'], true)) {
+            $voidOriginalCashSales += $originalTotal;
+            $voidCashSales += $difference;
+            $voidCashOrders++;
+        } elseif (in_array($paymentMethod, ['qrph', 'gcash'], true)) {
+            $voidOriginalDigitalSales += $originalTotal;
+            $voidDigitalSales += $difference;
+            $voidDigitalOrders++;
+        }
+    }
+    $voidStmt->close();
 
     $branchStmt = $connect->prepare('SELECT branch_id, opened_at FROM shift_logs WHERE id = ? LIMIT 1');
     $branchStmt->bind_param('i', $shiftId);
@@ -68,14 +119,16 @@ function pos_shift_sales(mysqli $connect, int $shiftId): array
     $onlineStmt->close();
 
     return [
-        'cash_sales' => (float) ($sales['cash_sales'] ?? 0),
-        'digital_sales' => (float) ($sales['digital_sales'] ?? 0),
-        'cash_orders' => (int) ($sales['cash_orders'] ?? 0),
-        'digital_orders' => (int) ($sales['digital_orders'] ?? 0),
+        'cash_sales' => (float) ($sales['cash_sales'] ?? 0) + $voidOriginalCashSales + $voidCashSales,
+        'digital_sales' => (float) ($sales['digital_sales'] ?? 0) + $voidOriginalDigitalSales + $voidDigitalSales,
+        'cash_orders' => (int) ($sales['cash_orders'] ?? 0) + $voidCashOrders,
+        'digital_orders' => (int) ($sales['digital_orders'] ?? 0) + $voidDigitalOrders,
         'online_sales' => (float) ($onlineSales['online_sales'] ?? 0),
         'online_orders' => (int) ($onlineSales['online_orders'] ?? 0),
-        'total_sales' => (float) ($sales['total_sales'] ?? 0) + (float) ($onlineSales['online_sales'] ?? 0),
-        'total_orders' => (int) ($sales['total_orders'] ?? 0) + (int) ($onlineSales['online_orders'] ?? 0),
+        'total_sales' => (float) ($sales['total_sales'] ?? 0) + (float) ($onlineSales['online_sales'] ?? 0) + $voidOriginalSales + $voidPayIn - $voidPayOut,
+        'total_orders' => (int) ($sales['total_orders'] ?? 0) + (int) ($onlineSales['online_orders'] ?? 0) + $voidCashOrders + $voidDigitalOrders,
+        'void_pay_in' => round($voidPayIn, 2),
+        'void_pay_out' => round($voidPayOut, 2),
     ];
 }
 
