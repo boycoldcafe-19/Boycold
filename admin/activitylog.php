@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/admin_guard.php';
 require_once __DIR__ . '/../config/activity_logger.php';
+require_once __DIR__ . '/../config/order_void_service.php';
+
+boycold_ensure_order_void_schema($connect);
 
 function activityLogEsc(string $value): string
 {
@@ -107,7 +110,7 @@ if (activityLogHasTable($connect, 'login_logs')) {
 
 if (activityLogHasTable($connect, 'orders')) {
     $orders = activityLogResult($connect, "
-        SELECT o.id, o.status, o.order_type, o.total, o.created_at, o.updated_at, b.branch_name,
+        SELECT o.id, o.status, o.voided_at, o.order_type, o.total, o.created_at, o.updated_at, b.branch_name,
                COALESCE(NULLIF(TRIM(e.employee_name), ''), NULLIF(TRIM(CONCAT_WS(' ', e.firstname, e.lastname)), ''), '') AS cashier_name
         FROM orders o
         LEFT JOIN branches b ON b.id = o.branch_id
@@ -130,7 +133,9 @@ if (activityLogHasTable($connect, 'orders')) {
             $order['created_at'] ?? null
         );
 
-        if (!empty($order['updated_at']) && strtotime((string) $order['updated_at']) > strtotime((string) $order['created_at'])) {
+        // A POS void has its own recorded audit log below. Do not also create
+        // a misleading generic "Order Updated / Cancelled" event for it.
+        if (empty($order['voided_at']) && !empty($order['updated_at']) && strtotime((string) $order['updated_at']) > strtotime((string) $order['created_at'])) {
             activityLogAdd(
                 $activities,
                 'orders',
@@ -261,11 +266,13 @@ if (boycold_activity_log_available($connect)) {
         LIMIT 250
     ");
     while ($activity = $recordedActivities?->fetch_assoc()) {
+        $action = (string) ($activity['action'] ?? 'recorded');
+        $isVoidAdjustment = $action === 'order_voided_adjusted';
         activityLogAdd(
             $activities,
             (string) ($activity['category'] ?? 'system'),
-            (string) ($activity['action'] ?? 'recorded'),
-            (string) ($activity['summary'] ?? 'System Activity'),
+            $action,
+            $isVoidAdjustment ? 'Void Order' : (string) ($activity['summary'] ?? 'System Activity'),
             (string) ($activity['details'] ?? 'A system activity was recorded.'),
             $activity['created_at'] ?? null
         );
@@ -572,7 +579,9 @@ $activities = array_slice($activities, 0, 250);
                                 [$activityDate, $activityTime] = activityLogDateParts((string) $activity['occurred_at']);
                                 $isShiftActivity = ($activity['category'] ?? '') === 'shift';
                                 ?>
-                                <li class="activity-item" data-category="<?php echo activityLogEsc((string) $activity['category']); ?>"
+                                <li class="activity-item"
+                                    data-category="<?php echo activityLogEsc((string) $activity['category']); ?>"
+                                    data-action="<?php echo activityLogEsc((string) $activity['action']); ?>"
                                     <?php if ($isShiftActivity): ?>
                                         data-status="<?php echo activityLogEsc((string) ($activity['shift_status'] ?? 'closed')); ?>"
                                         data-cashfloat="<?php echo activityLogEsc(number_format((float) ($activity['cash_float'] ?? 0), 2, '.', '')); ?>"
@@ -764,11 +773,6 @@ $activities = array_slice($activities, 0, 250);
 
                     <h2>Shift Summary</h2>
 
-                    <div class="shift-row">
-                        <span class="shift-label">Cash Float</span>
-                        <span class="shift-value" id="shiftCashFloat">₱0.00</span>
-                    </div>
-
                     <div class="shift-divider" id="shiftDetailsDivider"></div>
 
                     <div id="shiftDetails">
@@ -795,24 +799,21 @@ $activities = array_slice($activities, 0, 250);
                             <span class="shift-label">Pay Out</span>
                             <span class="shift-value shift-value-negative" id="shiftPayOut">− ₱0.00</span>
                         </div>
-                        <div class="shift-row">
-                            <span class="shift-label">Less Cash Float</span>
-                            <span class="shift-value shift-value-negative" id="shiftLessFloat">− ₱0.00</span>
-                        </div>
 
                         <div class="shift-divider"></div>
 
                         <div class="shift-row shift-row-net">
-                            <span class="shift-label">Net Total</span>
-                            <span class="shift-value" id="shiftNetTotal">₱0.00</span>
+                            <span class="shift-label">Sales Total</span>
+                            <span class="shift-value" id="shiftSalesTotal">₱0.00</span>
                         </div>
                     </div>
 
-                    <p class="shift-open-note" id="shiftOpenNote">This shift is still open. Sales will be totaled once it's closed.</p>
-
-                    <div class="shift-actions">
-                        <button class="shift-close-btn" id="closeShiftBtn">Close Shift</button>
+                    <div class="shift-row">
+                        <span class="shift-label">Cash Float</span>
+                        <span class="shift-value" id="shiftCashFloat">₱0.00</span>
                     </div>
+
+                    <p class="shift-open-note" id="shiftOpenNote">This shift is still open. Sales will be totaled once it's closed.</p>
 
                 </div>
             </div>
@@ -1022,7 +1023,14 @@ $activities = array_slice($activities, 0, 250);
 
                 filterButtons.forEach(item => item.classList.toggle('active', item === button));
                 activityItems.forEach(item => {
-                    const shouldShow = category === 'all' || item.dataset.category === category;
+                    // Keep logout events in Log In/Log Out, and also surface
+                    // POS/admin sign-outs in POS / Admin Changes.
+                    const isLogoutInAdminChanges = category === 'admin'
+                        && item.dataset.category === 'login'
+                        && item.dataset.action === 'logout';
+                    const shouldShow = category === 'all'
+                        || item.dataset.category === category
+                        || isLogoutInAdminChanges;
                     item.hidden = !shouldShow;
                     if (shouldShow) visibleCount++;
                 });
@@ -1039,10 +1047,7 @@ $activities = array_slice($activities, 0, 250);
             const shiftDetails = document.getElementById('shiftDetails');
             const shiftDetailsDivider = document.getElementById('shiftDetailsDivider');
             const shiftOpenNote = document.getElementById('shiftOpenNote');
-            const closeShiftActions = shiftModal?.querySelector('.shift-actions');
             const peso = amount => '₱' + Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            if (closeShiftActions) closeShiftActions.hidden = true;
 
             function openShiftModal(item) {
                 if (!shiftModal) return;
@@ -1059,8 +1064,9 @@ $activities = array_slice($activities, 0, 250);
                 document.getElementById('shiftTotalSales').textContent = peso(totalSales);
                 document.getElementById('shiftPayIn').textContent = '+ ' + peso(0);
                 document.getElementById('shiftPayOut').textContent = '− ' + peso(0);
-                document.getElementById('shiftLessFloat').textContent = '− ' + peso(cashFloat);
-                document.getElementById('shiftNetTotal').textContent = peso(totalSales - cashFloat);
+                // The POS opening float is shown separately below. It is not
+                // deducted from the Sales Total in this read-only summary.
+                document.getElementById('shiftSalesTotal').textContent = peso(totalSales);
 
                 const isOpen = status === 'open';
                 shiftDetails.hidden = isOpen;

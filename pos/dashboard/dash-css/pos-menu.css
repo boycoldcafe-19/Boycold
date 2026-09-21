@@ -556,7 +556,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
 .product-list-header.active {
     display: grid;
-    grid-template-columns: 95px minmax(160px, 233px) 130px 110px 100px 150px 110px;
+    grid-template-columns: 70px minmax(180px, 1fr) 120px 110px 150px 90px;
     column-gap: 16px;
     align-items: center;
     background: rgba(196, 193, 193, 0.22);
@@ -569,12 +569,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .product-list-header.active span:nth-child(1) { text-align: center; }
-.product-list-header.active span:nth-child(2) { text-align: left; margin-left: 14px;}
+.product-list-header.active span:nth-child(2) { text-align: left; }
 .product-list-header.active span:nth-child(3),
 .product-list-header.active span:nth-child(4),
 .product-list-header.active span:nth-child(5),
-.product-list-header.active span:nth-child(6),
-.product-list-header.active span:nth-child(7) {
+.product-list-header.active span:nth-child(6) {
     text-align: center;
 }
 
@@ -720,7 +719,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
 .drink-status,
 .drink-ingredient,
-.drink-cups{
+.drink-serving{
     font-size:15px;
     font-weight:500;
     color:var(--card-text);
@@ -730,7 +729,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .drink-ingredient span,
-.drink-cups span{
+.drink-serving span{
     color:var(--card-text);
 }
 
@@ -787,13 +786,9 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
 }
 
-.drink-servings {
-    display: none; /* only used in list view */
-}
-
 .product-grid.list-view .product-card {
     display: grid;
-    grid-template-columns: 70px minmax(100px, 235px) 130px 110px 100px 150px 110px;
+    grid-template-columns: 70px minmax(180px, 1fr) 120px 110px 150px 90px;
     column-gap: 16px;
     align-items: center;
     justify-content: center;
@@ -808,6 +803,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 .product-grid.list-view .card-image {
     grid-column: 1;
     grid-row: 1;
+    justify-self: center;
     width: 46px;
     height: 46px;
     padding: 0;
@@ -852,7 +848,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 
-.product-grid.list-view .drink-servings {
+.product-grid.list-view .drink-serving {
     grid-column: 4;
     grid-row: 1;
     display: flex;
@@ -863,23 +859,18 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     color: var(--text);
 }
 
-.product-grid.list-view .drink-cups {
-    grid-column: 5;
-    grid-row: 1;
-    display: flex;
-    justify-content: center;
-    margin: 0;
-}
-
-.product-grid.list-view .drink-cups .cups-value,
-.product-grid.list-view .drink-servings .servings-value {
+.product-grid.list-view .drink-serving .serving-value {
     font-size: 15px;
     font-weight: 600;
     color: var(--text);
 }
 
+.product-grid.list-view .serving-label {
+    display: none;
+}
+
 .product-grid.list-view .drink-status {
-    grid-column: 6;
+    grid-column: 5;
     grid-row: 1;
     justify-content: center;
     margin: 0;
@@ -897,7 +888,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .product-grid.list-view .card-btn {
-    grid-column: 7;
+    grid-column: 6;
     grid-row: 1;
     position: static;
     width: 60px;
@@ -1907,7 +1898,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
     .drink-status,
     .drink-ingredient,
-    .drink-cups{
+    .drink-serving{
         font-size: 18px;
     }
 
@@ -1992,14 +1983,14 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-list-header.active{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:14px 16px;
         font-size:16px;
     }
 
     .product-grid.list-view .product-card{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:0 16px;
         height:68px;
@@ -2016,8 +2007,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-grid.list-view .card-price,
-    .product-grid.list-view .drink-servings,
-    .product-grid.list-view .drink-cups,
+    .product-grid.list-view .drink-serving,
     .product-grid.list-view .drink-status{
         font-size:16px;
     }
@@ -2151,7 +2141,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
     .drink-status,
     .drink-ingredient,
-    .drink-cups{
+    .drink-serving{
         font-size: 18px;
     }
 
@@ -2236,14 +2226,14 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-list-header.active{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:14px 16px;
         font-size:16px;
     }
 
     .product-grid.list-view .product-card{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:0 16px;
         height:68px;
@@ -2260,8 +2250,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-grid.list-view .card-price,
-    .product-grid.list-view .drink-servings,
-    .product-grid.list-view .drink-cups,
+    .product-grid.list-view .drink-serving,
     .product-grid.list-view .drink-status{
         font-size:16px;
     }
@@ -2444,14 +2433,14 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-list-header.active{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:14px 16px;
         font-size:13px;
     }
 
     .product-grid.list-view .product-card{
-        grid-template-columns:55px 1fr 90px 80px 70px 110px 70px;
+        grid-template-columns:55px 1fr 90px 80px 110px 70px;
         column-gap:10px;
         padding:0 16px;
         height:68px;
@@ -2467,8 +2456,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .product-grid.list-view .card-price,
-    .product-grid.list-view .drink-servings,
-    .product-grid.list-view .drink-cups,
+    .product-grid.list-view .drink-serving,
     .product-grid.list-view .drink-status{
         font-size:13px;
     }

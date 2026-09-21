@@ -706,7 +706,8 @@
                             ? 'Admin (Sta. Barbara)'
                             : 'Admin';
                     const cashierName = order.cashier_name || branchCashier;
-                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(customerName)}" data-time="${escapeOrderText(order.created_at)}" data-branch="${escapeOrderText(branchName)}" data-cashier="${escapeOrderText(cashierName)}" data-payment="${payment}" data-payment-status="${escapeOrderText(order.payment_status || '')}" data-reference="${escapeOrderText(order.payment_reference || '')}" data-status="${escapeOrderText(order.status || '')}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
+                    const displayStatus = order.voided_at ? 'Void Order' : (order.status || '');
+                    return `<tr data-order-type="${orderType}" data-order-id="#ORDER-${String(order.id).padStart(4, '0')}" data-customer="${escapeOrderText(customerName)}" data-time="${escapeOrderText(order.created_at)}" data-branch="${escapeOrderText(branchName)}" data-cashier="${escapeOrderText(cashierName)}" data-payment="${payment}" data-payment-status="${escapeOrderText(order.payment_status || '')}" data-reference="${escapeOrderText(order.payment_reference || '')}" data-status="${escapeOrderText(displayStatus)}" data-tendered="${Number(order.total).toFixed(2)}" data-items-index="${orders.indexOf(order)}">
                         <td class="order-id">#ORDER-${String(order.id).padStart(4, '0')}</td>
                         <td class="customer-name">${escapeOrderText(customerName)}</td>
                         <td class="order-time">${escapeOrderText(order.created_at)}</td>
@@ -714,7 +715,7 @@
                         <td class="order-branch">${escapeOrderText(order.branch_name || 'Unassigned')}</td>
                         <td class="order-total">₱${Number(order.total).toFixed(2)}</td>
                         <td class="order-payment"><span class="payment-tag ${payment === 'COD' ? 'cod' : 'qrph'}">${payment} / ${escapeOrderText(order.payment_status || 'unpaid')}</span></td>
-                        <td class="order-status">${escapeOrderText(order.status || '')}</td>
+                        <td class="order-status">${escapeOrderText(displayStatus)}</td>
                         <td class="order-action"><button type="button" class="view-btn">View</button></td>
                     </tr>`;
                 }).join('');

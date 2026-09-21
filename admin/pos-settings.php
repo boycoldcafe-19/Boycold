@@ -3,6 +3,7 @@ require_once __DIR__ . '/admin_guard.php';
 require_once '../config/db_config.php';
 require_once '../config/activity_logger.php';
 require_once '../config/pos_login_lockout.php';
+require_once '../config/branch_authorization_pin.php';
 $guardEmployee = $adminAccount;
 
 // Session guard — redirect to flash screen if not logged in
@@ -74,6 +75,67 @@ function pos_settings_branch_pos_account(mysqli $connect, int $branchId): ?array
     $targetStmt->close();
 
     return $targetEmployee;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_authorization_pin') {
+    header('Content-Type: application/json');
+
+    if ($selectedBranchId <= 0 || $selectedBranchName === '') {
+        echo json_encode(['success' => false, 'errors' => ['form' => 'Please select Baliuag Branch or Bustos Branch.']]);
+        exit;
+    }
+
+    $currentAuthorizationPin = trim((string) ($_POST['current_auth_pin'] ?? ''));
+    $newAuthorizationPin = trim((string) ($_POST['new_auth_pin'] ?? ''));
+    $confirmAuthorizationPin = trim((string) ($_POST['confirm_auth_pin'] ?? ''));
+    $errors = [];
+
+    if (!preg_match('/^\d{4}$/', $currentAuthorizationPin)) {
+        $errors['current_auth_pin'] = 'Current authorization PIN must contain exactly 4 digits.';
+    }
+    if (!preg_match('/^\d{4}$/', $newAuthorizationPin)) {
+        $errors['new_auth_pin'] = 'New authorization PIN must contain exactly 4 digits.';
+    }
+    if ($newAuthorizationPin !== $confirmAuthorizationPin) {
+        $errors['confirm_auth_pin'] = 'Authorization PIN confirmation does not match.';
+    }
+
+    if ($errors) {
+        echo json_encode(['success' => false, 'errors' => $errors]);
+        exit;
+    }
+
+    $result = boycold_change_branch_authorization_pin(
+        $connect,
+        $selectedBranchId,
+        $selectedBranchName,
+        $currentAuthorizationPin,
+        $newAuthorizationPin,
+        $employeeId
+    );
+
+    if (!$result['success']) {
+        echo json_encode(['success' => false, 'errors' => ['form' => $result['error'] ?? 'Unable to update authorization PIN.']]);
+        exit;
+    }
+
+    boycold_log_activity($connect, [
+        'category' => 'admin',
+        'action' => 'authorization_pin_updated',
+        'summary' => 'Authorization PIN Updated',
+        'details' => 'The administrator updated and unlocked the authorization PIN for ' . $selectedBranchName . '.',
+        'actor_id' => $employeeId,
+        'actor_type' => 'admin',
+        'branch_id' => $selectedBranchId,
+        'entity_type' => 'branch_authorization_pin',
+        'entity_id' => $selectedBranchId,
+    ]);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Authorization PIN updated for ' . $selectedBranchName . '. Failed attempts were reset. The current POS shift remains open.',
+    ]);
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_pin') {
@@ -577,13 +639,13 @@ if ($loginTableCheck && $loginTableCheck->num_rows > 0) {
                     </section>
 
                     <!-- Authorization PIN -->
-                    <!-- UI only for now: no backend handler yet, so the form is blocked from submitting. -->
                     <section class="settings-card">
                         <div class="settings-card-header">
-                            <h2>Authorization PIN</h2>
-                            <p>Set the PIN used to authorize sensitive actions</p>
+                            <h2>Authorization PIN (<?php echo htmlspecialchars($selectedBranchName, ENT_QUOTES, 'UTF-8'); ?>)</h2>
+                            <p>Set the 4-digit PIN used to authorize sensitive actions for this branch only. Five failed attempts lock it until it is changed here.</p>
                         </div>
-                        <form class="password-form" id="authPinForm" method="post" onsubmit="return false;" novalidate>
+                        <form class="password-form" id="authPinForm" novalidate>
+                            <input type="hidden" name="branch_id" value="<?php echo (int) $selectedBranchId; ?>">
                             <div class="password-group">
                                 <label for="currentAuthPin">Current Authorization PIN</label>
                                 <div class="password-field">
@@ -748,6 +810,43 @@ if ($loginTableCheck && $loginTableCheck->num_rows > 0) {
                 passwordMessage.classList.add('error');
             } finally {
                 changePasswordBtn.disabled = false;
+            }
+        });
+
+        const authPinForm = document.getElementById('authPinForm');
+        const authPinMessage = document.getElementById('authPinMessage');
+
+        authPinForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            authPinMessage.textContent = '';
+            authPinMessage.className = 'form-message';
+
+            const formData = new FormData(authPinForm);
+            formData.append('action', 'change_authorization_pin');
+            const submitButton = authPinForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('pos-settings.php', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    authPinMessage.textContent = Object.values(data.errors || {})[0] || 'Unable to update authorization PIN.';
+                    authPinMessage.classList.add('error');
+                    return;
+                }
+
+                authPinMessage.textContent = data.message;
+                authPinMessage.classList.add('success');
+                authPinForm.reset();
+            } catch (error) {
+                authPinMessage.textContent = 'Unable to update authorization PIN. Please try again.';
+                authPinMessage.classList.add('error');
+            } finally {
+                submitButton.disabled = false;
             }
         });
 

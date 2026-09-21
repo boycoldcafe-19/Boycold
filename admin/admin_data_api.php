@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/admin_auth.php';
 require_once __DIR__ . '/../config/inventory_service.php';
 require_once __DIR__ . '/../config/menu_catalog_service.php';
 require_once __DIR__ . '/../config/activity_logger.php';
+require_once __DIR__ . '/../config/order_void_service.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -207,11 +208,16 @@ try {
             response(['success' => true]);
 
         case 'customers':
+            // A POS void creates a replacement sale for audit/history. It is
+            // not a new customer transaction, so do not include it in the
+            // order total displayed on the Customers page.
+            boycold_ensure_order_void_schema($connect);
             $sql = "SELECT u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
                            u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar,
                            COUNT(DISTINCT o.id) AS order_count
                     FROM users u
                     LEFT JOIN orders o ON o.user_id = u.id
+                        AND o.void_replacement_for_order_id IS NULL
                     GROUP BY u.id, u.firstname, u.lastname, u.email, u.phone, u.is_verified,
                              u.account_status, u.card_no, u.created_at, u.loyalty_card_status, u.avatar
                     ORDER BY u.created_at DESC";
@@ -494,10 +500,11 @@ try {
             response(['success' => true, 'categories' => boycold_menu_get_categories($connect)]);
 
         case 'orders':
+            boycold_ensure_order_void_schema($connect);
                  $result = $connect->query("SELECT o.id, o.user_id, o.user_name,
                                     COALESCE(NULLIF(CONCAT_WS(' ', u.firstname, u.lastname), ''), o.user_name) AS customer_name,
                                     u.email AS customer_email,
-                                    o.status, o.order_type, o.payment_method, o.payment_status,
+                                    o.status, o.voided_at, o.order_type, o.payment_method, o.payment_status,
                                               o.payment_reference, o.subtotal, o.delivery_fee, o.tax, o.total,
                                               o.branch_id, b.branch_code, b.branch_name,
                                               o.cashier_id, e.employee_name AS cashier_name,
@@ -507,6 +514,7 @@ try {
                                 LEFT JOIN users u ON u.id = o.user_id
                                        LEFT JOIN branches b ON b.id = o.branch_id
                                        LEFT JOIN employees e ON e.id = o.cashier_id
+                                      WHERE o.voided_at IS NULL
                                        ORDER BY o.created_at DESC, o.id DESC");
             $orders = [];
             $itemsStmt = $connect->prepare('SELECT product_name, quantity, unit_price, line_total, milk, addons, notes FROM order_items WHERE order_id = ? ORDER BY id');

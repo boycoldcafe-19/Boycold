@@ -3,7 +3,8 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     overflow-x: hidden;
     max-width: 100%;
     height: 100%;
@@ -29,13 +30,13 @@ button {
     -webkit-overflow-scrolling: touch;
 }
 
-::-webkit-scrollbar-thumb{
+::-webkit-scrollbar-thumb {
     background: var(--text-light);
     border-radius: 100px;
     border: 4px solid var(--surface);
 }
 
-:root{
+:root {
     /* Light Theme */
     --bg: #f7f6f4;
     --surface: #ffffff;
@@ -47,7 +48,7 @@ button {
     --primary-text: #ffffff;
     --header: #ffffff;
     --table-header: #DADCE5;
-    --shadow: rgba(0,0,0,.12);
+    --shadow: rgba(0, 0, 0, .12);
 
     /* Product card is always a dark card with light text, regardless of theme */
     --card-bg: #1e1e1e;
@@ -59,7 +60,7 @@ button {
    bg #18191A / surface #242526 / tertiary #3A3B3C
    text #E4E6EB / text-light #B0B3B8 / border #3E4042
 ══════════════════════════════ */
-body.dark-theme{
+body.dark-theme {
     --bg: #18191a;
     --surface: #242526;
     --sidebar: #18191a;
@@ -70,7 +71,7 @@ body.dark-theme{
     --primary: #692727;
     --primary-text: #ffffff;
     --table-header: #3a3b3c;
-    --shadow: rgba(0,0,0,.4);
+    --shadow: rgba(0, 0, 0, .4);
 
     /* Facebook dark-mode elevated surface + primary text for menu cards */
     --card-bg: #3a3b3c;
@@ -87,21 +88,30 @@ body.dark-theme .inventory-status-badge.instock {
     background: rgba(26, 156, 63, 0.18);
     color: #4bd07a;
 }
-body.dark-theme .inventory-status-badge.instock .status-dot { background: #4bd07a; }
+
+body.dark-theme .inventory-status-badge.instock .status-dot {
+    background: #4bd07a;
+}
 
 body.dark-theme .inventory-status-badge.low {
     background: rgba(196, 122, 0, 0.2);
     color: #ffb84d;
 }
-body.dark-theme .inventory-status-badge.low .status-dot { background: #ffb84d; }
+
+body.dark-theme .inventory-status-badge.low .status-dot {
+    background: #ffb84d;
+}
 
 body.dark-theme .inventory-status-badge.critical,
 body.dark-theme .inventory-status-badge.outstock {
     background: rgba(208, 52, 44, 0.2);
     color: #ff6b60;
 }
+
 body.dark-theme .inventory-status-badge.critical .status-dot,
-body.dark-theme .inventory-status-badge.outstock .status-dot { background: #ff6b60; }
+body.dark-theme .inventory-status-badge.outstock .status-dot {
+    background: #ff6b60;
+}
 
 .app-shell {
     display: flex;
@@ -140,20 +150,35 @@ body.dark-theme .inventory-status-badge.outstock .status-dot { background: #ff6b
 
 }
 
-.brand-mark img{
+.brand-mark img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.brand-mark .logo-dark { display: none; }
+.brand-mark .logo-dark {
+    display: none;
+}
 
-body.dark-theme .brand-mark .logo-light { display: none; }
-body.dark-theme .brand-mark .logo-dark  { display: block; }
+body.dark-theme .brand-mark .logo-light {
+    display: none;
+}
 
-.profile-avatar .logo-dark { display:none; }
-body.dark-theme .profile-avatar .logo-light { display:none; }
-body.dark-theme .profile-avatar .logo-dark  { display:block; }
+body.dark-theme .brand-mark .logo-dark {
+    display: block;
+}
+
+.profile-avatar .logo-dark {
+    display: none;
+}
+
+body.dark-theme .profile-avatar .logo-light {
+    display: none;
+}
+
+body.dark-theme .profile-avatar .logo-dark {
+    display: block;
+}
 
 .brand-text {
     display: flex;
@@ -178,13 +203,13 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .special-letter {
-  position: relative;
-  top: -2px;
+    position: relative;
+    top: -2px;
 }
 
 .special-letter-2 {
-  position: relative;
-  top: -7px;
+    position: relative;
+    top: -7px;
 }
 
 .sidebar-nav {
@@ -218,7 +243,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     color: var(--primary-text);
 }
 
-.nav-icon svg{
+.nav-icon svg {
     width: 25px;
     height: 25px;
     display: flex;
@@ -227,7 +252,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     flex-shrink: 0;
 }
 
-.nav-icon1 svg{
+.nav-icon1 svg {
     width: 23px;
     height: 23px;
     display: flex;
@@ -321,7 +346,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     display: grid;
     grid-template-columns: 1fr 380px;
     gap: 24px;
-    align-items: stretch; /* was "start" — stretch makes the left column match
+    align-items: stretch;
+    /* was "start" — stretch makes the left column match
                               the exact height of the order-right panel */
 }
 
@@ -393,7 +419,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     padding: 20px;
     margin-bottom: 20px;
     width: 100%;
-    flex: 1; /* grow to fill the stretched column so total-bar stays pinned
+    flex: 1;
+    /* grow to fill the stretched column so total-bar stays pinned
                 to the bottom, level with the bottom of order-right */
 }
 
@@ -446,7 +473,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .option-btn.active {
-    background: #9E6741;
+    background: #692727;
     border-color: var(--primary);
     color: #fff;
 }
@@ -490,7 +517,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     border: 1.5px solid var(--border);
     border-radius: 12px;
     padding: 18px 22px;
-    flex-shrink: 0; /* stays pinned at the bottom of the stretched column */
+    flex-shrink: 0;
+    /* stays pinned at the bottom of the stretched column */
 }
 
 .total-label {
@@ -590,7 +618,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .summary-list {
-    flex: 1; /* grows to fill remaining space so totals/checkout button
+    flex: 1;
+    /* grows to fill remaining space so totals/checkout button
                  stay pinned to the bottom, matching the left column's height */
     min-height: 120px;
     overflow-y: auto;
@@ -727,7 +756,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 #checkoutView {
 
     width: 100%;
-    flex: 1; 
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -906,13 +935,14 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 }
 
 .receipt-page {
-    display: none; /* toggled to flex by ordersum.js after payment */
+    display: none;
+    /* toggled to flex by ordersum.js after payment */
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100%;
-    min-height: 70vh; 
-                          
+    min-height: 70vh;
+
     padding: 20px 0;
 }
 
@@ -954,7 +984,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     padding: 36px 32px;
     border-radius: 14px;
     border: 1px solid #E5E5E5;
-    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
     color: #1e1e1e;
     text-align: center;
 }
@@ -1152,6 +1182,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
 /* Print styles for receipt */
 @media print {
+
     /* Hide everything else */
     body * {
         visibility: hidden;
@@ -1180,7 +1211,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 
     .receipt-paper {
         box-shadow: none;
-        border: none; /* Optional: removes card outline for realistic receipt printing */
+        border: none;
+        /* Optional: removes card outline for realistic receipt printing */
         margin: 0 auto;
     }
 
@@ -1221,11 +1253,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         width: 350px;
     }
 
-    .sidebar-nav{
+    .sidebar-nav {
         padding: 17px 10px;
     }
 
-    .sidebar-nav ul{
+    .sidebar-nav ul {
         padding: 0;
     }
 
@@ -1233,12 +1265,13 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         padding: 14px 12px;
         font-size: 22px;
     }
-    .nav-icon svg{
+
+    .nav-icon svg {
         width: 28px;
         height: 28px;
     }
 
-    .nav-icon1 svg{
+    .nav-icon1 svg {
         width: 26px;
         height: 26px;
         display: flex;
@@ -1284,11 +1317,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         width: 310px;
     }
 
-    .sidebar-nav{
+    .sidebar-nav {
         padding: 17px 10px;
     }
 
-    .sidebar-nav ul{
+    .sidebar-nav ul {
         padding: 0;
     }
 
@@ -1296,12 +1329,13 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         padding: 14px 12px;
         font-size: 22px;
     }
-    .nav-icon svg{
+
+    .nav-icon svg {
         width: 28px;
         height: 28px;
     }
 
-    .nav-icon1 svg{
+    .nav-icon1 svg {
         width: 26px;
         height: 26px;
         display: flex;
@@ -1324,7 +1358,7 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 }
 
-@media (max-width: 1024px){
+@media (max-width: 1024px) {
     .sidebar {
         width: 250px;
     }
@@ -1347,11 +1381,11 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         font-size: 18px;
     }
 
-    .sidebar-nav{
+    .sidebar-nav {
         padding: 14px 10px;
     }
 
-    .sidebar-nav ul{
+    .sidebar-nav ul {
         padding: 0;
     }
 
@@ -1398,8 +1432,10 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
         justify-content: center;
         padding: 12px;
     }
+
     .order-layout {
-        grid-template-columns: 1fr 260px;  /* keep side-by-side, even tighter */
+        grid-template-columns: 1fr 260px;
+        /* keep side-by-side, even tighter */
     }
 
     .product-display {
@@ -1420,7 +1456,8 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     }
 
     .option-btn {
-        width: 100%;   /* single column since the panel is narrow now */
+        width: 100%;
+        /* single column since the panel is narrow now */
     }
 
     .qty-stepper {
@@ -1437,14 +1474,16 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 /* Only stack fully on phone-sized screens */
 @media (max-width: 700px) {
     .order-layout {
-        grid-template-columns: 1fr;   /* stack here, not on tablet */
+        grid-template-columns: 1fr;
+        /* stack here, not on tablet */
     }
 
     .order-left,
     #customizeView,
     #checkoutWrapper,
     .order-right {
-        height: auto; /* stop forcing equal heights once columns stack */
+        height: auto;
+        /* stop forcing equal heights once columns stack */
     }
 
     .total-bar {

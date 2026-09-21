@@ -1450,3 +1450,124 @@ function boycold_restore_reserved_inventory_for_order(mysqli $connect, int $orde
         throw $e;
     }
 }
+
+/**
+ * Restores inventory that was already deducted for a completed order. This is
+ * used by the POS void flow; it deliberately relies on the original recorded
+ * stock movements instead of recalculating today's recipe mappings.
+ */
+function boycold_restore_deducted_inventory_for_order_in_transaction(
+    mysqli $connect,
+    int $orderId,
+    string $restoreSource = 'pos_void_restore',
+    ?int $actorId = null
+): array {
+    boycold_ensure_inventory_schema($connect);
+
+    $orderStmt = $connect->prepare(
+        'SELECT branch_id, inventory_deducted_at, inventory_deduction_source, inventory_restored_at
+         FROM orders
+         WHERE id = ?
+         LIMIT 1
+         FOR UPDATE'
+    );
+    $orderStmt->bind_param('i', $orderId);
+    $orderStmt->execute();
+    $order = $orderStmt->get_result()->fetch_assoc();
+    $orderStmt->close();
+
+    if (!$order) {
+        return ['success' => false, 'error' => 'Order not found.'];
+    }
+    if (empty($order['inventory_deducted_at'])) {
+        return ['success' => true, 'restored' => false, 'message' => 'No inventory was deducted for this order.'];
+    }
+    if (!empty($order['inventory_restored_at'])) {
+        return ['success' => true, 'restored' => false, 'already_restored' => true];
+    }
+
+    $branchId = (int) ($order['branch_id'] ?? 0);
+    $deductionSource = trim((string) ($order['inventory_deduction_source'] ?? ''));
+    if ($branchId <= 0 || $deductionSource === '') {
+        return ['success' => false, 'error' => 'This order has no recoverable inventory record.'];
+    }
+
+    $movementStmt = $connect->prepare(
+        "SELECT ingredient_id, SUM(quantity) AS quantity,
+                GROUP_CONCAT(DISTINCT NULLIF(product_name, '') ORDER BY product_name SEPARATOR ', ') AS product_names
+         FROM ingredient_stock_movements
+         WHERE order_id = ? AND source = ? AND movement_type = 'deduction'
+         GROUP BY ingredient_id"
+    );
+    $movementStmt->bind_param('is', $orderId, $deductionSource);
+    $movementStmt->execute();
+    $movements = $movementStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $movementStmt->close();
+
+    if (!$movements) {
+        return ['success' => false, 'error' => 'The original inventory movements could not be found.'];
+    }
+
+    $stockStmt = $connect->prepare('SELECT stock FROM ingredients WHERE id = ? AND branch_id = ? FOR UPDATE');
+    $updateStmt = $connect->prepare('UPDATE ingredients SET stock = ? WHERE id = ? AND branch_id = ?');
+    $insertStmt = $connect->prepare(
+        "INSERT INTO ingredient_stock_movements
+            (ingredient_id, movement_type, quantity, resulting_stock, order_id, source, product_name, reference, created_by)
+         VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?, ?)"
+    );
+    $reference = 'Void restore #' . $orderId;
+    $restoreSource = substr(trim($restoreSource), 0, 30) ?: 'pos_void_restore';
+    $actor = $actorId && $actorId > 0 ? $actorId : null;
+    $movementCount = 0;
+
+    foreach ($movements as $movement) {
+        $ingredientId = (int) ($movement['ingredient_id'] ?? 0);
+        $quantity = (float) ($movement['quantity'] ?? 0);
+        if ($ingredientId <= 0 || $quantity <= 0) {
+            continue;
+        }
+
+        $stockStmt->bind_param('ii', $ingredientId, $branchId);
+        $stockStmt->execute();
+        $stockRow = $stockStmt->get_result()->fetch_assoc();
+        if (!$stockRow) {
+            throw new RuntimeException('An order ingredient does not belong to this branch.');
+        }
+
+        $newStock = (float) $stockRow['stock'] + $quantity;
+        $productNames = (string) ($movement['product_names'] ?? 'Voided order item');
+        boycold_inventory_set_branch_stock($updateStmt, $newStock, $ingredientId, $branchId);
+        $insertStmt->bind_param(
+            'iddisssi',
+            $ingredientId,
+            $quantity,
+            $newStock,
+            $orderId,
+            $restoreSource,
+            $productNames,
+            $reference,
+            $actor
+        );
+        $insertStmt->execute();
+        $movementCount++;
+    }
+
+    $stockStmt->close();
+    $updateStmt->close();
+    $insertStmt->close();
+
+    if ($movementCount === 0) {
+        return ['success' => false, 'error' => 'The original inventory movements are invalid.'];
+    }
+
+    $restoreStmt = $connect->prepare(
+        'UPDATE orders
+         SET inventory_restored_at = NOW()
+         WHERE id = ? AND inventory_restored_at IS NULL'
+    );
+    $restoreStmt->bind_param('i', $orderId);
+    $restoreStmt->execute();
+    $restoreStmt->close();
+
+    return ['success' => true, 'restored' => true, 'movement_count' => $movementCount];
+}

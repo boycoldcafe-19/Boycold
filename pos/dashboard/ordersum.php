@@ -163,7 +163,7 @@ if ($shiftResult) {
                         </a>
                     </li>
                     <li>
-                        <a href="#">
+                        <a href="pos-loyalty.php">
                             <span class="nav-icon"><i class="fa-regular fa-credit-card"></i></span>
                             <span class="nav-label">Loyalty Card</span>
                             <i class="fa-solid fa-chevron-right nav-chevron"></i>
@@ -867,16 +867,24 @@ if ($shiftResult) {
         }
 
         // Confirm — add current customization to cart
-        document.getElementById('confirmBtn').addEventListener('click', async () => {
+        const confirmBtn = document.getElementById('confirmBtn');
+        let isConfirmingItem = false;
+
+        confirmBtn.addEventListener('click', async () => {
+            if (isConfirmingItem) return;
+
             const cartItem = buildCurrentCartItem();
             if (!cartItem) {
                 window.location.href = 'pos-menu.php';
                 return;
             }
 
+            isConfirmingItem = true;
+            confirmBtn.disabled = true;
             const success = await saveCartItem(cartItem);
             if (success.success) {
                 clearCurrentProductSelection();
+                currentProduct = { id: '', name: '', price: 0, img: '', category: '' };
                 renderSummary();
 
                 // Reset the form for the next customization
@@ -900,6 +908,8 @@ if ($shiftResult) {
                 selectedOrderType = 'Dine In';
                 updateTotal();
             } else {
+                isConfirmingItem = false;
+                confirmBtn.disabled = false;
                 alert(`Failed to add item to cart: ${success.error}`);
             }
         });
@@ -920,24 +930,14 @@ if ($shiftResult) {
             });
         }
 
-        // Add Order - go back to menu to add more items to current order
+        // Add Order only returns to the menu. Confirm already saved the item,
+        // so saving it here again caused a duplicate without its modifiers.
         const addOrderBtnEl = document.getElementById('addOrderBtn');
         if (addOrderBtnEl) {
-            addOrderBtnEl.addEventListener('click', async (e) => {
+            addOrderBtnEl.addEventListener('click', (e) => {
                 e.preventDefault();
-                const cartItem = buildCurrentCartItem();
-                if (!cartItem) return;
-
-                const addOrderButton = e.currentTarget;
-                addOrderButton.disabled = true;
-                const success = await saveCartItem(cartItem);
-                if (success.success) {
-                    clearCurrentProductSelection();
-                    window.location.href = 'pos-menu.php';
-                } else {
-                    addOrderButton.disabled = false;
-                    alert(`Failed to add item to cart: ${success.error}`);
-                }
+                clearCurrentProductSelection();
+                window.location.href = 'pos-menu.php';
             });
         }
 

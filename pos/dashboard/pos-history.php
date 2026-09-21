@@ -12,6 +12,7 @@ require_once '../config/db_config.php';
 $guardEmployee = pos_require_employee($connect);
 require_once '../../config/shift_manager.php';
 require_once '../../config/payments.php';
+require_once '../../config/order_void_service.php';
 
 // Session guard — redirect to flash screen if not logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -36,6 +37,7 @@ $stmt->close();
 
 // Reconcile missed 2:00 AM boundaries and use the shared branch shift.
 $branchId = (int) ($employee['branch_id'] ?? $_SESSION['branch_id'] ?? 0);
+boycold_ensure_order_void_schema($connect);
 pos_reconcile_branch_shift($connect, $branchId, $employeeId);
 $shiftStmt = $connect->prepare("SELECT id, opening_cash_float, opened_at FROM shift_logs WHERE branch_id = ? AND status = 'open' LIMIT 1");
 $shiftStmt->bind_param('i', $branchId);
@@ -74,7 +76,7 @@ if ($branchId > 0) {
 // Pull every order, newest first, joining the customer's phone number
 // from the users table (matched on user_name, since that's how orders
 // links back to an account).
-$sql = "SELECT o.id, o.user_name, o.status, o.order_type, o.payment_method,
+$sql = "SELECT o.id, o.user_name, o.status, o.voided_at, o.order_type, o.payment_method,
                o.payment_status, o.total, o.address, o.created_at,
                u.phone AS user_phone
         FROM orders o
@@ -478,6 +480,7 @@ function orderhis_format_group_label(string $dateStr): string {
                                 $paymentLabel = boycold_payment_label($payment, (string) ($order['payment_status'] ?? 'unpaid'));
                                 $paymentAttr  = $payment === 'qrph' ? 'qrph' : 'cash';
                                 $typeAttr     = str_replace('-', '', $type);
+                                $statusLabel  = boycold_order_was_voided($order) ? 'Void Order' : ucfirst((string) $order['status']);
 
                                 $groupLabel = orderhis_format_group_label($order['created_at']);
                                 $showGroupLabel = ($groupLabel !== $lastGroupLabel);
@@ -486,11 +489,16 @@ function orderhis_format_group_label(string $dateStr): string {
                             <?php if ($showGroupLabel): ?>
                         <div class="table-group-label"><?= htmlspecialchars($groupLabel) ?></div>
                             <?php endif; ?>
-                        <div class="table-row"
+                        <div class="table-row history-order-row"
+                            data-order-id="<?= (int) $order['id'] ?>"
+                            data-order-number="<?= htmlspecialchars($orderNo, ENT_QUOTES, 'UTF-8') ?>"
                             data-date="<?= $createdAt->format('Y-m-d') ?>"
                             data-payment="<?= $paymentAttr ?>"
                             data-type="<?= $typeAttr ?>"
-                            data-amount="<?= number_format((float)$order['total'], 2, '.', '') ?>">
+                            data-amount="<?= number_format((float)$order['total'], 2, '.', '') ?>"
+                            role="button"
+                            tabindex="0"
+                            aria-label="View receipt for <?= htmlspecialchars($orderNo, ENT_QUOTES, 'UTF-8') ?>">
                             <span class="col-time"><?= $createdAt->format('g:i a') ?></span>
                             <span class="col-orderno">
                                 <p class="order-no"><?= htmlspecialchars($orderNo) ?></p>
@@ -505,7 +513,7 @@ function orderhis_format_group_label(string $dateStr): string {
                                 <p class="amount-value">₱<?= number_format((float)$order['total'], 2) ?></p>
                                 <p class="amount-method"><?= htmlspecialchars($paymentLabel) ?></p>
                             </span>
-                            <span class="col-status"><?= htmlspecialchars(ucfirst($order['status'])) ?></span>
+                            <span class="col-status"><?= htmlspecialchars($statusLabel) ?></span>
                         </div>
                             <?php } ?>
                         <?php endforeach; ?>
@@ -517,6 +525,186 @@ function orderhis_format_group_label(string $dateStr): string {
                 </div>
 
             </div>
+            <!-- AUTHORIZATION PIN MODAL -->
+            <div class="pin-modal" id="pinModal">
+                <div class="pin-modal-box">
+                    <h2>Enter Authorization PIN</h2>
+                    <div class="pin-inputs" id="pinInputs">
+                        <input type="password" class="pin-box" maxlength="1" inputmode="numeric" autocomplete="off">
+                        <input type="password" class="pin-box" maxlength="1" inputmode="numeric" autocomplete="off">
+                        <input type="password" class="pin-box" maxlength="1" inputmode="numeric" autocomplete="off">
+                        <input type="password" class="pin-box" maxlength="1" inputmode="numeric" autocomplete="off">
+                    </div>
+                    <p class="pin-error" id="pinError">*Incorrect PIN</p>
+                    <div class="pin-actions">
+                        <button type="button" class="pin-cancel-btn" id="pinCancelBtn">Cancel</button>
+                        <button type="button" class="pin-confirm-btn" id="pinConfirmBtn">Confirm</button>
+                    </div>
+                </div>
+            </div>
+            <!-- VOID ORDER ADJUSTMENT MODAL -->
+            <div class="void-modal" id="voidModal">
+                <div class="void-modal-box">
+                    <div class="void-modal-header">Void Order - Adjustment Mode</div>
+
+                    <div class="void-modal-body">
+                        <div class="void-warning">The original paid order will be marked as Void Order. Its inventory will be restored, then your edited items will be saved as a new order.
+                        </div>
+
+                        <div class="void-info-row"><span>Order No:</span><span id="voidOrderNo">—</span></div>
+                        <div class="void-info-row"><span>Payment:</span><span id="voidPayment">—</span></div>
+                        <div class="void-info-row"><span>Status:</span><span id="voidStatus">—</span></div>
+
+                        <div class="void-items-header">
+                            <span>Items:</span>
+                            <div class="void-items-actions">
+                                <button type="button" class="void-add-btn" id="addItemBtn">Item <i
+                                        class="fa-solid fa-plus"></i></button>
+                                <button type="button" class="void-add-btn" id="addAddonBtn">Add-on <i
+                                        class="fa-solid fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="void-items-list" id="voidItemsList"></div>
+
+                        <div class="void-total-row">
+                            <span>Total:</span> <span id="voidTotal">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="void-payadjust" id="voidPayAdjust" style="display:none;">
+                        <div class="void-payadjust-label" id="voidPayLabel">Pay In</div>
+                        <div class="void-payadjust-value" id="voidPayValue">Collect ₱0.00</div>
+                    </div>
+
+                    <div class="void-modal-actions">
+                        <button type="button" class="void-cancel-btn" id="voidCancelBtn">Cancel</button>
+                        <button type="button" class="void-confirm-btn" id="voidConfirmBtn">Confirm Void</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-overlay" id="orderModal" hidden>
+                <div class="receipt-modal-container">
+                    <button type="button" class="receipt-floating-close" id="closeModalBtn" aria-label="Close modal">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <div class="receipt-sawtooth-top"></div>
+                    <div class="receipt-paper" id="printableReceipt">
+                        <div class="receipt-header">
+                            <span class="receipt-logo-text">B<span class="special-letter">o</span><span
+                                    class="special-letter-2">y</span>C<span class="special-letter">o</span>LD
+                                CAFE</span>
+                            <p class="receipt-store-sub">Specialty Coffee & Beverages</p>
+                            <p class="receipt-store-info" id="modalBranch"><?= htmlspecialchars($branchName) ?></p>
+                            <p class="receipt-store-info">Tel: +63 912 345 6789</p>
+                            <p class="receipt-store-info">VAT Reg TIN: 000-123-456-000</p>
+                        </div>
+                        <div class="receipt-divider-double">================================</div>
+                        <div class="receipt-meta">
+                            <div class="receipt-row">
+                                <span class="r-label">RECEIPT NO:</span>
+                                <span class="r-val bold" id="modalOrderId">#ORDER-0000</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="r-label">DATE & TIME:</span>
+                                <span class="r-val" id="modalOrderTime">—</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="r-label">CASHIER:</span>
+                                <span class="r-val" id="modalCashier"><?= htmlspecialchars($employeeName) ?></span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="r-label">CUSTOMER:</span>
+                                <span class="r-val bold" id="modalCustomerName">N/A</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="r-label">ORDER TYPE:</span>
+                                <span class="r-val bold" id="modalOrderType">ORDER ADJUSTMENT</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="r-label">STATUS:</span>
+                                <span class="r-val bold" id="modalOrderStatus">COMPLETED</span>
+                            </div>
+                        </div>
+                        <div class="receipt-divider-dashed">--------------------------------</div>
+                        <div class="receipt-items-header">
+                            <span class="r-col-qty">QTY</span>
+                            <span class="r-col-desc">ITEM</span>
+                            <span class="r-col-amt">AMOUNT</span>
+                        </div>
+                        <div class="receipt-divider-dashed">--------------------------------</div>
+                        <div class="receipt-items-list" id="modalItemsList"></div>
+                        <div class="receipt-divider-dashed">--------------------------------</div>
+                        <div class="receipt-totals">
+                            <div class="receipt-row">
+                                <span>Subtotal</span>
+                                <span id="modalSubtotal">₱0.00</span>
+                            </div>
+                            <div class="receipt-row" id="modalDeliveryFeeRow" style="display:none;">
+                                <span>Delivery Fee</span>
+                                <span id="modalDeliveryFee">₱0.00</span>
+                            </div>
+                            <div class="receipt-row" id="modalTaxRow" style="display:none;">
+                                <span>Other Charges</span>
+                                <span id="modalTax">₱0.00</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span>Discount</span>
+                                <span>₱0.00</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span>VATable Sales (12%)</span>
+                                <span id="modalVatSales">₱0.00</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span>VAT Amount</span>
+                                <span id="modalVatAmt">₱0.00</span>
+                            </div>
+                            <div class="receipt-divider-double">================================</div>
+                            <div class="receipt-row receipt-grand-total">
+                                <span>TOTAL AMOUNT:</span>
+                                <span id="modalTotal">₱0.00</span>
+                            </div>
+                            <div class="receipt-divider-double">================================</div>
+                            <div class="receipt-row">
+                                <span>Payment Method:</span>
+                                <span class="bold uppercase" id="modalPayment">Cash</span>
+                            </div>
+                            <div class="receipt-row" id="modalTenderedRow">
+                                <span id="modalTenderedLabel">Amount Tendered:</span>
+                                <span id="modalTendered">₱0.00</span>
+                            </div>
+                            <div class="receipt-row" id="modalChangeRow">
+                                <span id="modalChangeLabel">Change:</span>
+                                <span id="modalChange">₱0.00</span>
+                            </div>
+                            <div class="receipt-row" id="modalRefRow" style="display:none;">
+                                <span>Ref / Trans No:</span>
+                                <span id="modalRefNo">Not available</span>
+                            </div>
+                        </div>
+                        <div class="receipt-divider-dashed">--------------------------------</div>
+                        <div class="receipt-footer">
+                            <div class="receipt-barcode-wrap">
+                                <span class="barcode-num" id="modalBarcodeNum">* ORDER-1234 *</span>
+                            </div>
+                            <p class="receipt-thankyou" id="modalReceiptMessage">*** THANK YOU FOR YOUR PURCHASE! ***</p>
+                            <p class="receipt-tagline">Brewed with passion, served with love.</p>
+                            <p class="receipt-social">Follow us: @boycoldcafe</p>
+                            <p class="receipt-pos-system">BoyCold POS v1.0 - Official Receipt</p>
+                        </div>
+                    </div>
+                    <div class="receipt-sawtooth-bottom"></div>
+                    <div class="receipt-actions">
+                        <button type="button" class="receipt-btn-print" id="modalPrintBtn">
+                            <i class="fa-solid fa-print"></i> Print Receipt
+                        </button>
+                        <button type="button" class="receipt-btn-close" id="modalDoneBtn">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -527,127 +715,191 @@ function orderhis_format_group_label(string $dateStr): string {
         const notifBadge = document.getElementById("notifBadge");
         const notifList = document.getElementById("notifList");
 
-        if (notifBtn?.dataset.inventoryAlert !== "true") {
-        notifBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifDropdown.classList.toggle("open");
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-                notifDropdown.classList.remove("open");
-            }
-        });
-
-        markAllRead?.addEventListener("click", (e) => {
-            e.preventDefault();
-            notifList?.querySelectorAll(".notif-item.unread").forEach(item => {
-                item.classList.remove("unread");
+        // order-notify.js creates this UI on pages that have notifications.
+        // On this page it may not exist yet, so it must not stop the scripts
+        // below (including the history date/filter dropdowns).
+        if (notifBtn && notifDropdown && notifBtn.dataset.inventoryAlert !== "true") {
+            notifBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle("open");
             });
-            if (notifBadge) notifBadge.style.display = "none";
-        });
+
+            document.addEventListener("click", (e) => {
+                if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+                    notifDropdown.classList.remove("open");
+                }
+            });
+
+            markAllRead?.addEventListener("click", (e) => {
+                e.preventDefault();
+                notifList?.querySelectorAll(".notif-item.unread").forEach(item => {
+                    item.classList.remove("unread");
+                });
+                if (notifBadge) notifBadge.style.display = "none";
+            });
         }
-        // ── Date dropdown ──
-        const dateDropdownBtn = document.getElementById("dateDropdownBtn");
-        const dateDropdownPanel = document.getElementById("dateDropdownPanel");
-        const dateDropdownLabel = document.getElementById("dateDropdownLabel");
-        let currentRange = "today";
+        // Date and advanced filters share one function so both controls always
+        // show the same set of history rows.
+        (() => {
+            const dateDropdownBtn = document.getElementById("dateDropdownBtn");
+            const dateDropdownPanel = document.getElementById("dateDropdownPanel");
+            const dateDropdownLabel = document.getElementById("dateDropdownLabel");
+            const filterDropdownBtn = document.getElementById("filterDropdownBtn");
+            const filterDropdownPanel = document.getElementById("filterDropdownPanel");
+            const filterPayment = document.getElementById("filterPayment");
+            const filterType = document.getElementById("filterType");
+            const filterMinAmount = document.getElementById("filterMinAmount");
+            const filterMaxAmount = document.getElementById("filterMaxAmount");
+            const filterApplyBtn = document.getElementById("filterApplyBtn");
+            const filterResetBtn = document.getElementById("filterResetBtn");
+            const table = document.querySelector(".orderhis-table");
+            const tableEmpty = document.getElementById("tableEmpty");
 
-        dateDropdownBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            filterDropdownPanel.classList.remove("open");
-            dateDropdownPanel.classList.toggle("open");
-        });
+            if (!dateDropdownBtn || !dateDropdownPanel || !dateDropdownLabel ||
+                !filterDropdownBtn || !filterDropdownPanel || !filterPayment ||
+                !filterType || !filterMinAmount || !filterMaxAmount ||
+                !filterApplyBtn || !filterResetBtn || !table || !tableEmpty) {
+                return;
+            }
 
-        dateDropdownPanel.querySelectorAll(".date-option").forEach(opt => {
-            opt.addEventListener("click", () => {
-                dateDropdownPanel.querySelectorAll(".date-option").forEach(o => o.classList.remove("active"));
-                opt.classList.add("active");
-                dateDropdownLabel.textContent = opt.textContent;
-                currentRange = opt.dataset.range;
+            let currentRange = "today";
+
+            function parseHistoryDate(value) {
+                const matches = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+                if (!matches) return null;
+
+                return new Date(
+                    Number(matches[1]),
+                    Number(matches[2]) - 1,
+                    Number(matches[3])
+                );
+            }
+
+            function isWithinRange(dateValue, range) {
+                const rowDate = parseHistoryDate(dateValue);
+                if (!rowDate || Number.isNaN(rowDate.getTime())) return false;
+
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const diffDays = Math.round((today - rowDate) / 86400000);
+                if (diffDays < 0) return false;
+
+                if (range === "today") return diffDays === 0;
+                if (range === "weekly") return diffDays <= 7;
+                if (range === "monthly") return diffDays <= 30;
+                if (range === "annual") return diffDays <= 365;
+                return true;
+            }
+
+            function updateGroupLabels() {
+                const children = Array.from(table.children);
+
+                children.forEach((child, index) => {
+                    if (!child.classList.contains("table-group-label")) return;
+
+                    let hasVisibleRow = false;
+                    for (let nextIndex = index + 1; nextIndex < children.length; nextIndex++) {
+                        const nextChild = children[nextIndex];
+                        if (nextChild.classList.contains("table-group-label")) break;
+                        if (nextChild.classList.contains("table-row") && nextChild.style.display !== "none") {
+                            hasVisibleRow = true;
+                            break;
+                        }
+                    }
+                    child.style.display = hasVisibleRow ? "" : "none";
+                });
+            }
+
+            function readAmount(input, fallback) {
+                if (input.value.trim() === "") return fallback;
+                const amount = Number(input.value);
+                return Number.isFinite(amount) ? amount : fallback;
+            }
+
+            function applyFilters() {
+                const payment = filterPayment.value;
+                const type = filterType.value;
+                const min = readAmount(filterMinAmount, 0);
+                const max = readAmount(filterMaxAmount, Infinity);
+                let visibleCount = 0;
+
+                table.querySelectorAll(".table-row").forEach((row) => {
+                    const amount = Number(row.dataset.amount || 0);
+                    const matches =
+                        isWithinRange(row.dataset.date, currentRange) &&
+                        (!payment || row.dataset.payment === payment) &&
+                        (!type || row.dataset.type === type) &&
+                        amount >= min && amount <= max;
+
+                    row.style.display = matches ? "" : "none";
+                    if (matches) visibleCount++;
+                });
+
+                updateGroupLabels();
+                tableEmpty.style.display = visibleCount === 0 ? "block" : "none";
+            }
+
+            dateDropdownBtn.addEventListener("click", (event) => {
+                event.stopPropagation();
+                filterDropdownPanel.classList.remove("open");
+                dateDropdownPanel.classList.toggle("open");
+            });
+
+            dateDropdownPanel.querySelectorAll(".date-option").forEach((option) => {
+                option.addEventListener("click", () => {
+                    dateDropdownPanel.querySelectorAll(".date-option").forEach((item) => {
+                        item.classList.toggle("active", item === option);
+                    });
+                    currentRange = option.dataset.range || "today";
+                    dateDropdownLabel.textContent = option.textContent.trim();
+                    dateDropdownPanel.classList.remove("open");
+                    applyFilters();
+                });
+            });
+
+            filterDropdownBtn.addEventListener("click", (event) => {
+                event.stopPropagation();
                 dateDropdownPanel.classList.remove("open");
+                filterDropdownPanel.classList.toggle("open");
+            });
+
+            document.addEventListener("click", (event) => {
+                if (!dateDropdownPanel.contains(event.target) && !dateDropdownBtn.contains(event.target)) {
+                    dateDropdownPanel.classList.remove("open");
+                }
+                if (!filterDropdownPanel.contains(event.target) && !filterDropdownBtn.contains(event.target)) {
+                    filterDropdownPanel.classList.remove("open");
+                }
+            });
+
+            filterApplyBtn.addEventListener("click", () => {
+                applyFilters();
+                filterDropdownPanel.classList.remove("open");
+            });
+
+            filterResetBtn.addEventListener("click", () => {
+                filterPayment.value = "";
+                filterType.value = "";
+                filterMinAmount.value = "";
+                filterMaxAmount.value = "";
                 applyFilters();
             });
-        });
-        
 
-        // ── Filter dropdown ──
-        const filterDropdownBtn = document.getElementById("filterDropdownBtn");
-        const filterDropdownPanel = document.getElementById("filterDropdownPanel");
-        const filterPayment = document.getElementById("filterPayment");
-        const filterType = document.getElementById("filterType");
-        const filterMinAmount = document.getElementById("filterMinAmount");
-        const filterMaxAmount = document.getElementById("filterMaxAmount");
+            // The periodic history refresh must not wipe a cashier's current
+            // date range or filters while they are reviewing orders.
+            window.isHistoryFilterActive = function () {
+                return dateDropdownPanel.classList.contains("open") ||
+                    filterDropdownPanel.classList.contains("open") ||
+                    currentRange !== "today" ||
+                    filterPayment.value !== "" ||
+                    filterType.value !== "" ||
+                    filterMinAmount.value.trim() !== "" ||
+                    filterMaxAmount.value.trim() !== "";
+            };
 
-        filterDropdownBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            dateDropdownPanel.classList.remove("open");
-            filterDropdownPanel.classList.toggle("open");
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!dateDropdownPanel.contains(e.target) && !dateDropdownBtn.contains(e.target)) {
-                dateDropdownPanel.classList.remove("open");
-            }
-            if (!filterDropdownPanel.contains(e.target) && !filterDropdownBtn.contains(e.target)) {
-                filterDropdownPanel.classList.remove("open");
-            }
-        });
-
-        document.getElementById("filterApplyBtn").addEventListener("click", () => {
+            // The label starts as Today, so apply that selection immediately.
             applyFilters();
-            filterDropdownPanel.classList.remove("open");
-        });
-
-        document.getElementById("filterResetBtn").addEventListener("click", () => {
-            filterPayment.value = "";
-            filterType.value = "";
-            filterMinAmount.value = "";
-            filterMaxAmount.value = "";
-            applyFilters();
-        });
-
-        // ── Core filtering logic ──
-        function isWithinRange(dateStr, range) {
-            const rowDate = new Date(dateStr + "T00:00:00");
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const diffDays = Math.floor((today - rowDate) / (1000 * 60 * 60 * 24));
-
-            if (range === "today") return diffDays === 0;
-            if (range === "weekly") return diffDays >= 0 && diffDays <= 7;
-            if (range === "monthly") return diffDays >= 0 && diffDays <= 30;
-            if (range === "annual") return diffDays >= 0 && diffDays <= 365;
-            return true;
-        }
-
-        function applyFilters() {
-            const rows = document.querySelectorAll(".orderhis-table .table-row");
-            const payment = filterPayment.value;
-            const type = filterType.value;
-            const min = parseFloat(filterMinAmount.value) || 0;
-            const max = parseFloat(filterMaxAmount.value) || Infinity;
-            let visibleCount = 0;
-
-            rows.forEach(row => {
-                const rowPayment = row.dataset.payment;
-                const rowType = row.dataset.type;
-                const rowAmount = parseFloat(row.dataset.amount) || 0;
-                const rowDate = row.dataset.date;
-
-                const matches =
-                    isWithinRange(rowDate, currentRange) &&
-                    (!payment || rowPayment === payment) &&
-                    (!type || rowType === type) &&
-                    rowAmount >= min &&
-                    rowAmount <= max;
-
-                row.style.display = matches ? "" : "none";
-                if (matches) visibleCount++;
-            });
-
-            document.getElementById("tableEmpty").style.display = visibleCount === 0 ? "block" : "none";
-        }
+        })();
     </script>
 
     <script>
@@ -722,12 +974,757 @@ function orderhis_format_group_label(string $dateStr): string {
         }
     </script>
 
+    <script>
+        // ══════════════════════════════
+        // ROW ACTIONS (⋮) + VOID ORDER
+        // ══════════════════════════════
+        (function () {
+            const table = document.querySelector(".orderhis-table");
+            if (!table) return;
+
+            const VOID_ORDER_API = "../pos-void-order-api.php";
+
+            function escapeHtml(value) {
+                return String(value).replace(/[&<>"']/g, ch => (
+                    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+                ));
+            }
+
+            let currentVoidRow = null;    // row waiting for the PIN
+            let currentVoidRowEl = null;  // row being voided / adjusted
+            let currentVoidAuthorizationPin = "";
+
+            // ── Row dots (⋮) menu ──
+            function initRowActions() {
+                table.querySelectorAll(".table-row").forEach(row => {
+                    if (row.querySelector(".col-actions")) return; // already injected
+
+                    const isPhysical = !!row.querySelector(".source-dot.physical");
+                    const status = (row.querySelector(".col-status")?.textContent || "").trim().toLowerCase();
+                    const actionsSpan = document.createElement("span");
+                    actionsSpan.className = "col-actions";
+
+                    if (isPhysical && status !== "cancelled" && status !== "voided" && status !== "void order") {
+                        actionsSpan.innerHTML = `
+                <button type="button" class="row-dots-btn" aria-label="More actions">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div class="row-actions-menu">
+                    <button type="button" class="void-order-btn">Void</button>
+                </div>
+            `;
+                    }
+                    row.appendChild(actionsSpan);
+                });
+            }
+
+            function closeRowMenus(except) {
+                document.querySelectorAll(".row-actions-menu.open").forEach(m => {
+                    if (m !== except) m.classList.remove("open");
+                });
+            }
+
+            // The table wrapper clips overflow, so the menu is fixed-positioned next to
+            // its button (and flips upward near the bottom of the screen).
+            function positionRowMenu(btn, menu) {
+                const r = btn.getBoundingClientRect();
+                const menuHeight = menu.offsetHeight;
+                const openUp = r.bottom + menuHeight + 8 > window.innerHeight && r.top - menuHeight - 8 > 0;
+                menu.style.top = (openUp ? r.top - menuHeight - 4 : r.bottom + 4) + "px";
+                menu.style.right = Math.max(8, window.innerWidth - r.right) + "px";
+                menu.style.left = "auto";
+            }
+
+            // One delegated listener, so rows added later (e.g. the adjusted order) work too.
+            table.addEventListener("click", (e) => {
+                const dotsBtn = e.target.closest(".row-dots-btn");
+                if (dotsBtn) {
+                    const menu = dotsBtn.nextElementSibling;
+                    const willOpen = !menu.classList.contains("open");
+                    closeRowMenus();
+                    if (willOpen) {
+                        menu.classList.add("open");
+                        positionRowMenu(dotsBtn, menu);
+                    }
+                    return;
+                }
+
+                const voidBtn = e.target.closest(".void-order-btn");
+                if (voidBtn) {
+                    closeRowMenus();
+                    openPinModal(voidBtn.closest(".table-row"));
+                    return;
+                }
+
+                // A normal history row opens the same thermal receipt-style
+                // order summary that administrators see from Orders > View.
+                const orderRow = e.target.closest(".history-order-row[data-order-id]");
+                if (orderRow && !e.target.closest("button, a, input, select, textarea, .col-actions")) {
+                    closeRowMenus();
+                    openHistoryReceipt(orderRow);
+                }
+            });
+
+            table.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+
+                const orderRow = event.target.closest(".history-order-row[data-order-id]");
+                if (!orderRow || event.target.closest("button, a, input, select, textarea, .col-actions")) return;
+
+                event.preventDefault();
+                closeRowMenus();
+                openHistoryReceipt(orderRow);
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!e.target.closest(".col-actions")) closeRowMenus();
+            });
+            window.addEventListener("scroll", () => closeRowMenus(), true);
+            window.addEventListener("resize", () => closeRowMenus());
+
+            // ── Authorization PIN modal ──
+            const pinModal = document.getElementById("pinModal");
+            const pinBoxes = Array.from(document.querySelectorAll(".pin-box"));
+            const pinError = document.getElementById("pinError");
+            const pinCancelBtn = document.getElementById("pinCancelBtn");
+            const pinConfirmBtn = document.getElementById("pinConfirmBtn");
+
+            function openPinModal(row) {
+                currentVoidRow = row;
+                clearPinBoxes();
+                hidePinError();
+                pinModal.classList.add("show");
+                pinBoxes[0].focus();
+            }
+
+            function closePinModal() {
+                pinModal.classList.remove("show");
+                currentVoidRow = null;
+            }
+
+            function clearPinBoxes() {
+                pinBoxes.forEach(box => {
+                    box.value = "";
+                    box.classList.remove("error");
+                });
+            }
+
+            function showPinError(message = "*Incorrect authorization PIN") {
+                pinError.textContent = message;
+                pinError.classList.add("show");
+                pinBoxes.forEach(box => box.classList.add("error"));
+            }
+
+            function hidePinError() {
+                pinError.classList.remove("show");
+                pinError.textContent = "*Incorrect authorization PIN";
+                pinBoxes.forEach(box => box.classList.remove("error"));
+            }
+
+            function getEnteredPin() {
+                return pinBoxes.map(box => box.value).join("");
+            }
+
+            async function requestVoidApi(payload) {
+                const response = await fetch(VOID_ORDER_API, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || "Unable to complete this void request.");
+                }
+                return result;
+            }
+
+            pinBoxes.forEach((box, idx) => {
+                box.addEventListener("input", () => {
+                    box.value = box.value.replace(/[^0-9]/g, "");
+                    if (box.classList.contains("error")) hidePinError();
+                    if (box.value && idx < pinBoxes.length - 1) {
+                        pinBoxes[idx + 1].focus();
+                    }
+                });
+
+                box.addEventListener("keydown", (e) => {
+                    if (e.key === "Backspace" && !box.value && idx > 0) {
+                        pinBoxes[idx - 1].focus();
+                    }
+                });
+            });
+
+            pinCancelBtn.addEventListener("click", closePinModal);
+
+            pinConfirmBtn.addEventListener("click", async () => {
+                const entered = getEnteredPin();
+
+                if (entered.length !== 4 || !currentVoidRow?.dataset.orderId) {
+                    showPinError();
+                    return;
+                }
+
+                pinConfirmBtn.disabled = true;
+                try {
+                    const result = await requestVoidApi({
+                        action: "authorize",
+                        order_id: Number(currentVoidRow.dataset.orderId),
+                        authorization_pin: entered
+                    });
+                    const row = currentVoidRow;
+                    currentVoidAuthorizationPin = entered;
+                    closePinModal();
+                    openVoidModal(row, result);
+                } catch (error) {
+                    console.error("POS void authorization failed:", error);
+                    clearPinBoxes();
+                    showPinError("*" + (error.message || "Incorrect authorization PIN."));
+                    pinBoxes[0].focus();
+                } finally {
+                    pinConfirmBtn.disabled = false;
+                }
+            });
+
+            pinModal.addEventListener("click", (e) => {
+                if (e.target === pinModal) closePinModal();
+            });
+
+            // ── Void order (adjustment mode) modal ──
+            const voidModal = document.getElementById("voidModal");
+            const voidOrderNoEl = document.getElementById("voidOrderNo");
+            const voidPaymentEl = document.getElementById("voidPayment");
+            const voidStatusEl = document.getElementById("voidStatus");
+            const voidItemsList = document.getElementById("voidItemsList");
+            const voidTotalEl = document.getElementById("voidTotal");
+            const voidPayAdjust = document.getElementById("voidPayAdjust");
+            const voidPayLabel = document.getElementById("voidPayLabel");
+            const voidPayValue = document.getElementById("voidPayValue");
+            const addItemBtn = document.getElementById("addItemBtn");
+            const addAddonBtn = document.getElementById("addAddonBtn");
+            const voidCancelBtn = document.getElementById("voidCancelBtn");
+            const voidConfirmBtn = document.getElementById("voidConfirmBtn");
+
+            let voidRows = [];
+            let voidProducts = [];
+            let voidRowIdCounter = 0;
+            let currentVoidOriginalPaid = 0;
+            let currentVoidOrderId = 0;
+
+            function productForVoidRow(rowState) {
+                return voidProducts.find((product) => Number(product.id) === Number(rowState.product_id)) || null;
+            }
+
+            function modifierNames(value) {
+                if (Array.isArray(value)) {
+                    return value.flatMap((modifier) => {
+                        if (modifier && typeof modifier === "object") {
+                            return modifierNames(modifier.value || modifier.name || "");
+                        }
+                        return modifierNames(modifier);
+                    });
+                }
+
+                const rawValue = String(value || "").trim();
+                if (!rawValue) return [];
+
+                // Older cart rows can contain JSON while saved receipts use
+                // comma-separated add-ons. Support both representations so
+                // the receipt choices are restored in the adjustment modal.
+                if ((rawValue.startsWith("[") || rawValue.startsWith("{"))) {
+                    try {
+                        const parsed = JSON.parse(rawValue);
+                        if (parsed !== rawValue) return modifierNames(parsed);
+                    } catch (error) {
+                        // Fall through to the receipt's comma-separated text.
+                    }
+                }
+
+                return rawValue
+                    .split(",")
+                    .map((name) => name.trim())
+                    .filter(Boolean);
+            }
+
+            function matchingModifierName(value, modifiers) {
+                const normalizedValue = String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+                const match = (modifiers || []).find((modifier) =>
+                    String(modifier.name || "").trim().replace(/\s+/g, " ").toLowerCase() === normalizedValue
+                );
+                return match ? String(match.name) : "";
+            }
+
+            function openVoidModal(row, result) {
+                const order = result.order || {};
+                voidProducts = Array.isArray(result.products) ? result.products : [];
+                if (!voidProducts.length) {
+                    window.alert("No available menu items were found for this adjustment.");
+                    currentVoidAuthorizationPin = "";
+                    return;
+                }
+
+                currentVoidRowEl = row;
+                currentVoidOrderId = Number(order.id || row.dataset.orderId || 0);
+                currentVoidOriginalPaid = Number(order.total || row.dataset.amount || 0);
+                voidOrderNoEl.textContent = result.order_number || row.dataset.orderNumber || "—";
+                voidPaymentEl.textContent = String(order.payment_method || "cash").toUpperCase();
+                voidStatusEl.textContent = String(order.status || "completed");
+
+                voidRows = (Array.isArray(order.items) ? order.items : []).map((item) => {
+                    const product = voidProducts.find((entry) =>
+                        String(entry.product_name || "").toLowerCase() === String(item.product_name || "").toLowerCase()
+                    ) || null;
+                    const addonOptions = product?.addons || [];
+                    const milkOptions = product?.milk_choices || [];
+                    return {
+                        id: voidRowIdCounter++,
+                        product_id: product ? Number(product.id) : 0,
+                        quantity: Math.max(1, Number.parseInt(item.quantity, 10) || 1),
+                        milk: matchingModifierName(item.milk, milkOptions),
+                        addons: modifierNames(item.addons)
+                            .map((addon) => matchingModifierName(addon, addonOptions))
+                            .filter(Boolean),
+                        notes: String(item.notes || "")
+                    };
+                });
+
+                if (!voidRows.length) {
+                    voidRows.push({
+                        id: voidRowIdCounter++,
+                        product_id: Number(voidProducts[0].id),
+                        quantity: 1,
+                        milk: "",
+                        addons: [],
+                        notes: ""
+                    });
+                }
+
+                renderVoidItems();
+                voidModal.classList.add("show");
+            }
+
+            function closeVoidModal() {
+                voidModal.classList.remove("show");
+                currentVoidRowEl = null;
+                currentVoidOrderId = 0;
+                currentVoidAuthorizationPin = "";
+                voidRows = [];
+            }
+
+            function voidProductOptions(selectedId) {
+                return `<option value="">Choose item</option>` + voidProducts.map((product) =>
+                    `<option value="${Number(product.id)}" ${Number(product.id) === Number(selectedId) ? "selected" : ""}>${escapeHtml(product.product_name)}</option>`
+                ).join("");
+            }
+
+            function voidModifierOptions(modifiers, selectedValue, emptyLabel) {
+                return `<option value="">${escapeHtml(emptyLabel)}</option>` + (modifiers || []).map((modifier) =>
+                    `<option value="${escapeHtml(modifier.name)}" ${String(modifier.name) === String(selectedValue) ? "selected" : ""}>${escapeHtml(modifier.name)}${Number(modifier.price) > 0 ? ` (+${formatVoidPeso(modifier.price)})` : ""}</option>`
+                ).join("");
+            }
+
+            function calcRowSubtotal(rowState) {
+                const product = productForVoidRow(rowState);
+                if (!product) return 0;
+
+                let unitPrice = Number(product.price) || 0;
+                const milk = (product.milk_choices || []).find((modifier) => String(modifier.name) === String(rowState.milk));
+                unitPrice += Number(milk?.price || 0);
+                (rowState.addons || []).forEach((addonName) => {
+                    const addon = (product.addons || []).find((modifier) => String(modifier.name) === String(addonName));
+                    unitPrice += Number(addon?.price || 0);
+                });
+                return unitPrice * Math.max(1, Number(rowState.quantity) || 1);
+            }
+
+            function renderVoidItems() {
+                voidItemsList.innerHTML = voidRows.map((rowState) => {
+                    const product = productForVoidRow(rowState);
+                    const productName = product?.product_name || "Choose a replacement item";
+                    const addonOptions = product?.addons || [];
+                    const selectedAddons = new Set(rowState.addons || []);
+                    const addonMarkup = addonOptions.length
+                        ? addonOptions.map((addon) => `
+                            <label class="void-addon-choice">
+                                <input type="checkbox" value="${escapeHtml(addon.name)}" ${selectedAddons.has(String(addon.name)) ? "checked" : ""}>
+                                <span>${escapeHtml(addon.name)}${Number(addon.price) > 0 ? ` (+${formatVoidPeso(addon.price)})` : ""}</span>
+                            </label>`).join("")
+                        : '<span class="void-no-modifiers">No add-ons available</span>';
+
+                    return `
+                        <div class="void-item-row" data-row-id="${rowState.id}">
+                            <select class="void-item-select" aria-label="Menu item">${voidProductOptions(rowState.product_id)}</select>
+                            <div class="void-item-addons">
+                                <select class="void-milk-select" aria-label="Milk option">${voidModifierOptions(product?.milk_choices, rowState.milk, "No milk option")}</select>
+                                <div class="void-addon-options" aria-label="Add-ons">${addonMarkup}</div>
+                                <input class="void-item-notes" type="text" maxlength="1000" placeholder="Item note (optional)" value="${escapeHtml(rowState.notes)}">
+                                <small class="void-item-price">${escapeHtml(productName)} · ${formatVoidPeso(calcRowSubtotal(rowState))}</small>
+                            </div>
+                            <div class="void-item-right">
+                                <div class="void-qty-stepper">
+                                    <button type="button" class="void-qty-minus" aria-label="Decrease quantity">−</button>
+                                    <span class="void-qty-value">${rowState.quantity}</span>
+                                    <button type="button" class="void-qty-plus" aria-label="Increase quantity">+</button>
+                                </div>
+                                ${voidRows.length > 1 ? '<button type="button" class="void-row-remove" aria-label="Remove item"><i class="fa-solid fa-trash"></i></button>' : ""}
+                            </div>
+                        </div>`;
+                }).join("");
+
+                attachVoidRowListeners();
+                updateVoidTotals();
+            }
+
+            function attachVoidRowListeners() {
+                voidItemsList.querySelectorAll(".void-item-row").forEach((rowEl) => {
+                    const rowState = voidRows.find((row) => Number(row.id) === Number(rowEl.dataset.rowId));
+                    if (!rowState) return;
+
+                    rowEl.querySelector(".void-item-select").addEventListener("change", (event) => {
+                        rowState.product_id = Number(event.target.value) || 0;
+                        rowState.milk = "";
+                        rowState.addons = [];
+                        renderVoidItems();
+                    });
+                    rowEl.querySelector(".void-milk-select").addEventListener("change", (event) => {
+                        rowState.milk = event.target.value;
+                        renderVoidItems();
+                    });
+                    rowEl.querySelectorAll(".void-addon-choice input").forEach((input) => {
+                        input.addEventListener("change", () => {
+                            rowState.addons = Array.from(rowEl.querySelectorAll(".void-addon-choice input:checked"))
+                                .map((checkbox) => checkbox.value);
+                            renderVoidItems();
+                        });
+                    });
+                    rowEl.querySelector(".void-item-notes").addEventListener("input", (event) => {
+                        rowState.notes = event.target.value;
+                    });
+                    rowEl.querySelector(".void-qty-plus").addEventListener("click", () => {
+                        rowState.quantity = Math.min(99, rowState.quantity + 1);
+                        renderVoidItems();
+                    });
+                    rowEl.querySelector(".void-qty-minus").addEventListener("click", () => {
+                        rowState.quantity = Math.max(1, rowState.quantity - 1);
+                        renderVoidItems();
+                    });
+                    rowEl.querySelector(".void-row-remove")?.addEventListener("click", () => {
+                        voidRows = voidRows.filter((row) => row !== rowState);
+                        renderVoidItems();
+                    });
+                });
+            }
+
+            function updateVoidTotals() {
+                const total = voidRows.reduce((sum, row) => sum + calcRowSubtotal(row), 0);
+                const isReady = voidRows.length > 0 && voidRows.every((row) => productForVoidRow(row));
+                voidTotalEl.textContent = formatVoidPeso(total);
+                voidConfirmBtn.disabled = !isReady;
+
+                const diff = total - currentVoidOriginalPaid;
+                if (Math.abs(diff) < 0.005) {
+                    voidPayAdjust.style.display = "none";
+                } else if (diff > 0) {
+                    voidPayAdjust.style.display = "block";
+                    voidPayLabel.textContent = "Pay In";
+                    voidPayValue.textContent = "Collect " + formatVoidPeso(diff);
+                } else {
+                    voidPayAdjust.style.display = "block";
+                    voidPayLabel.textContent = "Pay Out";
+                    voidPayValue.textContent = "Refund " + formatVoidPeso(Math.abs(diff));
+                }
+            }
+
+            function formatVoidPeso(amount) {
+                return "₱" + (Number(amount) || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            addItemBtn.addEventListener("click", () => {
+                if (!voidProducts.length) return;
+                voidRows.push({
+                    id: voidRowIdCounter++,
+                    product_id: Number(voidProducts[0].id),
+                    quantity: 1,
+                    milk: "",
+                    addons: [],
+                    notes: ""
+                });
+                renderVoidItems();
+            });
+
+            addAddonBtn.addEventListener("click", () => {
+                const lastRow = voidRows[voidRows.length - 1];
+                const product = lastRow && productForVoidRow(lastRow);
+                const nextAddon = (product?.addons || []).find((addon) => !lastRow.addons.includes(String(addon.name)));
+                if (!nextAddon) return;
+                lastRow.addons.push(String(nextAddon.name));
+                renderVoidItems();
+            });
+
+            voidCancelBtn.addEventListener("click", closeVoidModal);
+
+            voidModal.addEventListener("click", (e) => {
+                if (e.target === voidModal) closeVoidModal();
+            });
+
+            // ── Receipt for the adjusted (new) order ──
+            const orderModal = document.getElementById("orderModal");
+            const closeModalBtn = document.getElementById("closeModalBtn");
+            const modalDoneBtn = document.getElementById("modalDoneBtn");
+            const modalPrintBtn = document.getElementById("modalPrintBtn");
+            const currentBranchName = <?= json_encode($branchName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+            const currentCashierName = <?= json_encode($employeeName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+            function formatReceiptPeso(value) {
+                const amount = Number(value);
+                return "₱" + (Number.isFinite(amount) ? amount : 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function formatReceiptDate(value) {
+                const date = new Date(String(value || "").replace(" ", "T"));
+                if (Number.isNaN(date.getTime())) return "—";
+
+                return date.toLocaleString("en-PH", {
+                    timeZone: "Asia/Manila",
+                    month: "short",
+                    day: "2-digit",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true
+                });
+            }
+
+            function receiptStatusLabel(value) {
+                return String(value || "Unknown")
+                    .replace(/[-_]/g, " ")
+                    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+            }
+
+            function addReceiptItem(itemsList, item) {
+                const qty = Math.max(1, Number.parseInt(item.qty, 10) || 1);
+                const unitPrice = Number(item.price || 0);
+                const lineTotal = Number.isFinite(Number(item.line_total))
+                    ? Number(item.line_total)
+                    : qty * unitPrice;
+                const itemBlock = document.createElement("div");
+                itemBlock.className = "receipt-item-block";
+                const itemMain = document.createElement("div");
+                itemMain.className = "receipt-item-main";
+
+                const qtyCell = document.createElement("span");
+                qtyCell.className = "r-col-qty";
+                qtyCell.textContent = String(qty);
+                const nameCell = document.createElement("span");
+                nameCell.className = "r-col-desc";
+                nameCell.textContent = String(item.name || "Item");
+                const amountCell = document.createElement("span");
+                amountCell.className = "r-col-amt";
+                amountCell.textContent = Number.isFinite(lineTotal) ? lineTotal.toFixed(2) : "0.00";
+
+                itemMain.append(qtyCell, nameCell, amountCell);
+                itemBlock.appendChild(itemMain);
+
+                const details = [
+                    item.milk ? `Milk: ${item.milk}` : "",
+                    item.addons ? `Add-ons: ${item.addons}` : "",
+                    item.notes ? `Note: ${item.notes}` : ""
+                ].filter(Boolean);
+                if (details.length) {
+                    const detailList = document.createElement("div");
+                    detailList.className = "receipt-item-details";
+                    details.forEach((detail) => {
+                        const detailLine = document.createElement("span");
+                        detailLine.className = "r-indent";
+                        detailLine.textContent = `• ${detail}`;
+                        detailList.appendChild(detailLine);
+                    });
+                    itemBlock.appendChild(detailList);
+                }
+
+                itemsList.appendChild(itemBlock);
+                return Number.isFinite(lineTotal) ? lineTotal : 0;
+            }
+
+            function renderHistoryReceipt(order, orderNumber) {
+                const itemsList = document.getElementById("modalItemsList");
+                const items = Array.isArray(order.items) ? order.items : [];
+                const typeLabels = {
+                    "dine-in": "Dine In",
+                    takeout: "Take Out",
+                    delivery: "Delivery",
+                    pickup: "Pick Up"
+                };
+                const orderTypeLabel = typeLabels[order.order_type] || "Order";
+                const paymentMethod = String(order.payment_method || "cod").toLowerCase();
+                const paymentLabel = paymentMethod === "qrph" ? "QRPh" : "Cash";
+                const calculatedSubtotal = items.reduce((sum, item) => sum +
+                    ((Number(item.line_total) || ((Number(item.qty) || 1) * (Number(item.price) || 0)))), 0);
+                const subtotal = Number.isFinite(Number(order.subtotal)) ? Number(order.subtotal) : calculatedSubtotal;
+                const deliveryFee = Math.max(0, Number(order.delivery_fee) || 0);
+                const tax = Math.max(0, Number(order.tax) || 0);
+                const total = Number.isFinite(Number(order.total)) ? Number(order.total) : subtotal + deliveryFee + tax;
+                const vatableSales = total / 1.12;
+                const vatAmount = total - vatableSales;
+
+                document.getElementById("modalBranch").textContent = order.branch_name || currentBranchName;
+                document.getElementById("modalCashier").textContent = order.cashier_name || currentCashierName;
+                document.getElementById("modalOrderId").textContent = orderNumber;
+                document.getElementById("modalOrderTime").textContent = formatReceiptDate(order.created_at);
+                document.getElementById("modalCustomerName").textContent = order.customer_name || order.user_name || "Guest";
+                document.getElementById("modalOrderType").textContent = `${orderTypeLabel.toUpperCase()} ORDER`;
+                const wasVoided = Boolean(order.voided_at);
+                document.getElementById("modalOrderStatus").textContent = wasVoided
+                    ? "VOID ORDER"
+                    : `${receiptStatusLabel(order.status)} / ${receiptStatusLabel(order.payment_status)}`;
+                document.getElementById("modalPayment").textContent = paymentLabel;
+                document.getElementById("modalReceiptMessage").textContent = wasVoided
+                    ? "*** VOID ORDER ***"
+                    : String(order.status).toLowerCase() === "cancelled"
+                        ? "*** ORDER CANCELLED ***"
+                        : "*** THANK YOU FOR YOUR PURCHASE! ***";
+                document.getElementById("modalBarcodeNum").textContent = `* ${orderNumber} *`;
+
+                itemsList.replaceChildren();
+                items.forEach((item) => addReceiptItem(itemsList, item));
+                if (!items.length) {
+                    const emptyItem = document.createElement("p");
+                    emptyItem.className = "receipt-item-details";
+                    emptyItem.textContent = "Order items are not available.";
+                    itemsList.appendChild(emptyItem);
+                }
+
+                document.getElementById("modalSubtotal").textContent = formatReceiptPeso(subtotal);
+                document.getElementById("modalDeliveryFee").textContent = formatReceiptPeso(deliveryFee);
+                document.getElementById("modalTax").textContent = formatReceiptPeso(tax);
+                document.getElementById("modalDeliveryFeeRow").style.display = deliveryFee > 0 ? "flex" : "none";
+                document.getElementById("modalTaxRow").style.display = tax > 0 ? "flex" : "none";
+                document.getElementById("modalVatSales").textContent = formatReceiptPeso(vatableSales);
+                document.getElementById("modalVatAmt").textContent = formatReceiptPeso(vatAmount);
+                document.getElementById("modalTotal").textContent = formatReceiptPeso(total);
+
+                const tenderedRow = document.getElementById("modalTenderedRow");
+                const changeRow = document.getElementById("modalChangeRow");
+                const referenceRow = document.getElementById("modalRefRow");
+                if (paymentMethod === "qrph") {
+                    tenderedRow.style.display = "none";
+                    changeRow.style.display = "none";
+                    referenceRow.style.display = "flex";
+                    document.getElementById("modalRefNo").textContent = order.payment_reference || "Not available";
+                } else {
+                    document.getElementById("modalTenderedLabel").textContent = "Amount Tendered:";
+                    document.getElementById("modalChangeLabel").textContent = "Change:";
+                    document.getElementById("modalTendered").textContent = formatReceiptPeso(total);
+                    document.getElementById("modalChange").textContent = formatReceiptPeso(0);
+                    tenderedRow.style.display = "flex";
+                    changeRow.style.display = "flex";
+                    referenceRow.style.display = "none";
+                }
+            }
+
+            async function openHistoryReceipt(row) {
+                const orderId = Number.parseInt(row.dataset.orderId || "", 10);
+                if (!Number.isInteger(orderId) || orderId <= 0 || row.dataset.receiptLoading === "true") return;
+
+                row.dataset.receiptLoading = "true";
+                row.classList.add("is-loading-receipt");
+                try {
+                    const response = await fetch(`../pos-history-order-api.php?order_id=${encodeURIComponent(orderId)}`, {
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: { Accept: "application/json" }
+                    });
+                    const payload = await response.json();
+                    if (!response.ok || !payload.success || !payload.order) {
+                        throw new Error(payload.error || "Unable to load this order receipt.");
+                    }
+
+                    renderHistoryReceipt(payload.order, row.dataset.orderNumber || `ORDER-${orderId}`);
+                    orderModal.hidden = false;
+                    document.body.style.overflow = "hidden";
+                } catch (error) {
+                    console.error("Unable to open POS history receipt:", error);
+                    window.alert(error.message || "Unable to load this order receipt.");
+                } finally {
+                    delete row.dataset.receiptLoading;
+                    row.classList.remove("is-loading-receipt");
+                }
+            }
+
+            function closeVoidReceipt() {
+                orderModal.hidden = true;
+                document.body.style.overflow = "";
+            }
+
+            closeModalBtn.addEventListener("click", closeVoidReceipt);
+            modalDoneBtn.addEventListener("click", closeVoidReceipt);
+            modalPrintBtn.addEventListener("click", () => window.print());
+
+            orderModal.addEventListener("click", (e) => {
+                if (e.target === orderModal) closeVoidReceipt();
+            });
+
+            voidConfirmBtn.addEventListener("click", async () => {
+                if (!currentVoidRowEl || currentVoidOrderId <= 0 || !currentVoidAuthorizationPin) return;
+
+                const items = voidRows.map((row) => ({
+                    product_id: Number(row.product_id),
+                    quantity: Number(row.quantity),
+                    milk: row.milk || "",
+                    addons: Array.isArray(row.addons) ? row.addons : [],
+                    notes: row.notes || ""
+                }));
+                if (!items.length || items.some((item) => item.product_id <= 0 || item.quantity <= 0)) return;
+
+                voidConfirmBtn.disabled = true;
+                try {
+                    await requestVoidApi({
+                        action: "void_adjust",
+                        order_id: currentVoidOrderId,
+                        authorization_pin: currentVoidAuthorizationPin,
+                        items
+                    });
+
+                    closeVoidModal();
+                    window.alert("The order was voided and the adjusted replacement order was saved.");
+                    window.location.reload();
+                } catch (error) {
+                    console.error("Unable to save POS void adjustment:", error);
+                    window.alert(error.message || "Unable to save this void adjustment.");
+                    if (voidModal.classList.contains("show")) updateVoidTotals();
+                } finally {
+                    if (voidModal.classList.contains("show")) voidConfirmBtn.disabled = false;
+                }
+            });
+
+            // Lets the page's 10-second auto-refresh hold off while a void popup is open.
+            window.isHistoryVoidFlowActive = function () {
+                return pinModal.classList.contains("show")
+                    || voidModal.classList.contains("show")
+                    || !orderModal.hidden
+                    || !!document.querySelector(".row-actions-menu.open");
+            };
+
+            initRowActions();
+        })();
+    </script>
+
     <script src="pos-responsive.js"></script>
     <script src="order-notify.js"></script>
     <script src="shift-monitor.js"></script>
     <script>
         (function refreshHistoryData() {
             setInterval(() => {
+                // Don't wipe the page while a void / PIN / receipt popup is open.
+                if (window.isHistoryVoidFlowActive && window.isHistoryVoidFlowActive()) return;
+                if (window.isHistoryFilterActive && window.isHistoryFilterActive()) return;
                 if (document.visibilityState === 'visible') {
                     window.location.reload();
                 }

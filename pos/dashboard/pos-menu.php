@@ -230,10 +230,6 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                         <?= htmlspecialchars($menuCategory['name']) ?>
                     </a>
                 <?php endforeach; ?>
-                <button class="cat-add" id="addProductBtn" aria-label="Add category">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Add</span>
-                </button>
                 <button class="cat-more" id="viewToggle" aria-label="sort">
                     <i class="fa-solid fa-bars"></i>
                 </button>
@@ -245,8 +241,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                         <span>Item</span>
                         <span>Name</span>
                         <span>Price</span>
-                        <span>Servings</span>
-                        <span>Cups</span>
+                        <span>Serving</span>
                         <span>Status</span>
                         <span>Action</span>
                     </div>
@@ -298,12 +293,9 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                                             Ingredients: <span><?= $ingredientStatus ?></span>
                                         </p>
 
-                                        <p class="drink-servings">
-                                            Servings: <span class="servings-value"><?= $servings ?></span>
-                                        </p>
-
-                                        <p class="drink-cups">
-                                            Cups: <span class="cups-value"><?= $servings ?></span>
+                                        <p class="drink-serving">
+                                            <span class="serving-label">Serving:</span>
+                                            <span class="serving-value"><?= $servings ?></span>
                                         </p>
                                     </div>
                                     <button class="card-btn btn-order" aria-label="Add to order" <?= $canOrder ? '' : 'disabled' ?>>
@@ -592,14 +584,12 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
             });
         }
         
-        const addProductBtn = document.getElementById("addProductBtn");
         const addProductOverlay = document.getElementById("addProductOverlay");
         const closeAddProduct = document.getElementById("closeAddProduct");
         const cancelAddProduct = document.getElementById("cancelAddProduct");
         const saveProductBtn = document.getElementById("saveProductBtn");
         const productCategorySelect = document.getElementById("productCategory");
 
-        if (addProductBtn) addProductBtn.addEventListener("click", openAddProductModal);
         if (closeAddProduct) closeAddProduct.addEventListener("click", closeAddProductModal);
         if (cancelAddProduct) cancelAddProduct.addEventListener("click", closeAddProductModal);
         if (addProductOverlay) {
@@ -752,10 +742,9 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
 
                 const statusEl = card.querySelector('.drink-status');
                 const ingredientSpan = card.querySelector('.drink-ingredient span');
-                const cupsValueSpan = card.querySelector('.drink-cups .cups-value') || card.querySelector('.drink-cups span:last-child');
-                const servingsValueSpan = card.querySelector('.drink-servings .servings-value');
+                const servingValueSpan = card.querySelector('.drink-serving .serving-value') || card.querySelector('.drink-serving span:last-child');
                 const orderBtn = card.querySelector('.btn-order');
-                if (!statusEl || !ingredientSpan || !cupsValueSpan) return;
+                if (!statusEl || !ingredientSpan || !servingValueSpan) return;
 
                 statusEl.classList.remove('available', 'low', 'unavailable');
 
@@ -772,8 +761,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                     statusEl.innerHTML = '<span class="status-dot"></span>Available';
                     ingredientSpan.textContent = 'Sufficient';
                 }
-                cupsValueSpan.textContent = inv.cups.current;
-                if (servingsValueSpan) servingsValueSpan.textContent = inv.cups.current;
+                servingValueSpan.textContent = inv.cups.current;
 
 
                 if (orderBtn) {
@@ -810,17 +798,15 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
 
             const statusEl = card.querySelector('.drink-status');
             const ingredientSpan = card.querySelector('.drink-ingredient span');
-            const cupsValueSpan = card.querySelector('.drink-cups .cups-value') || card.querySelector('.drink-cups span:last-child');
-            const servingsValueSpan = card.querySelector('.drink-servings .servings-value') || card.querySelector('.drink-servings span:last-child');
+            const servingValueSpan = card.querySelector('.drink-serving .serving-value') || card.querySelector('.drink-serving span:last-child');
             const orderBtn = card.querySelector('.btn-order');
-            if (!statusEl || !ingredientSpan || !cupsValueSpan) return;
+            if (!statusEl || !ingredientSpan || !servingValueSpan) return;
 
             statusEl.classList.remove('available', 'low', 'unavailable');
             statusEl.classList.add(status);
             statusEl.innerHTML = '<span class="status-dot"></span>' + label;
             ingredientSpan.textContent = info.ingredient_status || (canOrder ? 'Sufficient' : 'Insufficient');
-            cupsValueSpan.textContent = servings;
-            if (servingsValueSpan) servingsValueSpan.textContent = servings;
+            servingValueSpan.textContent = servings;
 
             if (orderBtn) {
                 orderBtn.disabled = !canOrder;
@@ -912,7 +898,6 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         // Render database-backed inventory on load.
         (async () => {
             await renderInventoryBar();
-            document.querySelectorAll('.product-card').forEach(setupListViewStock);
             await updateProductCardsStock();
             attachOrderButtonHandlers();
             setInterval(() => {
@@ -1132,26 +1117,6 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
                 this.classList.add('active');
             });
         });
-
-        function setupListViewStock(card) {
-            if (card.dataset.listViewReady === "true") return;
-
-            const drinkStock = card.querySelector('.drink-stock');
-            const cupsEl = card.querySelector('.drink-cups');
-            if (!drinkStock || !cupsEl) return;
-
-            const cupsSpan = cupsEl.querySelector('span');
-            const cupsValue = cupsSpan ? (cupsSpan.textContent.match(/\d+/) || ['0'])[0] : '0';
-
-            cupsEl.innerHTML = `<span class="stock-label">Cups: </span><span>${cupsValue}</span>`;
-
-            const servingsEl = document.createElement('p');
-            servingsEl.className = 'drink-servings';
-            servingsEl.innerHTML = `<span class="stock-label">Servings: </span><span>${cupsValue}</span>`;
-            drinkStock.insertBefore(servingsEl, cupsEl);
-
-            card.dataset.listViewReady = "true";
-        }
 
     </script>
     <script>
