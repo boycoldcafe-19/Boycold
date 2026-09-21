@@ -76,7 +76,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
     <link rel="stylesheet" href="dash-css/pos-menu.css">
     <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
-    <link rel="stylesheet" href="dash-css/order-notify.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1194,7 +1194,7 @@ $employeeName = isset($_SESSION['employee_name']) ? $_SESSION['employee_name'] :
         })();
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js"></script>
+    <script src="order-notify.js?v=20260921-popup-queue"></script>
     <script src="shift-monitor.js"></script>
 </body>
 </html>

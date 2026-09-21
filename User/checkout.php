@@ -431,6 +431,22 @@ $branches = $branches ?? [];
             }
         }
 
+        function persistSelectedCheckoutStore() {
+            const branchSelect = document.getElementById('branchSelect');
+            const branchId = Number(branchSelect?.value);
+            if (!Number.isInteger(branchId) || branchId <= 0) return;
+
+            const parts = String(branchSelect.selectedOptions[0]?.textContent || '')
+                .split(' — ');
+            const selection = {
+                branchId,
+                branchName: parts.shift()?.trim() || 'Selected Branch',
+                address: parts.join(' — ').trim()
+            };
+            localStorage.setItem('boycold_selected_store', JSON.stringify(selection));
+            sessionStorage.setItem('boycold_selected_store', JSON.stringify(selection));
+        }
+
         function formatAddress(a) {
             return [a.street_address, a.barangay, a.city, a.province, a.zip_code]
                 .filter(Boolean).join(', ');
@@ -686,7 +702,11 @@ $branches = $branches ?? [];
             }
 
             try {
-                const res  = await fetch(CART_API + '?action=get');
+                const selectedBranchId = Number(document.getElementById('branchSelect')?.value) || 0;
+                const cartQuery = selectedBranchId > 0
+                    ? '?action=get&branch_id=' + encodeURIComponent(selectedBranchId)
+                    : '?action=get';
+                const res  = await fetch(CART_API + cartQuery);
                 const data = await res.json();
                 if (data.success) {
                     let allItems = data.items;
@@ -940,6 +960,7 @@ $branches = $branches ?? [];
         });
 
         document.getElementById('branchSelect')?.addEventListener('change', function () {
+            persistSelectedCheckoutStore();
             checkBranchAvailability(this.value);
         });
 

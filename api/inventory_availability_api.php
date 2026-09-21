@@ -8,13 +8,17 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     boycold_ensure_inventory_schema($connect);
 
+    // No branch means the customer is still browsing before selecting a
+    // store. Return combined availability; a chosen branch gets its own
+    // stock only.
     $branchId = isset($_GET['branch_id']) && (int) $_GET['branch_id'] > 0
         ? (int) $_GET['branch_id']
-        : (int) ($_SESSION['branch_id'] ?? 1);
+        : 0;
 
     echo json_encode([
         'success' => true,
         'branch_id' => $branchId,
+        'scope' => $branchId > 0 ? 'branch' : 'all_active_branches',
         'availability' => boycold_get_product_inventory_availability($connect, $branchId),
     ]);
 } catch (Throwable $e) {

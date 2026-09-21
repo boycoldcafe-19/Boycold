@@ -51,11 +51,6 @@ if (!$isLoyaltyCardComplete) {
 $_SESSION['user_name']  = $user['user_name'];
 $_SESSION['user_email'] = $user['email'];
 
-// Set default branch if not set
-if (!isset($_SESSION['branch_id'])) {
-    $_SESSION['branch_id'] = 1; // Default to Baliuag
-}
-
 $reviews = [];
 if ($reviewTable = $connect->query("SHOW TABLES LIKE 'order_reviews'")) {
     if ($reviewTable->num_rows > 0) {

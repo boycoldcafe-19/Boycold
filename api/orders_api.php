@@ -254,6 +254,12 @@ switch ($action) {
             break;
         }
 
+        if (!$branchId || $branchId <= 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'error' => 'Please select a store branch before placing an order.']);
+            break;
+        }
+
         if ($paymentMethod === 'qrph' && $userId <= 0) {
             echo json_encode(['success' => false, 'error' => 'QRPh checkout requires a customer account.']);
             break;

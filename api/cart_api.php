@@ -64,7 +64,7 @@ switch ($action) {
 
         $branchId = isset($_GET['branch_id']) && (int) $_GET['branch_id'] > 0
             ? (int) $_GET['branch_id']
-            : (int) ($_SESSION['branch_id'] ?? 1);
+            : 0;
         $availability = $rows
             ? boycold_get_product_inventory_availability($connect, $branchId, array_column($rows, 'product_name'))
             : [];
@@ -104,10 +104,16 @@ switch ($action) {
         $notes       = trim($body['notes'] ?? '');
         $branchId    = isset($body['branch_id']) && (int) $body['branch_id'] > 0
             ? (int) $body['branch_id']
-            : (int) ($_SESSION['branch_id'] ?? 1);
+            : 0;
 
         if (empty($productName)) {
             echo json_encode(['success' => false, 'error' => 'Invalid product_name.']);
+            break;
+        }
+
+        if ($branchId <= 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'error' => 'Please select a store location before adding items to your cart.']);
             break;
         }
 
@@ -148,10 +154,16 @@ switch ($action) {
         $qty    = isset($body['quantity']) ? max(1, (int) $body['quantity']) : 1;
         $branchId = isset($body['branch_id']) && (int) $body['branch_id'] > 0
             ? (int) $body['branch_id']
-            : (int) ($_SESSION['branch_id'] ?? 1);
+            : 0;
 
         if ($cartId <= 0) {
             echo json_encode(['success' => false, 'error' => 'Invalid cart_id.']);
+            break;
+        }
+
+        if ($branchId <= 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'error' => 'Please select a store location before changing cart quantities.']);
             break;
         }
 

@@ -489,6 +489,55 @@ function boycold_inventory_resolve_ingredient_for_branch(mysqli $connect, array 
     ];
 }
 
+/**
+ * Resolve an ingredient against the combined stock of every active branch.
+ *
+ * This is for customer-facing browsing only, before the customer has chosen
+ * a store. It must never be used to validate or deduct an order: both of
+ * those operations continue to call the branch-specific helpers above.
+ */
+function boycold_inventory_resolve_ingredient_for_active_branches(mysqli $connect, array $mappingRow): array
+{
+    static $activeBranchIdsByConnection = [];
+
+    $name = (string) ($mappingRow['ingredient_name'] ?? '');
+    $key = boycold_inventory_duplicate_key($name);
+    $connectionKey = spl_object_id($connect);
+    if (!isset($activeBranchIdsByConnection[$connectionKey])) {
+        $activeBranchIdsByConnection[$connectionKey] = boycold_inventory_active_branch_ids($connect);
+    }
+    $branchIds = $activeBranchIdsByConnection[$connectionKey];
+    $totalStock = 0.0;
+    $totalMinStock = 0.0;
+    $matchedBranchIds = [];
+    $unit = (string) ($mappingRow['unit'] ?? '');
+
+    foreach ($branchIds as $branchId) {
+        $row = boycold_inventory_branch_ingredient_map($connect, $branchId)[$key] ?? null;
+        if (!$row) {
+            continue;
+        }
+
+        $totalStock += max(0.0, (float) ($row['stock'] ?? 0));
+        $totalMinStock += max(0.0, (float) ($row['min_stock'] ?? 0));
+        $matchedBranchIds[] = $branchId;
+        if ($unit === '') {
+            $unit = (string) ($row['unit'] ?? '');
+        }
+    }
+
+    return [
+        'id' => 0,
+        'name' => $name,
+        'unit' => $unit,
+        'branch_id' => 0,
+        'stock' => $totalStock,
+        'min_stock' => $totalMinStock,
+        'branch_available' => !empty($matchedBranchIds),
+        'matched_branch_ids' => $matchedBranchIds,
+    ];
+}
+
 function boycold_inventory_ingredient_status(float $stock, float $minStock, float $required = 0): string
 {
     if ($stock <= 0 || ($required > 0 && $stock + 0.0001 < $required)) {
@@ -1019,6 +1068,7 @@ function boycold_get_product_inventory_availability(
     $names = array_map(static fn ($row) => (string) $row['product_name'], array_values($products));
     $mappingRows = boycold_inventory_fetch_mapping_rows($connect, $names);
     $availability = [];
+    $isAllBranchesView = $branchId <= 0;
 
     foreach ($products as $productKey => $product) {
         $productName = (string) $product['product_name'];
@@ -1040,29 +1090,21 @@ function boycold_get_product_inventory_availability(
             if ($branchId > 0) {
                 $ingredient = boycold_inventory_resolve_ingredient_for_branch($connect, $row, $branchId);
             } else {
-                $ingredient = [
-                    'id' => (int) ($row['ingredient_id'] ?? 0),
-                    'name' => (string) ($row['ingredient_name'] ?? ''),
-                    'unit' => (string) ($row['unit'] ?? ''),
-                    'branch_id' => 0,
-                    'stock' => null,
-                    'min_stock' => 0.0,
-                    'branch_available' => true,
-                ];
+                $ingredient = boycold_inventory_resolve_ingredient_for_active_branches($connect, $row);
             }
             $stock = (float) ($ingredient['stock'] ?? 0);
             $minStock = (float) ($ingredient['min_stock'] ?? 0);
-            $servings = $branchId > 0 ? (boycold_inventory_remaining_servings($stock, $amount) ?? 0) : 999;
+            $servings = boycold_inventory_remaining_servings($stock, $amount) ?? 0;
 
             if ($availableServings === null || $servings < $availableServings) {
                 $availableServings = $servings;
             }
 
-            if ($branchId > 0 && ($amount <= 0 || $stock + 0.0001 < $amount || empty($ingredient['branch_available']))) {
+            if ($amount <= 0 || $stock + 0.0001 < $amount || empty($ingredient['branch_available'])) {
                 $canOrder = false;
                 $reasons[] = $ingredient['name'] . (
                     empty($ingredient['branch_available'])
-                        ? ' is not stocked at this branch'
+                        ? ($isAllBranchesView ? ' is not stocked at any active branch' : ' is not stocked at this branch')
                         : ($stock <= 0 ? ' is out of stock' : ' is insufficient')
                 );
             }

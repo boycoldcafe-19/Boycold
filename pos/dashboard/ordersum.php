@@ -83,7 +83,7 @@ if ($shiftResult) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="dash-css/pos-menu.css">
     <link rel="stylesheet" href="dash-css/pos-controls.css">
-    <link rel="stylesheet" href="dash-css/order-notify.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">
     <link rel="stylesheet" href="dash-css/ordersum.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
     <link rel="icon" href="../img/LOGO 2.png">
@@ -1424,7 +1424,7 @@ if ($shiftResult) {
         })();
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js"></script>
+    <script src="order-notify.js?v=20260921-popup-queue"></script>
     <script src="shift-monitor.js"></script>
 </body>
 </html>

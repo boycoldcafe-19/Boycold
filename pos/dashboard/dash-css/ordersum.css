@@ -479,39 +479,62 @@ body.dark-theme .profile-avatar .logo-dark {
 }
 
 .qty-stepper {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 16px;
-    border: 2px solid var(--text);
-    border-radius: 50px;
-    padding: 6px 18px;
+    margin-top: 8px;
 }
 
 .qty-stepper button {
-    width: 24px;
-    height: 24px;
-    border-radius: 10%;
-    border: none;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #555;
+    border-radius: 4px 0 0 4px;
+    background: #fff;
+    color: #1e1e1e;
+    font-size: 18px;
     font-weight: 700;
+    font-family: 'Afacad', sans-serif;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s;
+}
+
+.qty-stepper button:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.qty-stepper button:hover {
+    background: #f0e8e2;
 }
 
 .qty-value-input {
-    width: 42px;
+    width: 40px;
+    height: 32px;
     padding: 0;
-    border: 0;
+    border-top: 1px solid #555;
+    border-bottom: 1px solid #555;
+    border-left: 0;
+    border-right: 0;
     outline: 0;
-    background: transparent;
+    background: #fff;
     font-weight: 600;
-    font-size: 20px;
+    font-size: 15px;
+    font-family: 'Afacad', sans-serif;
     text-align: center;
+    color: #1e1e1e;
+}
+
+body.dark-theme .qty-stepper button,
+body.dark-theme .qty-value-input {
+    background: var(--surface);
+    border-color: var(--border);
     color: var(--text);
+}
+
+body.dark-theme .qty-stepper button:hover {
+    background: #343638;
 }
 
 .total-bar {
@@ -1464,15 +1487,6 @@ body.dark-theme .profile-avatar .logo-dark {
         /* single column since the panel is narrow now */
     }
 
-    .qty-stepper {
-        padding: 6px 14px;
-    }
-
-    .qty-stepper button {
-        width: 22px;
-        height: 22px;
-        font-size: 18px;
-    }
 }
 
 /* Only stack fully on phone-sized screens */

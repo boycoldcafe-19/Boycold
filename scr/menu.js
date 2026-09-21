@@ -190,20 +190,41 @@ function applyFavUIAll() {
     });
 }
 
-function getSelectedBranchId() {
+function getSelectedStore() {
     try {
-        const selectedStore = JSON.parse(
+        return JSON.parse(
             sessionStorage.getItem('boycold_selected_store')
             || localStorage.getItem('boycold_selected_store')
             || 'null'
         );
-        return selectedStore?.branchId || 1;
     } catch (e) {
-        return 1;
+        return null;
     }
 }
 
+function getSelectedBranchId() {
+    const branchId = Number(getSelectedStore()?.branchId);
+    return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
+}
+
+function updateMenuInventoryScope(branchId = getSelectedBranchId()) {
+    const scope = document.getElementById('menuInventoryScope');
+    if (!scope) return;
+
+    const selectedStore = getSelectedStore();
+    const branchName = String(selectedStore?.branchName || 'your selected store').trim();
+    scope.innerHTML = branchId
+        ? `<i class="fa-solid fa-store"></i><span>Showing ingredient availability for ${branchName}.</span>`
+        : '<i class="fa-solid fa-store"></i><span>Showing combined ingredient availability from all branches. Select a store before ordering.</span>';
+}
+
 async function isStoreOpen(branchId = getSelectedBranchId()) {
+    if (!branchId) {
+        alert('Please choose a store location first so we can use that branch\'s current ingredients.');
+        window.location.href = '../store/store.php';
+        return false;
+    }
+
     try {
         const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
         const response = await fetch(`../api/store_status_api.php${query}`);
@@ -285,7 +306,10 @@ function applyProductAvailability(card, info) {
 async function refreshMenuAvailability() {
     try {
         const branchId = getSelectedBranchId();
-        const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+        updateMenuInventoryScope(branchId);
+        const query = branchId
+            ? `?branch_id=${encodeURIComponent(branchId)}`
+            : '?scope=all';
         const response = await fetch(`../api/inventory_availability_api.php${query}`, { cache: 'no-store' });
         const data = await response.json();
         if (!data.success || !data.availability) return;
@@ -356,13 +380,12 @@ document.addEventListener('click', async function(e) {
             return;
         }
 
-        if (!await isStoreOpen()) return;
-
         const card  = cartBtn.closest('.product-card');
         if (!productCanOrder(card)) return;
         const name  = card.dataset.productName || card.querySelector('.card-name')?.textContent.trim() || '';
         if (!name) return;
         const branchId = getSelectedBranchId();
+        if (!await isStoreOpen(branchId)) return;
 
         cartBtn.disabled = true;
         try {
@@ -392,13 +415,13 @@ document.addEventListener('click', async function(e) {
         e.stopPropagation();
         const card   = orderBtn.closest('.product-card');
         if (!productCanOrder(card)) return;
-        if (!await isStoreOpen()) return;
 
         const name   = card.querySelector('.card-name')?.textContent.trim()  || '';
         const price  = card.querySelector('.card-price')?.textContent.replace('₱','').trim() || '';
         const image  = card.querySelector('.card-image img')?.getAttribute('src') || '';
         const servings = card.dataset.availableServings || '0';
         const branchId = getSelectedBranchId();
+        if (!await isStoreOpen(branchId)) return;
 
         const productId = card.dataset.productId || '';
         const params = new URLSearchParams({ name, price, image, servings, branch_id: branchId, product_id: productId });

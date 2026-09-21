@@ -179,7 +179,7 @@ function orderhis_format_group_label(string $dateStr): string {
     <link rel="stylesheet" href="dash-css/pos-history.css">
     <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
-    <link rel="stylesheet" href="dash-css/order-notify.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -416,7 +416,10 @@ function orderhis_format_group_label(string $dateStr): string {
                         <?php if (empty($historyEntries)): ?>
                         <div class="table-empty" id="tableEmpty">No orders yet.</div>
                         <?php else: ?>
-                        <?php $lastGroupLabel = null; ?>
+                        <?php
+                            $lastGroupLabel = null;
+                            $voidWindowNow = new DateTime('now', new DateTimeZone('Asia/Manila'));
+                        ?>
                         <?php foreach ($historyEntries as $entry): ?>
                             <?php
                                 $kind = $entry['kind'];
@@ -481,6 +484,8 @@ function orderhis_format_group_label(string $dateStr): string {
                                 $paymentAttr  = $payment === 'qrph' ? 'qrph' : 'cash';
                                 $typeAttr     = str_replace('-', '', $type);
                                 $statusLabel  = boycold_order_was_voided($order) ? 'Void Order' : ucfirst((string) $order['status']);
+                                $voidDeadline = (clone $createdAt)->modify('+24 hours');
+                                $isVoidEligible = $voidDeadline > $voidWindowNow;
 
                                 $groupLabel = orderhis_format_group_label($order['created_at']);
                                 $showGroupLabel = ($groupLabel !== $lastGroupLabel);
@@ -496,6 +501,7 @@ function orderhis_format_group_label(string $dateStr): string {
                             data-payment="<?= $paymentAttr ?>"
                             data-type="<?= $typeAttr ?>"
                             data-amount="<?= number_format((float)$order['total'], 2, '.', '') ?>"
+                            data-void-eligible="<?= $isVoidEligible ? 'true' : 'false' ?>"
                             role="button"
                             tabindex="0"
                             aria-label="View receipt for <?= htmlspecialchars($orderNo, ENT_QUOTES, 'UTF-8') ?>">
@@ -1001,10 +1007,11 @@ function orderhis_format_group_label(string $dateStr): string {
 
                     const isPhysical = !!row.querySelector(".source-dot.physical");
                     const status = (row.querySelector(".col-status")?.textContent || "").trim().toLowerCase();
+                    const isVoidEligible = row.dataset.voidEligible === "true";
                     const actionsSpan = document.createElement("span");
                     actionsSpan.className = "col-actions";
 
-                    if (isPhysical && status !== "cancelled" && status !== "voided" && status !== "void order") {
+                    if (isPhysical && isVoidEligible && status !== "cancelled" && status !== "voided" && status !== "void order") {
                         actionsSpan.innerHTML = `
                 <button type="button" class="row-dots-btn" aria-label="More actions">
                     <i class="fa-solid fa-ellipsis-vertical"></i>
@@ -1748,7 +1755,7 @@ function orderhis_format_group_label(string $dateStr): string {
     </script>
 
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js"></script>
+    <script src="order-notify.js?v=20260921-popup-queue"></script>
     <script src="shift-monitor.js"></script>
     <script>
         (function refreshHistoryData() {

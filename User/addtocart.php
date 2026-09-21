@@ -27,11 +27,6 @@ $userName = $userRecord['user_name'];
 $successMsg = '';
 $errorMsg   = '';
 
-// Set default branch if not set
-if (!isset($_SESSION['branch_id'])) {
-    $_SESSION['branch_id'] = 1; // Default to Baliuag
-}
-
 // Handle AJAX / POST save for phone or address
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $field = $_POST['field'] ?? '';
@@ -267,15 +262,27 @@ $_SESSION['user_email'] = $user['email'];
                     || localStorage.getItem('boycold_selected_store')
                     || 'null'
                 );
-                return selectedStore?.branchId || <?= (int) $_SESSION['branch_id'] ?> || 1;
+                const branchId = Number(selectedStore?.branchId);
+                return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
             } catch (e) {
-                return <?= (int) $_SESSION['branch_id'] ?> || 1;
+                return null;
             }
+        }
+
+        function requireSelectedStore() {
+            if (getSelectedBranchId()) return true;
+            alert('Please choose a store location first so your cart uses that branch\'s ingredients.');
+            window.location.href = '../store/store.php';
+            return false;
         }
 
         async function loadCart() {
             try {
-                const res = await fetch(`${CART_API}?action=get&branch_id=${encodeURIComponent(getSelectedBranchId())}`);
+                const branchId = getSelectedBranchId();
+                const query = branchId
+                    ? `?action=get&branch_id=${encodeURIComponent(branchId)}`
+                    : '?action=get';
+                const res = await fetch(`${CART_API}${query}`);
                 const data = await res.json();
                 if (data.success) {
                     currentCart = data.items;
@@ -415,6 +422,7 @@ $_SESSION['user_email'] = $user['email'];
         }
 
         async function saveQty(cartId, newQty) {
+            if (!requireSelectedStore()) return;
             try {
                 const res = await fetch(CART_API, {
                     method: 'POST',

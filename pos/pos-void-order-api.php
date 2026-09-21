@@ -16,6 +16,8 @@ require_once __DIR__ . '/../config/order_void_service.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+const POS_VOID_ADJUSTMENT_WINDOW_SECONDS = 86400;
+
 function pos_void_response(array $payload, int $statusCode = 200): void
 {
     http_response_code($statusCode);
@@ -52,6 +54,34 @@ function pos_void_order_number(array $order): string
     $date = new DateTime((string) ($order['created_at'] ?? 'now'));
 
     return sprintf('POS-%s-%s-%05d', $typeCode, $date->format('Y'), (int) ($order['id'] ?? 0));
+}
+
+function pos_void_is_within_adjustment_window(array $order): bool
+{
+    $createdAt = trim((string) ($order['created_at'] ?? ''));
+    if ($createdAt === '') {
+        return false;
+    }
+
+    try {
+        $timezone = new DateTimeZone('Asia/Manila');
+        $orderTime = new DateTimeImmutable($createdAt, $timezone);
+        $elapsedSeconds = (new DateTimeImmutable('now', $timezone))->getTimestamp() - $orderTime->getTimestamp();
+
+        // An order becomes ineligible exactly 24 hours after it was placed.
+        return $elapsedSeconds < POS_VOID_ADJUSTMENT_WINDOW_SECONDS;
+    } catch (Throwable) {
+        return false;
+    }
+}
+
+function pos_void_require_adjustment_window(array $order): void
+{
+    if (pos_void_is_within_adjustment_window($order)) {
+        return;
+    }
+
+    throw new RuntimeException('This order can no longer be voided. Void adjustments are available only within 24 hours of the original order.');
 }
 
 function pos_void_load_order(mysqli $connect, int $orderId, int $branchId, bool $forUpdate = false): ?array
@@ -310,6 +340,12 @@ try {
         if (!in_array((string) $order['order_type'], ['dine-in', 'takeout'], true)) {
             pos_void_response(['success' => false, 'error' => 'Only physical POS orders can be adjusted here.'], 422);
         }
+        if (!pos_void_is_within_adjustment_window($order)) {
+            pos_void_response([
+                'success' => false,
+                'error' => 'This order can no longer be voided. Void adjustments are available only within 24 hours of the original order.',
+            ], 422);
+        }
 
         pos_void_response([
             'success' => true,
@@ -336,6 +372,7 @@ try {
         if (!in_array((string) $originalOrder['order_type'], ['dine-in', 'takeout'], true)) {
             throw new RuntimeException('Only physical POS orders can be adjusted here.');
         }
+        pos_void_require_adjustment_window($originalOrder);
 
         $restore = boycold_restore_deducted_inventory_for_order_in_transaction(
             $connect,

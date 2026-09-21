@@ -7,9 +7,19 @@ require_once __DIR__ . '/../config/payments.php';
 boycold_ensure_payment_schema($connect);
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 
 $employee = pos_require_employee($connect, true);
 $branchId = (int) $employee['branch_id'];
+
+// The browser uses this opaque key only to keep its popup cursor/queue scoped
+// to the active POS login. A fresh logout/login must not inherit an old tab's
+// "already seen" order IDs.
+if (empty($_SESSION['order_notify_popup_session_key'])) {
+    $_SESSION['order_notify_popup_session_key'] = bin2hex(random_bytes(12));
+}
+$popupSessionKey = (string) $_SESSION['order_notify_popup_session_key'];
 
 $lastOrderId = isset($_GET['last_order_id']) ? (int) $_GET['last_order_id'] : 0;
 
@@ -134,6 +144,8 @@ echo json_encode([
     'orders' => $orders,
     'pending_count' => $pendingCount,
     'latest_order_id' => $latestOrderId,
+    'branch_id' => $branchId,
+    'popup_session_key' => $popupSessionKey,
     'debug' => [
         'branch_id' => $branchId,
         'last_order_id' => $lastOrderId,

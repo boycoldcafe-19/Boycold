@@ -41,14 +41,12 @@ if (!$isLoyaltyCardComplete) {
     $_SESSION['loyalty_popup_shown_for_completion'] = false;
 }
 
-// Set default branch if not set
-if (!isset($_SESSION['branch_id'])) {
-    $_SESSION['branch_id'] = 1; // Default to Baliuag
-}
-
+// The store picker is browser-side. Before the customer chooses a store,
+// show the combined availability of active branches rather than silently
+// using Baliuag as the selected branch.
 // Fetch all products from DB
 boycold_ensure_inventory_schema($connect);
-$branchId = (int) $_SESSION['branch_id'];
+$branchId = 0;
 $productsResult = $connect->query("SELECT id, product_name, price, image, category, popular_category FROM products WHERE is_available = 1 ORDER BY category, product_name");
 $productsList = [];
 while ($productsResult && ($row = $productsResult->fetch_assoc())) {
@@ -178,6 +176,10 @@ $menuCategories = boycold_menu_get_categories($connect);
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <p class="nsr-title">No results found</p>
                     <p class="nsr-sub">Try searching for something else.</p>
+                </div>
+                <div class="menu-inventory-scope" id="menuInventoryScope" role="status">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Showing combined ingredient availability from all branches. Select a store before ordering.</span>
                 </div>
                 <div class="product-grid" id="productGrid">
                     <?php

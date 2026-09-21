@@ -2,7 +2,9 @@
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 4000;
+    /* Keep a new online-order prompt visible above page-specific modals
+       (history / void / status overlays use z-index values up to 10002). */
+    z-index: 20000;
     display: none;
 }
 

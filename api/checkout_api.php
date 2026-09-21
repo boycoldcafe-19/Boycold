@@ -112,8 +112,16 @@ $address     = trim($body['address']     ?? '');
 $contactNumber = trim($body['contact_number'] ?? '');
 $deliveryFee = max(0, (float) ($body['delivery_fee'] ?? 0));
 $tax         = max(0, (float) ($body['tax']          ?? 0));
-$branchId    = isset($body['branch_id']) ? (int) $body['branch_id'] : 1; // Use selected branch, default to Baliuag
+$branchId    = isset($body['branch_id']) && (int) $body['branch_id'] > 0
+    ? (int) $body['branch_id']
+    : 0;
 $orderNotes  = trim($body['notes'] ?? '');
+
+if ($branchId <= 0) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'error' => 'Please select a store branch before placing an order.']);
+    exit;
+}
 
 $connect->begin_transaction();
 $branchStatus = boycold_get_branch_order_status($connect, $branchId, true);

@@ -225,6 +225,21 @@ if (!$order) {
     $errorMsg = $orderId > 0 ? 'Order not found.' : 'No active order selected.';
 }
 
+$orderItems = [];
+if ($order) {
+    $selectedOrderId = (int) $order['id'];
+    $itemStmt = $connect->prepare(
+        'SELECT product_name, product_image, quantity, unit_price, line_total, milk, addons, notes
+         FROM order_items
+         WHERE order_id = ?
+         ORDER BY id ASC'
+    );
+    $itemStmt->bind_param('i', $selectedOrderId);
+    $itemStmt->execute();
+    $orderItems = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $itemStmt->close();
+}
+
 $pendingCount = 0;
 $pendingStmt = $connect->prepare("SELECT COUNT(*) AS cnt FROM orders WHERE order_type IN ('delivery', 'pickup') AND status = 'pending' AND branch_id = ?");
 if ($pendingStmt) {
@@ -388,7 +403,7 @@ if ($paymentMethodKey === 'qrph') {
     <link rel="stylesheet" href="dash-css/pos-status.css">
     <link rel="stylesheet" href="dash-css/pos-controls.css">
     <link rel="stylesheet" href="dash-css/pos-responsive.css">
-    <link rel="stylesheet" href="dash-css/order-notify.css">
+    <link rel="stylesheet" href="dash-css/order-notify.css?v=20260921-popup-queue">
     <link rel="icon" href="../img/LOGO 2.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -630,6 +645,60 @@ if ($paymentMethodKey === 'qrph') {
                                     <dd>&#8369;<?= number_format((float) $order['total'], 2) ?></dd>
                                 </div>
                             </dl>
+                        </section>
+
+                        <section class="online-order-summary" aria-labelledby="order-summary-title">
+                            <div class="status-section-heading">
+                                <h2 id="order-summary-title">Order Summary</h2>
+                                <p>Items selected by the customer</p>
+                            </div>
+
+                            <?php if (!$orderItems): ?>
+                                <p class="online-summary-empty">No saved items were found for this order.</p>
+                            <?php else: ?>
+                                <div class="online-summary-items">
+                                    <div class="online-summary-columns" aria-hidden="true">
+                                        <span>Qty</span>
+                                        <span>Item</span>
+                                        <span>Amount</span>
+                                    </div>
+                                    <?php foreach ($orderItems as $item): ?>
+                                        <?php
+                                            $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                                            $milk = trim((string) ($item['milk'] ?? ''));
+                                            $addons = trim((string) ($item['addons'] ?? ''));
+                                            $notes = trim((string) ($item['notes'] ?? ''));
+                                        ?>
+                                        <article class="online-summary-item">
+                                            <span class="online-summary-quantity"><?= $quantity ?>x</span>
+                                            <div class="online-summary-item-details">
+                                                <span class="online-summary-name"><?= htmlspecialchars((string) ($item['product_name'] ?? 'Item')) ?></span>
+                                                <?php if ($milk !== '' || $addons !== ''): ?>
+                                                    <p class="online-summary-modifiers">
+                                                        <?php if ($milk !== ''): ?><span>Milk: <?= htmlspecialchars($milk) ?></span><?php endif; ?>
+                                                        <?php if ($addons !== ''): ?><span>Add-ons: <?= htmlspecialchars($addons) ?></span><?php endif; ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                                <?php if ($notes !== ''): ?>
+                                                    <p class="online-summary-note">Note: <?= htmlspecialchars($notes) ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            <span class="online-summary-price">&#8369;<?= number_format((float) ($item['line_total'] ?? 0), 2) ?></span>
+                                        </article>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="online-summary-totals">
+                                <div><span>Subtotal</span><strong>&#8369;<?= number_format((float) ($order['subtotal'] ?? 0), 2) ?></strong></div>
+                                <?php if ((float) ($order['delivery_fee'] ?? 0) > 0): ?>
+                                    <div><span>Delivery Fee</span><strong>&#8369;<?= number_format((float) $order['delivery_fee'], 2) ?></strong></div>
+                                <?php endif; ?>
+                                <?php if ((float) ($order['tax'] ?? 0) > 0): ?>
+                                    <div><span>Tax</span><strong>&#8369;<?= number_format((float) $order['tax'], 2) ?></strong></div>
+                                <?php endif; ?>
+                                <div class="online-summary-grand-total"><span>Total</span><strong>&#8369;<?= number_format((float) $order['total'], 2) ?></strong></div>
+                            </div>
                         </section>
 
                         <section class="order-progress" aria-labelledby="progress-title">
@@ -890,7 +959,7 @@ if ($paymentMethodKey === 'qrph') {
         })();
     </script>
     <script src="pos-responsive.js"></script>
-    <script src="order-notify.js"></script>
+    <script src="order-notify.js?v=20260921-popup-queue"></script>
     <script src="shift-monitor.js"></script>
 </body>
 

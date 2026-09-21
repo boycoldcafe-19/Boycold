@@ -5,6 +5,7 @@
     const ORDER_API = '../online-orders-api.php';
     const ORDER_POPUP = '../order-popup.php';
     const POLL_INTERVAL = 5000;
+    const POPUP_STATE_PREFIX = 'boycold_pos_order_popup_state_';
 
     function isPopupSoundMuted() {
         return localStorage.getItem('boycold_pos_muted') === 'true';
@@ -13,10 +14,66 @@
     console.log('[Order Notify] Initialized, polling every', POLL_INTERVAL, 'ms');
 
     let latestOrderId = 0;
-    let isInitialPoll = true;
+    let activeBranchId = 0;
+    let activePopupSessionKey = '';
+    let popupQueue = [];
+    let activePopupOrderId = 0;
+    let pollInFlight = false;
     let popupSound = null;
     let popupSoundGain = null;
     let popupSoundInterval = null;
+
+    function popupStateKey() {
+        return activeBranchId > 0
+            ? `${POPUP_STATE_PREFIX}${activeBranchId}_${activePopupSessionKey || 'browser'}`
+            : '';
+    }
+
+    function readPopupState() {
+        const key = popupStateKey();
+        if (!key) return { lastOrderId: 0, queue: [] };
+
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(key) || '{}');
+            const lastOrderId = Math.max(0, Number(saved.lastOrderId) || 0);
+            const queue = Array.isArray(saved.queue)
+                ? [...new Set(saved.queue.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+                : [];
+            return { lastOrderId, queue };
+        } catch (error) {
+            return { lastOrderId: 0, queue: [] };
+        }
+    }
+
+    function savePopupState() {
+        const key = popupStateKey();
+        if (!key) return;
+
+        try {
+            sessionStorage.setItem(key, JSON.stringify({
+                lastOrderId: latestOrderId,
+                queue: popupQueue
+            }));
+        } catch (error) {
+            // The POS can still show notifications if browser storage is unavailable.
+        }
+    }
+
+    function useBranchPopupState(branchId, popupSessionKey) {
+        const normalizedBranchId = Number(branchId);
+        const normalizedSessionKey = String(popupSessionKey || 'browser');
+        if (!Number.isInteger(normalizedBranchId) || normalizedBranchId <= 0
+            || (activeBranchId === normalizedBranchId && activePopupSessionKey === normalizedSessionKey)) {
+            return;
+        }
+
+        activeBranchId = normalizedBranchId;
+        activePopupSessionKey = normalizedSessionKey;
+        const savedState = readPopupState();
+        latestOrderId = savedState.lastOrderId;
+        popupQueue = savedState.queue;
+        activePopupOrderId = 0;
+    }
 
     function ensurePopupHost() {
         let popupHost = document.getElementById('popupHost');
@@ -352,55 +409,98 @@
         }
     }
 
-    function showPopup(orderId) {
-        if (!orderId) return;
-        const popupHost = ensurePopupHost();
-        const orderIdText = String(orderId);
-        const alreadyShowing = Array.from(popupHost.querySelectorAll('.order-popup-frame'))
-            .some(frame => frame.dataset.orderId === orderIdText);
-        if (alreadyShowing) return;
+    function renderNextPopup() {
+        if (activePopupOrderId || !popupQueue.length) return;
 
+        const orderId = popupQueue[0];
+        const popupHost = ensurePopupHost();
         const iframe = document.createElement('iframe');
-        iframe.src = `${ORDER_POPUP}?order_id=${encodeURIComponent(orderIdText)}`;
-        iframe.dataset.orderId = orderIdText;
+        iframe.src = `${ORDER_POPUP}?order_id=${encodeURIComponent(orderId)}`;
+        iframe.dataset.orderId = String(orderId);
         iframe.className = 'order-popup-frame';
-        popupHost.innerHTML = '';
-        popupHost.appendChild(iframe);
+        iframe.title = `New online order #${orderId}`;
+        iframe.addEventListener('error', () => {
+            console.error('[Order Notify] Failed to load popup for order:', orderId);
+            closePopup(orderId);
+        });
+
+        popupHost.replaceChildren(iframe);
         popupHost.style.display = 'block';
+        activePopupOrderId = orderId;
         startPopupSound();
     }
 
-    function closePopup() {
-        const popupHost = ensurePopupHost();
-        stopPopupSound();
-        popupHost.innerHTML = '';
-        popupHost.style.display = 'none';
+    // Orders can arrive in one poll response. Keep every one in a queue so
+    // replacing the iframe for a newer order can never discard an older one.
+    function showPopup(orderId) {
+        const normalizedOrderId = Number(orderId);
+        if (!Number.isInteger(normalizedOrderId) || normalizedOrderId <= 0) return;
+
+        if (!popupQueue.includes(normalizedOrderId)) {
+            popupQueue.push(normalizedOrderId);
+            savePopupState();
+        }
+        renderNextPopup();
     }
 
-    // New-order polling intentionally returns only pending/confirmed rows, so
-    // it cannot tell us when an already-open popup was cancelled by the
-    // customer. Check that one order separately and close the popup at once.
-    async function closePopupIfCustomerCancelled() {
-        const popupFrame = document.querySelector('#popupHost .order-popup-frame[data-order-id]');
-        const orderId = Number(popupFrame?.dataset.orderId);
-        if (!Number.isInteger(orderId) || orderId <= 0) return false;
+    function closePopup(orderId = activePopupOrderId) {
+        const normalizedOrderId = Number(orderId);
+        if (Number.isInteger(normalizedOrderId) && normalizedOrderId > 0) {
+            popupQueue = popupQueue.filter((queuedOrderId) => queuedOrderId !== normalizedOrderId);
+        }
+
+        const popupHost = ensurePopupHost();
+        if (!activePopupOrderId || activePopupOrderId === normalizedOrderId) {
+            activePopupOrderId = 0;
+            stopPopupSound();
+            popupHost.replaceChildren();
+            popupHost.style.display = 'none';
+        }
+
+        savePopupState();
+        renderNextPopup();
+    }
+
+    // A customer can cancel QRPh while their order is in the visible popup or
+    // waiting behind another popup. Remove cancelled orders from both places.
+    async function removeCancelledPopupOrders() {
+        const queuedOrderIds = [...popupQueue];
+        if (!queuedOrderIds.length) return false;
 
         try {
-            const res = await fetch(
-                `${ORDER_API}?action=payment_status&order_id=${encodeURIComponent(orderId)}`,
-                { cache: 'no-store' }
+            const checks = await Promise.all(queuedOrderIds.map(async (orderId) => {
+                const res = await fetch(
+                    `${ORDER_API}?action=payment_status&order_id=${encodeURIComponent(orderId)}`,
+                    { cache: 'no-store', credentials: 'same-origin' }
+                );
+                if (!res.ok) return { orderId, cancelled: false };
+                const data = await res.json();
+                return {
+                    orderId,
+                    cancelled: data.success && String(data.order_status).toLowerCase() === 'cancelled'
+                };
+            }));
+            const cancelledOrderIds = new Set(
+                checks.filter((result) => result.cancelled).map((result) => result.orderId)
             );
-            const data = await res.json();
-            if (!data.success || String(data.order_status).toLowerCase() !== 'cancelled') {
-                return false;
-            }
+            if (!cancelledOrderIds.size) return false;
 
-            closePopup();
+            const activeWasCancelled = cancelledOrderIds.has(activePopupOrderId);
+            popupQueue = popupQueue.filter((orderId) => !cancelledOrderIds.has(orderId));
+            if (activeWasCancelled) {
+                activePopupOrderId = 0;
+                const popupHost = ensurePopupHost();
+                stopPopupSound();
+                popupHost.replaceChildren();
+                popupHost.style.display = 'none';
+            }
+            savePopupState();
+            renderNextPopup();
             refreshOrderCount();
             refreshNotificationList();
             return true;
         } catch (err) {
-            console.error('Failed to check the open order popup status', err);
+            console.error('Failed to check queued popup order statuses', err);
             return false;
         }
     }
@@ -453,8 +553,26 @@
 
     window.addEventListener('message', (event) => {
         const type = event.data?.type;
+        if (!['orderAccepted', 'orderCancelled', 'closeOrderPopup', 'orderUpdated'].includes(type)) {
+            return;
+        }
+
+        const activeFrame = document.querySelector('#popupHost .order-popup-frame');
+        // Only the visible popup iframe is allowed to close this popup. This
+        // prevents unrelated windows/pages from dismissing a queued order.
+        if (activeFrame?.contentWindow && event.source !== activeFrame.contentWindow) return;
+
+        const messageOrderId = Number(event.data?.orderId);
+        if (messageOrderId > 0 && activePopupOrderId > 0 && messageOrderId !== activePopupOrderId) {
+            if (['orderAccepted', 'orderCancelled', 'orderUpdated'].includes(type)) {
+                refreshOnlineOrdersTable();
+                refreshOrderCount();
+            }
+            return;
+        }
+
         if (['orderAccepted', 'orderCancelled', 'closeOrderPopup', 'orderUpdated'].includes(type)) {
-            closePopup();
+            closePopup(activePopupOrderId);
         }
         if (['orderAccepted', 'orderCancelled', 'orderUpdated'].includes(type)) {
             refreshOnlineOrdersTable();
@@ -463,30 +581,48 @@
     });
 
     async function pollOnlineOrders() {
+        if (pollInFlight) return;
+        pollInFlight = true;
         try {
-            const res = await fetch(`${ORDER_API}?last_order_id=${encodeURIComponent(latestOrderId)}`);
+            // no-store avoids stale Hostinger/proxy responses that make a new
+            // order look like it never arrived at the POS.
+            const res = await fetch(
+                `${ORDER_API}?last_order_id=${encodeURIComponent(latestOrderId)}`,
+                { cache: 'no-store', credentials: 'same-origin' }
+            );
+            if (!res.ok) throw new Error(`Order polling returned HTTP ${res.status}`);
             const data = await res.json();
             console.log('[Order Notify] Poll response:', data);
             if (!data.success || !Array.isArray(data.orders)) return;
 
-            if (isInitialPoll) {
-                latestOrderId = data.latest_order_id || latestOrderId;
-                isInitialPoll = false;
-                console.log('[Order Notify] Initial poll, latest_order_id:', latestOrderId);
-                return;
-            }
+            useBranchPopupState(
+                data.branch_id ?? data.debug?.branch_id,
+                data.popup_session_key
+            );
+            // A page reload should resume a popup that was already queued,
+            // not silently discard it because no new rows were returned.
+            renderNextPopup();
+            const newOrders = data.orders.filter((order) => {
+                const orderId = Number(order?.id);
+                return Number.isInteger(orderId) && orderId > latestOrderId;
+            });
 
-            if (data.orders.length > 0) {
-                latestOrderId = data.latest_order_id || latestOrderId;
-                console.log('[Order Notify] Found new orders:', data.orders.length);
-                data.orders.forEach((order) => {
+            if (newOrders.length > 0) {
+                latestOrderId = Math.max(
+                    latestOrderId,
+                    Number(data.latest_order_id) || 0,
+                    ...newOrders.map((order) => Number(order.id) || 0)
+                );
+                savePopupState();
+                console.log('[Order Notify] Found new orders:', newOrders.length);
+                newOrders.forEach((order) => {
                     console.log('[Order Notify] Showing popup for order:', order.id);
                     showPopup(order.id);
                     addNotification(order);
                 });
             }
 
-            await closePopupIfCustomerCancelled();
+            await removeCancelledPopupOrders();
 
             // Keep the open POS list in sync when a customer cancels QRPh
             // from the user checkout page, including a popup that was open
@@ -494,6 +630,8 @@
             await refreshOnlineOrdersTable();
         } catch (err) {
             console.error('Online order poll failed', err);
+        } finally {
+            pollInFlight = false;
         }
     }
 

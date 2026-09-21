@@ -1459,36 +1459,18 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
 .void-qty-stepper {
     display: flex;
     align-items: center;
-    gap: 4px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 2px 4px;
-    background: var(--bg);
 }
 
 .void-qty-stepper button {
-    width: 22px;
-    height: 22px;
-    border: none;
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border: 1px solid #555;
+    border-radius: 4px 0 0 4px;
+    background: #fff;
+    color: #1e1e1e;
+    font-size: 18px;
     font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.void-qty-minus,
-.void-qty-plus {
-    width: 26px;
-    height: 26px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text);
-    font-size: 15px;
-    font-weight: 700;
+    font-family: 'Afacad', sans-serif;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1496,21 +1478,40 @@ body.dark-theme .profile-avatar .logo-dark  { display:block; }
     transition: background 0.15s;
 }
 
+.void-qty-stepper button:last-child {
+    border-radius: 0 4px 4px 0;
+}
 
 .void-qty-stepper button:hover {
-    background: var(--border);
+    background: #f0e8e2;
 }
 
 .void-qty-value {
-    width: 42px;
+    width: 40px;
+    height: 32px;
     padding: 0;
-    border: 0;
+    border-top: 1px solid #555;
+    border-bottom: 1px solid #555;
+    border-left: 0;
+    border-right: 0;
     outline: 0;
-    background: transparent;
+    background: #fff;
     text-align: center;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
+    font-family: 'Afacad', sans-serif;
+    color: #1e1e1e;
+}
+
+body.dark-theme .void-qty-stepper button,
+body.dark-theme .void-qty-value {
+    background: var(--surface);
+    border-color: var(--border);
     color: var(--text);
+}
+
+body.dark-theme .void-qty-stepper button:hover {
+    background: #343638;
 }
 
 .void-row-remove {

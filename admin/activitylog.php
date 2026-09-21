@@ -1007,6 +1007,7 @@ $activities = array_slice($activities, 0, 250);
     <?php endif; ?>
     <script src="admin-js/admin-responsive.js"></script>
     <script src="admin-js/logout-modal.js"></script>
+    <script src="admin-js/inventory-warning.js"></script>
     <script>
         (() => {
             const filterButtons = [...document.querySelectorAll('.filter-item')];
